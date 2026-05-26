@@ -1,30 +1,54 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
-import { Tabs, useTabs } from "@/components/brand/Tabs";
+import { Tabs } from "@/components/brand/Tabs";
 import { bloggers, products, messages, applications, stats } from "@/mocks/data";
 import { cn } from "@/lib/utils";
 
+type Tab =
+  | "overview" | "bloggers" | "products" | "form" | "inbox" | "newsletter" | "apps"
+  | "locations" | "preferences" | "notifications" | "subscribers";
+
 export const Route = createFileRoute("/app/admin")({
+  validateSearch: (s: Record<string, unknown>): { section?: Tab } => ({
+    section: (s.section as Tab) || undefined,
+  }),
   component: AdminDash,
 });
 
-type Tab = "overview" | "bloggers" | "products" | "form" | "inbox" | "newsletter" | "apps";
+const TITLES: Partial<Record<Tab, { eyebrow: string; title: string; note: string }>> = {
+  overview:      { eyebrow: "ADMIN · Nº 02",         title: "The atelier.",        note: "run the house" },
+  bloggers:      { eyebrow: "EASYBLOGGERS · FRIENDS", title: "The friends.",        note: "your inner circle" },
+  apps:          { eyebrow: "EASYBLOGGERS · APPLY",   title: "Hopefuls.",           note: "review with care" },
+  locations:     { eyebrow: "EASYBLOGGERS · MAP",     title: "On the grid.",        note: "where they pose" },
+  products:      { eyebrow: "EASYBLOGGERS · STOCK",   title: "The drops.",          note: "fresh on shelves" },
+  preferences:   { eyebrow: "EASYBLOGGERS · RULES",   title: "House rules.",        note: "set the tempo" },
+  notifications: { eyebrow: "EASYBLOGGERS · INBOX",   title: "Whispers.",           note: "stay in touch" },
+  form:          { eyebrow: "EASYBLOGGERS · FORM",    title: "Build the gate.",     note: "shape the question" },
+  inbox:         { eyebrow: "ADMIN · COMPOSE",        title: "Write a love note.",  note: "from you, to them" },
+  subscribers:   { eyebrow: "EASYSUBSCRIBERS · LIST", title: "The list.",           note: "people who care" },
+  newsletter:    { eyebrow: "EASYSUBSCRIBERS · SEND", title: "A new edition.",      note: "send to grid" },
+};
 
 function AdminDash() {
-  const [tab, setTab] = useTabs<Tab>("overview");
+  const navigate = useNavigate({ from: "/app/admin" });
+  const { section } = Route.useSearch();
+  const tab: Tab = section ?? "overview";
+  const setTab = (v: Tab) =>
+    navigate({ search: { section: v === "overview" ? undefined : v } });
+  const meta = TITLES[tab] ?? TITLES.overview!;
   return (
     <div className="px-6 py-10 md:px-12">
       <div className="flex items-end justify-between">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-            ADMIN · Nº 02
+            {meta.eyebrow}
           </div>
           <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">
-            The atelier.
+            {meta.title}
           </h1>
         </div>
-        <HandwrittenNote>run the house</HandwrittenNote>
+        <HandwrittenNote>{meta.note}</HandwrittenNote>
       </div>
 
       <div className="mt-8">
@@ -33,7 +57,7 @@ function AdminDash() {
           onChange={setTab}
           tabs={[
             { id: "overview",   label: "Overview",     sub: "01" },
-            { id: "bloggers",   label: "Bloggers",     sub: "02" },
+            { id: "bloggers",   label: "Friends",      sub: "02" },
             { id: "products",   label: "Products",     sub: "03" },
             { id: "apps",       label: "Applications", sub: "04" },
             { id: "form",       label: "Form builder", sub: "05" },
@@ -51,6 +75,10 @@ function AdminDash() {
         {tab === "form" && <FormBuilder />}
         {tab === "inbox" && <Compose />}
         {tab === "newsletter" && <Newsletter />}
+        {tab === "locations" && <Locations />}
+        {tab === "preferences" && <Preferences />}
+        {tab === "notifications" && <Notifications />}
+        {tab === "subscribers" && <Subscribers />}
       </div>
     </div>
   );
