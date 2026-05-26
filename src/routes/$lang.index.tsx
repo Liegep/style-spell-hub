@@ -89,13 +89,15 @@ function Landing() {
             <div className="flex flex-col items-start gap-3 md:items-end">
               <div className="flex gap-2">
                 <Link
-                  to={`/${lang}/login`}
+                  to="/$lang/login"
+                  params={{ lang }}
                   className="rounded-full bg-foreground px-6 py-3 font-mono text-[11px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)]"
                 >
                   {t.hero.ctaBlogger}
                 </Link>
                 <Link
-                  to={`/${lang}/apply`}
+                  to="/$lang/apply"
+                  params={{ lang }}
                   className="rounded-full border border-foreground/40 px-6 py-3 font-mono text-[11px] uppercase tracking-[0.3em] hover:bg-foreground hover:text-background"
                 >
                   {t.hero.ctaApply}

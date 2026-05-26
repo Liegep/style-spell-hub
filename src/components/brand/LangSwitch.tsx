@@ -1,11 +1,22 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useLang } from "@/i18n/dict";
 import { cn } from "@/lib/utils";
 
 export function LangSwitch({ className }: { className?: string }) {
   const lang = useLang();
   const loc = useLocation();
-  const rest = loc.pathname.replace(/^\/(en|es)/, "") || "/";
+  const navigate = useNavigate();
+
+  const switchTo = (target: "en" | "es") => {
+    const current = loc.pathname;
+    // Replace the lang segment if present
+    const replaced = current.replace(/^\/(en|es)(\/|$)/, `/${target}$2`);
+    const next = replaced === current && !/^\/(en|es)/.test(current)
+      ? `/${target}`
+      : replaced;
+    navigate({ to: next, replace: true });
+  };
+
   return (
     <div
       className={cn(
@@ -13,8 +24,8 @@ export function LangSwitch({ className }: { className?: string }) {
         className,
       )}
     >
-      <Link
-        to={`/en${rest === "/" ? "" : rest}` as string}
+      <button
+        onClick={() => switchTo("en")}
         className={cn(
           "rounded-full px-2 py-1 transition",
           lang === "en"
@@ -23,10 +34,10 @@ export function LangSwitch({ className }: { className?: string }) {
         )}
       >
         EN
-      </Link>
+      </button>
       <span className="text-foreground/30">/</span>
-      <Link
-        to={`/es${rest === "/" ? "" : rest}` as string}
+      <button
+        onClick={() => switchTo("es")}
         className={cn(
           "rounded-full px-2 py-1 transition",
           lang === "es"
@@ -35,7 +46,7 @@ export function LangSwitch({ className }: { className?: string }) {
         )}
       >
         ES
-      </Link>
+      </button>
     </div>
   );
 }
