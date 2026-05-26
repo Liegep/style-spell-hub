@@ -14,7 +14,7 @@ export function LangSwitch({ className }: { className?: string }) {
     const next = replaced === current && !/^\/(en|es)/.test(current)
       ? `/${target}`
       : replaced;
-    navigate({ to: next, replace: true });
+    navigate({ to: next, replace: true } as never);
   };
 
   return (
