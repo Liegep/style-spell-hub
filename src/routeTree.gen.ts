@@ -9,38 +9,210 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as LangRouteImport } from './routes/$lang'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as LangIndexRouteImport } from './routes/$lang.index'
+import { Route as AppSuperAdminRouteImport } from './routes/app.super-admin'
+import { Route as AppBloggerRouteImport } from './routes/app.blogger'
+import { Route as AppAdminRouteImport } from './routes/app.admin'
+import { Route as LangShopInfoRouteImport } from './routes/$lang.shop-info'
+import { Route as LangReleasesRouteImport } from './routes/$lang.releases'
+import { Route as LangNewsletterRouteImport } from './routes/$lang.newsletter'
+import { Route as LangLoginRouteImport } from './routes/$lang.login'
+import { Route as LangApplyRouteImport } from './routes/$lang.apply'
+import { Route as LangAboutRouteImport } from './routes/$lang.about'
 
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LangRoute = LangRouteImport.update({
+  id: '/$lang',
+  path: '/$lang',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const LangIndexRoute = LangIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LangRoute,
+} as any)
+const AppSuperAdminRoute = AppSuperAdminRouteImport.update({
+  id: '/super-admin',
+  path: '/super-admin',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBloggerRoute = AppBloggerRouteImport.update({
+  id: '/blogger',
+  path: '/blogger',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
+const LangShopInfoRoute = LangShopInfoRouteImport.update({
+  id: '/shop-info',
+  path: '/shop-info',
+  getParentRoute: () => LangRoute,
+} as any)
+const LangReleasesRoute = LangReleasesRouteImport.update({
+  id: '/releases',
+  path: '/releases',
+  getParentRoute: () => LangRoute,
+} as any)
+const LangNewsletterRoute = LangNewsletterRouteImport.update({
+  id: '/newsletter',
+  path: '/newsletter',
+  getParentRoute: () => LangRoute,
+} as any)
+const LangLoginRoute = LangLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => LangRoute,
+} as any)
+const LangApplyRoute = LangApplyRouteImport.update({
+  id: '/apply',
+  path: '/apply',
+  getParentRoute: () => LangRoute,
+} as any)
+const LangAboutRoute = LangAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => LangRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$lang': typeof LangRouteWithChildren
+  '/app': typeof AppRouteWithChildren
+  '/$lang/about': typeof LangAboutRoute
+  '/$lang/apply': typeof LangApplyRoute
+  '/$lang/login': typeof LangLoginRoute
+  '/$lang/newsletter': typeof LangNewsletterRoute
+  '/$lang/releases': typeof LangReleasesRoute
+  '/$lang/shop-info': typeof LangShopInfoRoute
+  '/app/admin': typeof AppAdminRoute
+  '/app/blogger': typeof AppBloggerRoute
+  '/app/super-admin': typeof AppSuperAdminRoute
+  '/$lang/': typeof LangIndexRoute
+  '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$lang/about': typeof LangAboutRoute
+  '/$lang/apply': typeof LangApplyRoute
+  '/$lang/login': typeof LangLoginRoute
+  '/$lang/newsletter': typeof LangNewsletterRoute
+  '/$lang/releases': typeof LangReleasesRoute
+  '/$lang/shop-info': typeof LangShopInfoRoute
+  '/app/admin': typeof AppAdminRoute
+  '/app/blogger': typeof AppBloggerRoute
+  '/app/super-admin': typeof AppSuperAdminRoute
+  '/$lang': typeof LangIndexRoute
+  '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$lang': typeof LangRouteWithChildren
+  '/app': typeof AppRouteWithChildren
+  '/$lang/about': typeof LangAboutRoute
+  '/$lang/apply': typeof LangApplyRoute
+  '/$lang/login': typeof LangLoginRoute
+  '/$lang/newsletter': typeof LangNewsletterRoute
+  '/$lang/releases': typeof LangReleasesRoute
+  '/$lang/shop-info': typeof LangShopInfoRoute
+  '/app/admin': typeof AppAdminRoute
+  '/app/blogger': typeof AppBloggerRoute
+  '/app/super-admin': typeof AppSuperAdminRoute
+  '/$lang/': typeof LangIndexRoute
+  '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/$lang'
+    | '/app'
+    | '/$lang/about'
+    | '/$lang/apply'
+    | '/$lang/login'
+    | '/$lang/newsletter'
+    | '/$lang/releases'
+    | '/$lang/shop-info'
+    | '/app/admin'
+    | '/app/blogger'
+    | '/app/super-admin'
+    | '/$lang/'
+    | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/$lang/about'
+    | '/$lang/apply'
+    | '/$lang/login'
+    | '/$lang/newsletter'
+    | '/$lang/releases'
+    | '/$lang/shop-info'
+    | '/app/admin'
+    | '/app/blogger'
+    | '/app/super-admin'
+    | '/$lang'
+    | '/app'
+  id:
+    | '__root__'
+    | '/'
+    | '/$lang'
+    | '/app'
+    | '/$lang/about'
+    | '/$lang/apply'
+    | '/$lang/login'
+    | '/$lang/newsletter'
+    | '/$lang/releases'
+    | '/$lang/shop-info'
+    | '/app/admin'
+    | '/app/blogger'
+    | '/app/super-admin'
+    | '/$lang/'
+    | '/app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LangRoute: typeof LangRouteWithChildren
+  AppRoute: typeof AppRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$lang': {
+      id: '/$lang'
+      path: '/$lang'
+      fullPath: '/$lang'
+      preLoaderRoute: typeof LangRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +220,129 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/$lang/': {
+      id: '/$lang/'
+      path: '/'
+      fullPath: '/$lang/'
+      preLoaderRoute: typeof LangIndexRouteImport
+      parentRoute: typeof LangRoute
+    }
+    '/app/super-admin': {
+      id: '/app/super-admin'
+      path: '/super-admin'
+      fullPath: '/app/super-admin'
+      preLoaderRoute: typeof AppSuperAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/blogger': {
+      id: '/app/blogger'
+      path: '/blogger'
+      fullPath: '/app/blogger'
+      preLoaderRoute: typeof AppBloggerRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/admin': {
+      id: '/app/admin'
+      path: '/admin'
+      fullPath: '/app/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/$lang/shop-info': {
+      id: '/$lang/shop-info'
+      path: '/shop-info'
+      fullPath: '/$lang/shop-info'
+      preLoaderRoute: typeof LangShopInfoRouteImport
+      parentRoute: typeof LangRoute
+    }
+    '/$lang/releases': {
+      id: '/$lang/releases'
+      path: '/releases'
+      fullPath: '/$lang/releases'
+      preLoaderRoute: typeof LangReleasesRouteImport
+      parentRoute: typeof LangRoute
+    }
+    '/$lang/newsletter': {
+      id: '/$lang/newsletter'
+      path: '/newsletter'
+      fullPath: '/$lang/newsletter'
+      preLoaderRoute: typeof LangNewsletterRouteImport
+      parentRoute: typeof LangRoute
+    }
+    '/$lang/login': {
+      id: '/$lang/login'
+      path: '/login'
+      fullPath: '/$lang/login'
+      preLoaderRoute: typeof LangLoginRouteImport
+      parentRoute: typeof LangRoute
+    }
+    '/$lang/apply': {
+      id: '/$lang/apply'
+      path: '/apply'
+      fullPath: '/$lang/apply'
+      preLoaderRoute: typeof LangApplyRouteImport
+      parentRoute: typeof LangRoute
+    }
+    '/$lang/about': {
+      id: '/$lang/about'
+      path: '/about'
+      fullPath: '/$lang/about'
+      preLoaderRoute: typeof LangAboutRouteImport
+      parentRoute: typeof LangRoute
+    }
   }
 }
 
+interface LangRouteChildren {
+  LangAboutRoute: typeof LangAboutRoute
+  LangApplyRoute: typeof LangApplyRoute
+  LangLoginRoute: typeof LangLoginRoute
+  LangNewsletterRoute: typeof LangNewsletterRoute
+  LangReleasesRoute: typeof LangReleasesRoute
+  LangShopInfoRoute: typeof LangShopInfoRoute
+  LangIndexRoute: typeof LangIndexRoute
+}
+
+const LangRouteChildren: LangRouteChildren = {
+  LangAboutRoute: LangAboutRoute,
+  LangApplyRoute: LangApplyRoute,
+  LangLoginRoute: LangLoginRoute,
+  LangNewsletterRoute: LangNewsletterRoute,
+  LangReleasesRoute: LangReleasesRoute,
+  LangShopInfoRoute: LangShopInfoRoute,
+  LangIndexRoute: LangIndexRoute,
+}
+
+const LangRouteWithChildren = LangRoute._addFileChildren(LangRouteChildren)
+
+interface AppRouteChildren {
+  AppAdminRoute: typeof AppAdminRoute
+  AppBloggerRoute: typeof AppBloggerRoute
+  AppSuperAdminRoute: typeof AppSuperAdminRoute
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAdminRoute: AppAdminRoute,
+  AppBloggerRoute: AppBloggerRoute,
+  AppSuperAdminRoute: AppSuperAdminRoute,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LangRoute: LangRouteWithChildren,
+  AppRoute: AppRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

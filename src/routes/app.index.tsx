@@ -1,8 +1,8 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/app/")({
   beforeLoad: () => {
-    throw redirect({ to: "/$lang", params: { lang: "en" } });
+    throw redirect({ to: "/app/blogger" });
   },
   component: () => null,
 });
