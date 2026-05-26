@@ -14,6 +14,9 @@ import { Route as LangRouteImport } from './routes/$lang'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as LangIndexRouteImport } from './routes/$lang.index'
+import { Route as AppSuperAdminRouteImport } from './routes/app.super-admin'
+import { Route as AppBloggerRouteImport } from './routes/app.blogger'
+import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as LangShopInfoRouteImport } from './routes/$lang.shop-info'
 import { Route as LangReleasesRouteImport } from './routes/$lang.releases'
 import { Route as LangNewsletterRouteImport } from './routes/$lang.newsletter'
@@ -45,6 +48,21 @@ const LangIndexRoute = LangIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => LangRoute,
+} as any)
+const AppSuperAdminRoute = AppSuperAdminRouteImport.update({
+  id: '/super-admin',
+  path: '/super-admin',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBloggerRoute = AppBloggerRouteImport.update({
+  id: '/blogger',
+  path: '/blogger',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
 } as any)
 const LangShopInfoRoute = LangShopInfoRouteImport.update({
   id: '/shop-info',
@@ -87,6 +105,9 @@ export interface FileRoutesByFullPath {
   '/$lang/newsletter': typeof LangNewsletterRoute
   '/$lang/releases': typeof LangReleasesRoute
   '/$lang/shop-info': typeof LangShopInfoRoute
+  '/app/admin': typeof AppAdminRoute
+  '/app/blogger': typeof AppBloggerRoute
+  '/app/super-admin': typeof AppSuperAdminRoute
   '/$lang/': typeof LangIndexRoute
   '/app/': typeof AppIndexRoute
 }
@@ -98,6 +119,9 @@ export interface FileRoutesByTo {
   '/$lang/newsletter': typeof LangNewsletterRoute
   '/$lang/releases': typeof LangReleasesRoute
   '/$lang/shop-info': typeof LangShopInfoRoute
+  '/app/admin': typeof AppAdminRoute
+  '/app/blogger': typeof AppBloggerRoute
+  '/app/super-admin': typeof AppSuperAdminRoute
   '/$lang': typeof LangIndexRoute
   '/app': typeof AppIndexRoute
 }
@@ -112,6 +136,9 @@ export interface FileRoutesById {
   '/$lang/newsletter': typeof LangNewsletterRoute
   '/$lang/releases': typeof LangReleasesRoute
   '/$lang/shop-info': typeof LangShopInfoRoute
+  '/app/admin': typeof AppAdminRoute
+  '/app/blogger': typeof AppBloggerRoute
+  '/app/super-admin': typeof AppSuperAdminRoute
   '/$lang/': typeof LangIndexRoute
   '/app/': typeof AppIndexRoute
 }
@@ -127,6 +154,9 @@ export interface FileRouteTypes {
     | '/$lang/newsletter'
     | '/$lang/releases'
     | '/$lang/shop-info'
+    | '/app/admin'
+    | '/app/blogger'
+    | '/app/super-admin'
     | '/$lang/'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
@@ -138,6 +168,9 @@ export interface FileRouteTypes {
     | '/$lang/newsletter'
     | '/$lang/releases'
     | '/$lang/shop-info'
+    | '/app/admin'
+    | '/app/blogger'
+    | '/app/super-admin'
     | '/$lang'
     | '/app'
   id:
@@ -151,6 +184,9 @@ export interface FileRouteTypes {
     | '/$lang/newsletter'
     | '/$lang/releases'
     | '/$lang/shop-info'
+    | '/app/admin'
+    | '/app/blogger'
+    | '/app/super-admin'
     | '/$lang/'
     | '/app/'
   fileRoutesById: FileRoutesById
@@ -197,6 +233,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/$lang/'
       preLoaderRoute: typeof LangIndexRouteImport
       parentRoute: typeof LangRoute
+    }
+    '/app/super-admin': {
+      id: '/app/super-admin'
+      path: '/super-admin'
+      fullPath: '/app/super-admin'
+      preLoaderRoute: typeof AppSuperAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/blogger': {
+      id: '/app/blogger'
+      path: '/blogger'
+      fullPath: '/app/blogger'
+      preLoaderRoute: typeof AppBloggerRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/admin': {
+      id: '/app/admin'
+      path: '/admin'
+      fullPath: '/app/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
     }
     '/$lang/shop-info': {
       id: '/$lang/shop-info'
@@ -266,10 +323,16 @@ const LangRouteChildren: LangRouteChildren = {
 const LangRouteWithChildren = LangRoute._addFileChildren(LangRouteChildren)
 
 interface AppRouteChildren {
+  AppAdminRoute: typeof AppAdminRoute
+  AppBloggerRoute: typeof AppBloggerRoute
+  AppSuperAdminRoute: typeof AppSuperAdminRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAdminRoute: AppAdminRoute,
+  AppBloggerRoute: AppBloggerRoute,
+  AppSuperAdminRoute: AppSuperAdminRoute,
   AppIndexRoute: AppIndexRoute,
 }
 
