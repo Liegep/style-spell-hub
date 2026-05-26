@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-rout
 import {
   Settings, ScrollText, UsersRound,
   ClipboardList, Heart, MapPinned, Package, SlidersHorizontal, Bell,
-  Users, Mail,
+  Users, Mail, MessageSquare, Inbox, UserCircle2,
 } from "lucide-react";
 import { LangSwitch } from "@/components/brand/LangSwitch";
 import { cn } from "@/lib/utils";
@@ -45,6 +45,20 @@ const ADMIN_GROUPS: NavGroup[] = [
     ],
   },
 ];
+
+const BLOGGER_GROUPS: NavGroup[] = [
+  {
+    title: "Studio",
+    items: [
+      { to: "/app/blogger", section: "products", label: "Products", icon: Package },
+      { to: "/app/blogger", section: "posts",    label: "Posts",    icon: MessageSquare },
+      { to: "/app/blogger", section: "inbox",    label: "Mailbox",  icon: Inbox },
+      { to: "/app/blogger", section: "profile",  label: "Profile",  icon: UserCircle2 },
+    ],
+  },
+];
+
+
 
 function AppLayout() {
   const loc = useLocation();
