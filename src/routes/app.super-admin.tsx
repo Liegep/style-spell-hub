@@ -1,28 +1,43 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
-import { Tabs, useTabs } from "@/components/brand/Tabs";
-
-export const Route = createFileRoute("/app/super-admin")({
-  component: SuperDash,
-});
+import { Tabs } from "@/components/brand/Tabs";
 
 type Tab = "settings" | "admins" | "branding" | "logs";
 
+export const Route = createFileRoute("/app/super-admin")({
+  validateSearch: (s: Record<string, unknown>): { section?: Tab } => ({
+    section: (s.section as Tab) || undefined,
+  }),
+  component: SuperDash,
+});
+
+const TITLES: Record<Tab, { eyebrow: string; title: string; note: string }> = {
+  settings: { eyebrow: "SUPER ADMIN · GENERAL",  title: "The control room.", note: "handle with care" },
+  logs:     { eyebrow: "SUPER ADMIN · AUDIT",    title: "The paper trail.",  note: "every spell, logged" },
+  admins:   { eyebrow: "SUPER ADMIN · MANAGERS", title: "The keepers.",      note: "your circle" },
+  branding: { eyebrow: "SUPER ADMIN · BRAND",    title: "The signature.",    note: "house style" },
+};
+
 function SuperDash() {
-  const [tab, setTab] = useTabs<Tab>("settings");
+  const navigate = useNavigate({ from: "/app/super-admin" });
+  const { section } = Route.useSearch();
+  const tab: Tab = section ?? "settings";
+  const setTab = (v: Tab) =>
+    navigate({ search: { section: v === "settings" ? undefined : v } });
+  const meta = TITLES[tab];
   return (
     <div className="px-6 py-10 md:px-12">
       <div className="flex items-end justify-between">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-            SUPER ADMIN · Nº 03
+            {meta.eyebrow}
           </div>
           <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">
-            The control room.
+            {meta.title}
           </h1>
         </div>
-        <HandwrittenNote>handle with care</HandwrittenNote>
+        <HandwrittenNote>{meta.note}</HandwrittenNote>
       </div>
 
       <div className="mt-8">
@@ -30,10 +45,10 @@ function SuperDash() {
           value={tab}
           onChange={setTab}
           tabs={[
-            { id: "settings", label: "Platform rules", sub: "01" },
-            { id: "admins",   label: "Admins",         sub: "02" },
-            { id: "branding", label: "Branding",       sub: "03" },
-            { id: "logs",     label: "Activity logs",  sub: "04" },
+            { id: "settings", label: "General",        sub: "01" },
+            { id: "logs",     label: "Audit log",      sub: "02" },
+            { id: "admins",   label: "Managers",       sub: "03" },
+            { id: "branding", label: "Branding",       sub: "04" },
           ]}
         />
       </div>
