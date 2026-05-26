@@ -1,30 +1,54 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
-import { Tabs, useTabs } from "@/components/brand/Tabs";
+import { Tabs } from "@/components/brand/Tabs";
 import { bloggers, products, messages, applications, stats } from "@/mocks/data";
 import { cn } from "@/lib/utils";
 
+type Tab =
+  | "overview" | "bloggers" | "products" | "form" | "inbox" | "newsletter" | "apps"
+  | "locations" | "preferences" | "notifications" | "subscribers";
+
 export const Route = createFileRoute("/app/admin")({
+  validateSearch: (s: Record<string, unknown>): { section?: Tab } => ({
+    section: (s.section as Tab) || undefined,
+  }),
   component: AdminDash,
 });
 
-type Tab = "overview" | "bloggers" | "products" | "form" | "inbox" | "newsletter" | "apps";
+const TITLES: Partial<Record<Tab, { eyebrow: string; title: string; note: string }>> = {
+  overview:      { eyebrow: "ADMIN · Nº 02",         title: "The atelier.",        note: "run the house" },
+  bloggers:      { eyebrow: "EASYBLOGGERS · FRIENDS", title: "The friends.",        note: "your inner circle" },
+  apps:          { eyebrow: "EASYBLOGGERS · APPLY",   title: "Hopefuls.",           note: "review with care" },
+  locations:     { eyebrow: "EASYBLOGGERS · MAP",     title: "On the grid.",        note: "where they pose" },
+  products:      { eyebrow: "EASYBLOGGERS · STOCK",   title: "The drops.",          note: "fresh on shelves" },
+  preferences:   { eyebrow: "EASYBLOGGERS · RULES",   title: "House rules.",        note: "set the tempo" },
+  notifications: { eyebrow: "EASYBLOGGERS · INBOX",   title: "Whispers.",           note: "stay in touch" },
+  form:          { eyebrow: "EASYBLOGGERS · FORM",    title: "Build the gate.",     note: "shape the question" },
+  inbox:         { eyebrow: "ADMIN · COMPOSE",        title: "Write a love note.",  note: "from you, to them" },
+  subscribers:   { eyebrow: "EASYSUBSCRIBERS · LIST", title: "The list.",           note: "people who care" },
+  newsletter:    { eyebrow: "EASYSUBSCRIBERS · SEND", title: "A new edition.",      note: "send to grid" },
+};
 
 function AdminDash() {
-  const [tab, setTab] = useTabs<Tab>("overview");
+  const navigate = useNavigate({ from: "/app/admin" });
+  const { section } = Route.useSearch();
+  const tab: Tab = section ?? "overview";
+  const setTab = (v: Tab) =>
+    navigate({ search: { section: v === "overview" ? undefined : v } });
+  const meta = TITLES[tab] ?? TITLES.overview!;
   return (
     <div className="px-6 py-10 md:px-12">
       <div className="flex items-end justify-between">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-            ADMIN · Nº 02
+            {meta.eyebrow}
           </div>
           <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">
-            The atelier.
+            {meta.title}
           </h1>
         </div>
-        <HandwrittenNote>run the house</HandwrittenNote>
+        <HandwrittenNote>{meta.note}</HandwrittenNote>
       </div>
 
       <div className="mt-8">
@@ -33,7 +57,7 @@ function AdminDash() {
           onChange={setTab}
           tabs={[
             { id: "overview",   label: "Overview",     sub: "01" },
-            { id: "bloggers",   label: "Bloggers",     sub: "02" },
+            { id: "bloggers",   label: "Friends",      sub: "02" },
             { id: "products",   label: "Products",     sub: "03" },
             { id: "apps",       label: "Applications", sub: "04" },
             { id: "form",       label: "Form builder", sub: "05" },
@@ -51,6 +75,10 @@ function AdminDash() {
         {tab === "form" && <FormBuilder />}
         {tab === "inbox" && <Compose />}
         {tab === "newsletter" && <Newsletter />}
+        {tab === "locations" && <Locations />}
+        {tab === "preferences" && <Preferences />}
+        {tab === "notifications" && <Notifications />}
+        {tab === "subscribers" && <Subscribers />}
       </div>
     </div>
   );
@@ -350,6 +378,145 @@ function Newsletter() {
           <h3 className="mt-2 font-display text-2xl">Velvet 04 has arrived</h3>
           <p className="mt-2 text-sm text-foreground/75">A new gown, four colors, fitted for every body. Try the demo at the mainstore.</p>
         </div>
+      </GlassCard>
+    </div>
+  );
+}
+
+function Locations() {
+  const locs = [
+    { sim: "Love Potion Mainstore",      region: "Pink Atoll",      visitors: 1240, traffic: "high"   },
+    { sim: "Velvet Pose Studio",         region: "Ivory Bay",       visitors: 412,  traffic: "medium" },
+    { sim: "Lace Noir Photo Spot",       region: "Noir Hills",      visitors: 188,  traffic: "low"    },
+    { sim: "Satin Spell Runway",         region: "Pink Atoll",      visitors: 902,  traffic: "high"   },
+    { sim: "Tulle Rose Garden",          region: "Rose Cliffs",     visitors: 305,  traffic: "medium" },
+    { sim: "Silk Touch Beach",           region: "Coral Sea",       visitors: 76,   traffic: "low"    },
+  ];
+  return (
+    <div className="grid gap-6 md:grid-cols-3">
+      {locs.map((l, i) => (
+        <GlassCard key={l.sim} tone={i % 3 === 1 ? "pink" : "light"} className="p-6">
+          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+            SLURL · sim
+          </div>
+          <h3 className="mt-1 font-display text-2xl leading-tight">{l.sim}</h3>
+          <div className="mt-1 text-sm text-foreground/70">{l.region}</div>
+          <div className="mt-5 flex items-end justify-between">
+            <div>
+              <div className="font-display text-3xl">{l.visitors}</div>
+              <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/60">visitors / 7d</div>
+            </div>
+            <span className={cn(
+              "rounded-full px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em]",
+              l.traffic === "high"   ? "bg-[var(--brand-magenta)] text-white" :
+              l.traffic === "medium" ? "bg-[var(--brand-rose)] text-white"    :
+                                       "bg-foreground/10 text-foreground/70",
+            )}>{l.traffic}</span>
+          </div>
+        </GlassCard>
+      ))}
+    </div>
+  );
+}
+
+function Preferences() {
+  const prefs = [
+    { k: "Post frequency",         v: "1 / month",   o: ["1 / month", "2 / month", "1 / week"] },
+    { k: "Auto-archive after",     v: "90 days",     o: ["30 days", "60 days", "90 days"] },
+    { k: "Inactivity warning",     v: "21 days",     o: ["7 days", "14 days", "21 days"] },
+    { k: "Required platforms",     v: "Flickr",      o: ["Flickr", "Flickr + IG", "Any"] },
+    { k: "Default newsletter day", v: "Friday",      o: ["Monday", "Wednesday", "Friday"] },
+  ];
+  return (
+    <div className="grid gap-4">
+      {prefs.map((p, i) => (
+        <GlassCard key={p.k} tone={i % 2 === 0 ? "light" : "pink"} className="flex items-center justify-between gap-6 p-6">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">Nº 0{i + 1}</div>
+            <h3 className="mt-1 font-display text-xl">{p.k}</h3>
+          </div>
+          <select className="rounded-full border border-foreground/30 bg-background/70 px-4 py-2 font-mono text-xs" defaultValue={p.v}>
+            {p.o.map(opt => <option key={opt}>{opt}</option>)}
+          </select>
+        </GlassCard>
+      ))}
+    </div>
+  );
+}
+
+function Notifications() {
+  const items = [
+    { t: "1h",  k: "warning", title: "Naya Cassidy is inactive (42 days)" },
+    { t: "3h",  k: "info",    title: "New application: Lyra Hollow" },
+    { t: "6h",  k: "info",    title: "Silk Touch auto-archives in 29 days" },
+    { t: "1d",  k: "success", title: "Aria Solstice posted Velvet 04" },
+    { t: "2d",  k: "warning", title: "Sasha Vermillion missed her monthly post" },
+    { t: "3d",  k: "info",    title: "Newsletter delivered to 1,840 subscribers" },
+  ];
+  const dot = (k: string) =>
+    k === "warning" ? "bg-[var(--brand-magenta)]" :
+    k === "success" ? "bg-[var(--brand-rose)]"    :
+                      "bg-foreground/30";
+  return (
+    <GlassCard className="p-0">
+      <ul>
+        {items.map((m, i) => (
+          <li key={i} className="flex items-center gap-5 border-b border-foreground/5 px-6 py-4 last:border-0">
+            <span className={cn("h-2 w-2 rounded-full", dot(m.k))} />
+            <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50 w-10">{m.t}</span>
+            <span className="font-display text-base">{m.title}</span>
+            <span className="ml-auto font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/40">{m.k}</span>
+          </li>
+        ))}
+      </ul>
+    </GlassCard>
+  );
+}
+
+function Subscribers() {
+  const subs = [
+    { n: "Aurora Belle",       e: "aurora@sl.grid",      since: "12 mo", lang: "EN", opens: "92%" },
+    { n: "Mireille Velour",    e: "mireille@sl.grid",    since: "9 mo",  lang: "ES", opens: "88%" },
+    { n: "Coco Argentum",      e: "coco@sl.grid",        since: "7 mo",  lang: "EN", opens: "74%" },
+    { n: "Lyra Hollow",        e: "lyra@sl.grid",        since: "4 mo",  lang: "EN", opens: "61%" },
+    { n: "Pilar Estrella",     e: "pilar@sl.grid",       since: "3 mo",  lang: "ES", opens: "55%" },
+    { n: "Margaux Plume",      e: "margaux@sl.grid",     since: "2 mo",  lang: "ES", opens: "47%" },
+  ];
+  return (
+    <div className="grid gap-6 md:grid-cols-4">
+      <GlassCard tone="pink" className="md:col-span-1 p-6">
+        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">TOTAL</div>
+        <div className="mt-2 font-display text-6xl leading-none">{stats.subscribers}</div>
+        <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">subscribers</div>
+        <div className="mt-6 space-y-2 text-sm">
+          <div className="flex justify-between"><span>EN</span><span className="font-mono">62%</span></div>
+          <div className="flex justify-between"><span>ES</span><span className="font-mono">38%</span></div>
+          <div className="flex justify-between"><span>Avg. open rate</span><span className="font-mono">69%</span></div>
+        </div>
+      </GlassCard>
+      <GlassCard className="md:col-span-3 overflow-x-auto p-0">
+        <table className="w-full text-sm">
+          <thead className="border-b border-foreground/10">
+            <tr className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+              <th className="px-6 py-4 text-left">Name</th>
+              <th className="px-6 py-4 text-left">Email</th>
+              <th className="px-6 py-4 text-left">Since</th>
+              <th className="px-6 py-4 text-left">Lang</th>
+              <th className="px-6 py-4 text-left">Opens</th>
+            </tr>
+          </thead>
+          <tbody>
+            {subs.map((s) => (
+              <tr key={s.n} className="border-b border-foreground/5 hover:bg-foreground/5">
+                <td className="px-6 py-4 font-display text-lg">{s.n}</td>
+                <td className="px-6 py-4 text-foreground/70">{s.e}</td>
+                <td className="px-6 py-4 font-mono text-xs">{s.since}</td>
+                <td className="px-6 py-4 font-mono text-xs">{s.lang}</td>
+                <td className="px-6 py-4 font-mono text-xs">{s.opens}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </GlassCard>
     </div>
   );
