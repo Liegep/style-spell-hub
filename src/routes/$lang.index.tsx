@@ -148,7 +148,8 @@ function Landing() {
             </h2>
           </div>
           <Link
-            to={`/${lang}/releases`}
+            to="/$lang/releases"
+            params={{ lang }}
             className="hidden rounded-full border border-foreground/40 px-5 py-2 font-mono text-[10px] uppercase tracking-[0.3em] hover:bg-foreground hover:text-background md:inline-block"
           >
             {t.releases.cta} →

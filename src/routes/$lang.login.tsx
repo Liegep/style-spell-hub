@@ -119,7 +119,8 @@ function LoginPage() {
 
           <div className="mt-6 flex items-center justify-between">
             <Link
-              to={`/${lang}/apply`}
+              to="/$lang/apply"
+              params={{ lang }}
               className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70 hover:text-foreground"
             >
               ← {t.nav.apply}
