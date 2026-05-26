@@ -18,7 +18,7 @@ function AppLayout() {
       <div className="flex">
         {/* SIDEBAR */}
         <aside className="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-foreground/10 p-6 md:flex md:flex-col">
-          <Link to="/en" className="block">
+          <Link to="/$lang" params={{ lang: "en" }} className="block">
             <div className="font-display text-2xl leading-none">
               love potion<span className="text-[var(--brand-magenta)]">.</span>
             </div>
@@ -57,7 +57,7 @@ function AppLayout() {
           <div className="mt-auto flex items-center justify-between border-t border-foreground/10 pt-6">
             <LangSwitch />
             <Link
-              to="/en"
+              to="/$lang" params={{ lang: "en" }}
               className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60 hover:text-foreground"
             >
               ← exit
