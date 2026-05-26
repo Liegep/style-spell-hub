@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import heroImg from "@/assets/hero-avatar.jpg";
+import heroImg from "@/assets/hero-marie.png";
 import { useT } from "@/i18n/dict";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
