@@ -9,8 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AppRouteImport } from './routes/app'
 import { Route as LangRouteImport } from './routes/$lang'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as LangIndexRouteImport } from './routes/$lang.index'
 import { Route as LangShopInfoRouteImport } from './routes/$lang.shop-info'
 import { Route as LangReleasesRouteImport } from './routes/$lang.releases'
@@ -19,6 +21,11 @@ import { Route as LangLoginRouteImport } from './routes/$lang.login'
 import { Route as LangApplyRouteImport } from './routes/$lang.apply'
 import { Route as LangAboutRouteImport } from './routes/$lang.about'
 
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LangRoute = LangRouteImport.update({
   id: '/$lang',
   path: '/$lang',
@@ -28,6 +35,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
 } as any)
 const LangIndexRoute = LangIndexRouteImport.update({
   id: '/',
@@ -68,6 +80,7 @@ const LangAboutRoute = LangAboutRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$lang': typeof LangRouteWithChildren
+  '/app': typeof AppRouteWithChildren
   '/$lang/about': typeof LangAboutRoute
   '/$lang/apply': typeof LangApplyRoute
   '/$lang/login': typeof LangLoginRoute
@@ -75,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/$lang/releases': typeof LangReleasesRoute
   '/$lang/shop-info': typeof LangShopInfoRoute
   '/$lang/': typeof LangIndexRoute
+  '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -85,11 +99,13 @@ export interface FileRoutesByTo {
   '/$lang/releases': typeof LangReleasesRoute
   '/$lang/shop-info': typeof LangShopInfoRoute
   '/$lang': typeof LangIndexRoute
+  '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$lang': typeof LangRouteWithChildren
+  '/app': typeof AppRouteWithChildren
   '/$lang/about': typeof LangAboutRoute
   '/$lang/apply': typeof LangApplyRoute
   '/$lang/login': typeof LangLoginRoute
@@ -97,12 +113,14 @@ export interface FileRoutesById {
   '/$lang/releases': typeof LangReleasesRoute
   '/$lang/shop-info': typeof LangShopInfoRoute
   '/$lang/': typeof LangIndexRoute
+  '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/$lang'
+    | '/app'
     | '/$lang/about'
     | '/$lang/apply'
     | '/$lang/login'
@@ -110,6 +128,7 @@ export interface FileRouteTypes {
     | '/$lang/releases'
     | '/$lang/shop-info'
     | '/$lang/'
+    | '/app/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -120,10 +139,12 @@ export interface FileRouteTypes {
     | '/$lang/releases'
     | '/$lang/shop-info'
     | '/$lang'
+    | '/app'
   id:
     | '__root__'
     | '/'
     | '/$lang'
+    | '/app'
     | '/$lang/about'
     | '/$lang/apply'
     | '/$lang/login'
@@ -131,15 +152,24 @@ export interface FileRouteTypes {
     | '/$lang/releases'
     | '/$lang/shop-info'
     | '/$lang/'
+    | '/app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LangRoute: typeof LangRouteWithChildren
+  AppRoute: typeof AppRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$lang': {
       id: '/$lang'
       path: '/$lang'
@@ -153,6 +183,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
     }
     '/$lang/': {
       id: '/$lang/'
@@ -228,9 +265,20 @@ const LangRouteChildren: LangRouteChildren = {
 
 const LangRouteWithChildren = LangRoute._addFileChildren(LangRouteChildren)
 
+interface AppRouteChildren {
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LangRoute: LangRouteWithChildren,
+  AppRoute: AppRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
