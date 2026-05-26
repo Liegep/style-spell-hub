@@ -71,9 +71,13 @@ function AppLayout() {
     { to: "/app/super-admin", label: "Super Admin",  sub: "Nº 03" },
   ];
 
-  const isSuper = loc.pathname.startsWith("/app/super-admin");
-  const isAdmin = loc.pathname.startsWith("/app/admin");
-  const groups: NavGroup[] = isSuper ? SUPER_ADMIN_GROUPS : isAdmin ? ADMIN_GROUPS : [];
+  const isSuper   = loc.pathname.startsWith("/app/super-admin");
+  const isAdmin   = loc.pathname.startsWith("/app/admin");
+  const isBlogger = loc.pathname.startsWith("/app/blogger");
+  const groups: NavGroup[] =
+    isSuper ? SUPER_ADMIN_GROUPS :
+    isAdmin ? ADMIN_GROUPS :
+    isBlogger ? BLOGGER_GROUPS : [];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
