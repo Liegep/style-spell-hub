@@ -27,26 +27,37 @@ function Landing() {
             </h1>
           </div>
 
-          {/* image */}
-          <div className="relative z-10 mx-auto flex max-w-3xl justify-center pt-[10vw]">
-            <img
-              src={heroImg}
-              alt="Love Potion avatar"
-              width={1080}
-              height={1600}
-              className="w-[55vw] max-w-[640px] object-contain drop-shadow-[0_30px_60px_rgba(0,0,0,0.15)]"
-            />
-          </div>
-
-          {/* coral wash overlay */}
+          {/* pink halo behind the figure */}
           <div
-            className="pointer-events-none absolute z-20 left-1/2 top-[55%] h-[40vw] w-[36vw] -translate-x-[8%] rounded-full mix-blend-multiply"
+            className="pointer-events-none absolute left-1/2 top-[14%] z-[5] h-[55vw] w-[55vw] max-h-[820px] max-w-[820px] -translate-x-1/2 rounded-full blur-3xl"
             style={{
               background:
-                "radial-gradient(closest-side, var(--brand-coral) 30%, transparent 75%)",
+                "radial-gradient(closest-side, var(--brand-rose) 0%, var(--brand-coral) 35%, transparent 70%)",
               opacity: 0.55,
             }}
           />
+
+          {/* image */}
+          <div className="relative z-10 mx-auto flex max-w-3xl justify-center pt-[8vw]">
+            <img
+              src={heroImg}
+              alt="Love Potion avatar"
+              width={1536}
+              height={1920}
+              className="w-[58vw] max-w-[680px] object-contain drop-shadow-[0_40px_70px_rgba(219,24,97,0.35)] [filter:drop-shadow(0_8px_24px_rgba(0,0,0,0.25))_drop-shadow(0_0_60px_rgba(241,122,169,0.45))]"
+            />
+          </div>
+
+          {/* magenta wash overlay */}
+          <div
+            className="pointer-events-none absolute z-20 left-1/2 top-[60%] h-[36vw] w-[34vw] -translate-x-1/2 rounded-full mix-blend-multiply"
+            style={{
+              background:
+                "radial-gradient(closest-side, var(--brand-magenta) 20%, transparent 75%)",
+              opacity: 0.25,
+            }}
+          />
+
 
           {/* vertical labels */}
           <div className="absolute left-3 top-32 z-30 hidden md:block">
