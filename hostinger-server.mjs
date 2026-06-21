@@ -48,12 +48,20 @@ function safeStaticPath(urlPath) {
 }
 
 async function serveStaticFile(request, response, pathname) {
-  const filePath = safeStaticPath(pathname);
+  let filePath = safeStaticPath(pathname);
   if (!filePath) return false;
 
   try {
-    const fileStats = await stat(filePath);
-    if (!fileStats.isFile()) return false;
+    let fileStats = await stat(filePath);
+    if (fileStats.isDirectory()) {
+      const indexPath = path.join(filePath, "index.html");
+      const indexStats = await stat(indexPath);
+      if (!indexStats.isFile()) return false;
+      filePath = indexPath;
+      fileStats = indexStats;
+    } else if (!fileStats.isFile()) {
+      return false;
+    }
 
     const contentType = mimeTypes.get(path.extname(filePath).toLowerCase()) ?? "application/octet-stream";
     response.writeHead(200, {
@@ -93,7 +101,7 @@ async function serveHealth(response) {
     has_server_entry: await pathExists(path.join(__dirname, "dist", "server", "server.js")),
     has_supabase_url: Boolean(process.env.VITE_SUPABASE_URL),
     has_supabase_key: Boolean(process.env.VITE_SUPABASE_ANON_KEY),
-    hostinger_render_mode: "client_shell",
+    hostinger_render_mode: "static_pages",
   };
 
   response.writeHead(200, {

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "vite build && node scripts/generate-static-pages.mjs",
     "build:dev": "vite build --mode development",
     "start": "node hostinger-server.mjs",
     "check:i18n": "node scripts/check-i18n.mjs",
