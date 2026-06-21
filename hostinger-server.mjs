@@ -72,6 +72,35 @@ async function serveStaticFile(request, response, pathname) {
   }
 }
 
+async function pathExists(filePath) {
+  try {
+    await stat(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function serveHealth(response) {
+  const payload = {
+    ok: true,
+    cwd: process.cwd(),
+    server_dir: __dirname,
+    node: process.version,
+    has_dist_client: await pathExists(clientDir),
+    has_dist_server: await pathExists(path.join(__dirname, "dist", "server")),
+    has_server_entry: await pathExists(path.join(__dirname, "dist", "server", "server.js")),
+    has_supabase_url: Boolean(process.env.VITE_SUPABASE_URL),
+    has_supabase_key: Boolean(process.env.VITE_SUPABASE_ANON_KEY),
+  };
+
+  response.writeHead(200, {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
+  });
+  response.end(JSON.stringify(payload, null, 2));
+}
+
 async function sendFetchResponse(response, fetchResponse) {
   response.writeHead(
     fetchResponse.status,
@@ -113,6 +142,11 @@ function buildRequest(nodeRequest) {
 const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
+
+    if (url.pathname === "/__health") {
+      await serveHealth(response);
+      return;
+    }
 
     if (await serveStaticFile(request, response, url.pathname)) return;
 
