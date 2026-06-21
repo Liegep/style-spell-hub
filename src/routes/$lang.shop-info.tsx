@@ -2,17 +2,29 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useT } from "@/i18n/dict";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
+import { useSiteContent } from "@/hooks/use-site-content";
 
 export const Route = createFileRoute("/$lang/shop-info")({
   component: ShopPage,
 });
 
 function ShopPage() {
-  const { t } = useT();
+  const { t, lang } = useT();
+  const content = useSiteContent(lang, {
+    shop_title: t.shop.title,
+    shop_copy: t.shop.copy,
+    shop_mainstore: t.shop.mainstore,
+    shop_mainstore_val: t.shop.mainstoreVal,
+    shop_mp: t.shop.mp,
+    shop_mp_val: t.shop.mpVal,
+    shop_group: t.shop.group,
+    shop_group_val: t.shop.groupVal,
+    shop_handwritten: lang === "es" ? "prueba el demo primero" : "try the demo first",
+  });
   const rows = [
-    { k: t.shop.mainstore, v: t.shop.mainstoreVal },
-    { k: t.shop.mp, v: t.shop.mpVal },
-    { k: t.shop.group, v: t.shop.groupVal },
+    { k: content.shop_mainstore, v: content.shop_mainstore_val },
+    { k: content.shop_mp, v: content.shop_mp_val },
+    { k: content.shop_group, v: content.shop_group_val },
   ];
   return (
     <main className="px-6 pt-16 md:px-12">
@@ -21,10 +33,10 @@ function ShopPage() {
           INFO · Nº 02
         </div>
         <h1 className="mt-3 font-display text-6xl leading-[0.9] md:text-[7rem]">
-          {t.shop.title}
+          {content.shop_title}
         </h1>
 
-        <p className="mt-8 max-w-xl text-lg text-foreground/80">{t.shop.copy}</p>
+        <p className="mt-8 max-w-xl text-lg text-foreground/80">{content.shop_copy}</p>
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {rows.map((r, i) => (
@@ -39,7 +51,7 @@ function ShopPage() {
         </div>
 
         <div className="mt-16 flex justify-end">
-          <HandwrittenNote withArrow>try the demo first</HandwrittenNote>
+          <HandwrittenNote withArrow>{content.shop_handwritten}</HandwrittenNote>
         </div>
       </div>
     </main>

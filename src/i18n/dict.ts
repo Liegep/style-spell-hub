@@ -1,4 +1,4 @@
-import { useParams } from "@tanstack/react-router";
+import { useLocation, useParams } from "@tanstack/react-router";
 
 export type Lang = "en" | "es";
 
@@ -13,6 +13,7 @@ export const dict = {
       releases: "Releases",
       shop: "Shop info",
       newsletter: "Newsletter",
+      links: "Links",
       apply: "Apply",
       login: "Login",
     },
@@ -26,7 +27,7 @@ export const dict = {
       ctaApply: "Apply to blog",
       scroll: "Scroll",
     },
-    socials: { flickr: "Flickr", mp: "SL Marketplace", fb: "Facebook" },
+    socials: { flickr: "Flickr", mp: "SL Marketplace", fb: "Facebook", primfeed: "Primfeed" },
     about: {
       title: "About the house",
       kicker: "Manifesto",
@@ -80,15 +81,22 @@ export const dict = {
     },
     login: {
       title: "Step inside",
+      access: "Secure atelier access",
       kicker: "Select your role",
       blogger: "Blogger",
       admin: "Admin",
       super: "Super Admin",
       mail: "Email",
+      identifier: "Avatar name (or email)",
       pass: "Password",
       remember: "Remember me",
       cta: "Enter the house",
       forgot: "Forgot password?",
+      loading: "Opening...",
+      handwritten: "welcome",
+      missingProfile: "Your login exists, but your profile row was not found.",
+      leftAccount: "This blogger account is no longer active.",
+      failed: "Login failed. Please try again.",
     },
     app: {
       logout: "Sign out",
@@ -105,6 +113,7 @@ export const dict = {
       releases: "Lanzamientos",
       shop: "Cómo comprar",
       newsletter: "Newsletter",
+      links: "Links",
       apply: "Aplicar",
       login: "Entrar",
     },
@@ -118,7 +127,7 @@ export const dict = {
       ctaApply: "Aplicar para bloguear",
       scroll: "Desliza",
     },
-    socials: { flickr: "Flickr", mp: "Marketplace SL", fb: "Facebook" },
+    socials: { flickr: "Flickr", mp: "Marketplace SL", fb: "Facebook", primfeed: "Primfeed" },
     about: {
       title: "Sobre la casa",
       kicker: "Manifiesto",
@@ -172,15 +181,22 @@ export const dict = {
     },
     login: {
       title: "Entra a la casa",
+      access: "Acceso seguro al atelier",
       kicker: "Elige tu rol",
       blogger: "Blogger",
       admin: "Admin",
       super: "Super Admin",
       mail: "Email",
+      identifier: "Nombre del avatar (o email)",
       pass: "Contraseña",
       remember: "Recuérdame",
       cta: "Entrar",
       forgot: "¿Olvidaste tu contraseña?",
+      loading: "Abriendo...",
+      handwritten: "bienvenida",
+      missingProfile: "Tu login existe, pero no encontramos tu perfil.",
+      leftAccount: "Esta cuenta de blogger ya no está activa.",
+      failed: "No se pudo entrar. Inténtalo otra vez.",
     },
     app: {
       logout: "Cerrar sesión",
@@ -191,7 +207,13 @@ export const dict = {
 
 export function useLang(): Lang {
   const params = useParams({ strict: false }) as { lang?: string };
-  return params.lang === "es" ? "es" : "en";
+  const loc = useLocation({ strict: false });
+  const search = (loc.search ?? {}) as { uiLang?: string };
+
+  if (params.lang === "es") return "es";
+  if (params.lang === "en") return "en";
+  if (search.uiLang === "es") return "es";
+  return "en";
 }
 
 export function useT() {

@@ -1,35 +1,97 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import loginImg from "@/assets/login-editorial.jpg";
 import { useT } from "@/i18n/dict";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
-import { LangSwitch } from "@/components/brand/LangSwitch";
-import { cn } from "@/lib/utils";
+import { getCurrentProfile, getRoleHome, signInWithIdentifier } from "@/integrations/supabase/auth";
+import { supabase } from "@/integrations/supabase/client";
+import { useSiteAssetUrl } from "@/hooks/use-site-asset";
+import type { AuthProfile } from "@/integrations/supabase/auth";
 
 export const Route = createFileRoute("/$lang/login")({
   component: LoginPage,
 });
 
-type Role = "blogger" | "admin" | "super";
-
 function LoginPage() {
   const { t, lang } = useT();
-  const [role, setRole] = useState<Role>("blogger");
   const navigate = useNavigate();
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [message, setMessage] = useState("");
+  const loginAssetUrl = useSiteAssetUrl("login_editorial", loginImg);
 
-  const target = role === "super" ? "/app/super-admin" : role === "admin" ? "/app/admin" : "/app/blogger";
+  async function enterAppWithProfileLanguage(profile: AuthProfile) {
+    const uiLang = profile.language_preference === "es" ? "es" : "en";
+    window.localStorage.setItem("love-potion-ui-lang", uiLang);
+    await navigate({
+      to: getRoleHome(profile.role),
+      search: { uiLang },
+    } as never);
+  }
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function bounceIfAlreadyLogged() {
+      const { data, error } = await supabase.auth.getSession();
+      if (!mounted || error || !data.session) return;
+
+      const profile = await getCurrentProfile(data.session.user.id);
+      if (!mounted) return;
+
+      if (profile) {
+        await enterAppWithProfileLanguage(profile);
+      } else {
+        await navigate({ to: "/app/atelier" });
+      }
+    }
+
+    void bounceIfAlreadyLogged();
+    return () => {
+      mounted = false;
+    };
+  }, [navigate]);
+
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus("loading");
+    setMessage("");
+
+    try {
+      const { profile } = await signInWithIdentifier(identifier, password);
+
+      if (!profile) {
+        throw new Error(t.login.missingProfile);
+      }
+
+      if (profile.account_status === "left") {
+        throw new Error(t.login.leftAccount);
+      }
+
+      await enterAppWithProfileLanguage(profile);
+    } catch (error) {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : t.login.failed);
+    }
+  }
 
   return (
     <main className="grid min-h-[calc(100vh-100px)] grid-cols-1 md:grid-cols-2">
       {/* editorial */}
       <div className="relative hidden overflow-hidden md:block">
-        <img
-          src={loginImg}
-          alt="Love Potion"
-          loading="lazy"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
+        {loginAssetUrl ? (
+          <img
+            src={loginAssetUrl}
+            alt="Love Potion"
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-[var(--brand-pink)]/50" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-tr from-[var(--brand-magenta)]/30 via-transparent to-transparent" />
         <div className="absolute left-6 top-6">
           <span className="font-mono text-[10px] uppercase tracking-[0.4em] text-white/80">
@@ -46,46 +108,25 @@ function LoginPage() {
 
       {/* form */}
       <div className="relative flex items-center justify-center px-6 py-12 md:px-12">
-        <div className="absolute right-6 top-6">
-          <LangSwitch />
-        </div>
-
         <GlassCard tone="pink" className="w-full max-w-md p-8 md:p-10">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-            {t.login.kicker}
+            {t.login.access}
           </div>
           <h1 className="mt-2 font-display text-5xl leading-[0.95]">{t.login.title}</h1>
 
-          <div className="mt-6 grid grid-cols-3 gap-2">
-            {([
-              { id: "blogger", label: t.login.blogger },
-              { id: "admin", label: t.login.admin },
-              { id: "super", label: t.login.super },
-            ] as { id: Role; label: string }[]).map((r) => (
-              <button
-                key={r.id}
-                onClick={() => setRole(r.id)}
-                className={cn(
-                  "rounded-xl border px-2 py-3 font-mono text-[10px] uppercase tracking-[0.2em] transition",
-                  role === r.id
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-foreground/30 hover:border-foreground",
-                )}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-6 space-y-4">
+          <form onSubmit={onSubmit} className="mt-6 space-y-4">
             <label className="block">
               <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">
-                {t.login.mail}
+                {t.login.identifier}
               </span>
               <input
-                type="email"
+                type="text"
+                value={identifier}
+                onChange={(event) => setIdentifier(event.target.value)}
                 className="mt-2 w-full rounded-full border border-foreground/30 bg-background/80 px-5 py-3 text-sm focus:border-[var(--brand-magenta)] focus:outline-none"
-                placeholder="you@email.com"
+                placeholder="Marie Whitfield"
+                autoComplete="username"
+                required
               />
             </label>
             <label className="block">
@@ -94,28 +135,44 @@ function LoginPage() {
               </span>
               <input
                 type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
                 className="mt-2 w-full rounded-full border border-foreground/30 bg-background/80 px-5 py-3 text-sm focus:border-[var(--brand-magenta)] focus:outline-none"
                 placeholder="••••••••"
+                autoComplete="current-password"
+                required
               />
             </label>
-          </div>
 
-          <div className="mt-4 flex items-center justify-between text-xs">
-            <label className="flex items-center gap-2 text-foreground/70">
-              <input type="checkbox" className="accent-[var(--brand-magenta)]" />
+            <div className="flex items-center justify-between text-xs">
+              <label className="flex items-center gap-2 text-foreground/70">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(event) => setRemember(event.target.checked)}
+                className="accent-[var(--brand-magenta)]"
+              />
               {t.login.remember}
-            </label>
-            <a href="#" className="text-[var(--brand-magenta)] hover:underline">
-              {t.login.forgot}
-            </a>
-          </div>
+              </label>
+              <a href="#" className="text-[var(--brand-magenta)] hover:underline">
+                {t.login.forgot}
+              </a>
+            </div>
 
-          <button
-            onClick={() => navigate({ to: target })}
-            className="mt-6 w-full rounded-full bg-foreground px-6 py-3 font-mono text-[11px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)]"
-          >
-            {t.login.cta} →
-          </button>
+            {status === "error" ? (
+              <p className="rounded-2xl border border-[var(--brand-magenta)]/30 bg-[var(--brand-pink)]/50 px-4 py-3 text-xs text-[var(--brand-magenta)]">
+                {message}
+              </p>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={status === "loading"}
+              className="w-full rounded-full bg-foreground px-6 py-3 font-mono text-[11px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)] disabled:cursor-wait disabled:opacity-60"
+            >
+              {status === "loading" ? t.login.loading : `${t.login.cta} →`}
+            </button>
+          </form>
 
           <div className="mt-6 flex items-center justify-between">
             <Link
@@ -125,7 +182,7 @@ function LoginPage() {
             >
               ← {t.nav.apply}
             </Link>
-            <HandwrittenNote>welcome</HandwrittenNote>
+            <HandwrittenNote>{t.login.handwritten}</HandwrittenNote>
           </div>
         </GlassCard>
       </div>

@@ -1,0 +1,2 @@
+[functions.register-delivery-server]
+verify_jwt = false

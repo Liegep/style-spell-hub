@@ -1,4 +1,5 @@
 import { useT } from "@/i18n/dict";
+import { publicSocialLinks } from "@/lib/public-links";
 
 export function PublicFooter() {
   const { t } = useT();
@@ -14,11 +15,13 @@ export function PublicFooter() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-4 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-          <a href="#" className="hover:text-foreground">{t.socials.flickr}</a>
+          <a href={publicSocialLinks.flickr} target="_blank" rel="noreferrer" className="hover:text-foreground">{t.socials.flickr}</a>
           <span>·</span>
-          <a href="#" className="hover:text-foreground">{t.socials.mp}</a>
+          <a href={publicSocialLinks.primfeed} target="_blank" rel="noreferrer" className="hover:text-foreground">{t.socials.primfeed}</a>
           <span>·</span>
-          <a href="#" className="hover:text-foreground">{t.socials.fb}</a>
+          <a href={publicSocialLinks.marketplace} target="_blank" rel="noreferrer" className="hover:text-foreground">{t.socials.mp}</a>
+          <span>·</span>
+          <a href={publicSocialLinks.facebook} target="_blank" rel="noreferrer" className="hover:text-foreground">{t.socials.fb}</a>
         </div>
       </div>
       <div className="mt-10 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/40">

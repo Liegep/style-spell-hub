@@ -9,6 +9,17 @@ export function LangSwitch({ className }: { className?: string }) {
 
   const switchTo = (target: "en" | "es") => {
     const current = loc.pathname;
+    window.localStorage.setItem("love-potion-ui-lang", target);
+
+    if (current.startsWith("/app")) {
+      navigate({
+        to: current,
+        search: (prev) => ({ ...(prev as object), uiLang: target }),
+        replace: true,
+      } as never);
+      return;
+    }
+
     // Replace the lang segment if present
     const replaced = current.replace(/^\/(en|es)(\/|$)/, `/${target}$2`);
     const next = replaced === current && !/^\/(en|es)/.test(current)

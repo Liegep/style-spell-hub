@@ -6,7 +6,7 @@ export function Tabs<T extends string>({
   value,
   onChange,
 }: {
-  tabs: { id: T; label: string; sub?: string }[];
+  tabs: { id: T; label: string; sub?: string; badge?: number }[];
   value: T;
   onChange: (v: T) => void;
 }) {
@@ -27,6 +27,18 @@ export function Tabs<T extends string>({
           >
             {tab.sub && <span className="mr-2 opacity-60">{tab.sub}</span>}
             {tab.label}
+            {tab.badge ? (
+              <span
+                className={cn(
+                  "ml-2 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[9px] tracking-normal",
+                  active
+                    ? "bg-[var(--brand-magenta)] text-white"
+                    : "bg-[var(--brand-magenta)] text-white",
+                )}
+              >
+                {tab.badge > 99 ? "99+" : tab.badge}
+              </span>
+            ) : null}
           </button>
         );
       })}

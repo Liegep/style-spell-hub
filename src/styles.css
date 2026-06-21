@@ -211,4 +211,17 @@
   .editorial-shadow {
     text-shadow: 0 1px 0 color-mix(in oklab, white 50%, transparent);
   }
+
+  @keyframes tour-soft-bounce {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+
+  .tour-soft-bounce {
+    animation: tour-soft-bounce 2.8s ease-in-out infinite;
+  }
 }

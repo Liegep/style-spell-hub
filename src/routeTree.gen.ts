@@ -15,12 +15,21 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as LangIndexRouteImport } from './routes/$lang.index'
 import { Route as AppSuperAdminRouteImport } from './routes/app.super-admin'
+import { Route as AppProfileRouteImport } from './routes/app.profile'
+import { Route as AppManagersRouteImport } from './routes/app.managers'
+import { Route as AppFilesLinksRouteImport } from './routes/app.files-links'
+import { Route as AppContentStudioRouteImport } from './routes/app.content-studio'
+import { Route as AppBloggersRouteImport } from './routes/app.bloggers'
 import { Route as AppBloggerRouteImport } from './routes/app.blogger'
+import { Route as AppAuditLogRouteImport } from './routes/app.audit-log'
+import { Route as AppAtelierRouteImport } from './routes/app.atelier'
+import { Route as AppApplicationsRouteImport } from './routes/app.applications'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as LangShopInfoRouteImport } from './routes/$lang.shop-info'
 import { Route as LangReleasesRouteImport } from './routes/$lang.releases'
 import { Route as LangNewsletterRouteImport } from './routes/$lang.newsletter'
 import { Route as LangLoginRouteImport } from './routes/$lang.login'
+import { Route as LangLinksRouteImport } from './routes/$lang.links'
 import { Route as LangApplyRouteImport } from './routes/$lang.apply'
 import { Route as LangAboutRouteImport } from './routes/$lang.about'
 
@@ -54,9 +63,49 @@ const AppSuperAdminRoute = AppSuperAdminRouteImport.update({
   path: '/super-admin',
   getParentRoute: () => AppRoute,
 } as any)
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppManagersRoute = AppManagersRouteImport.update({
+  id: '/managers',
+  path: '/managers',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFilesLinksRoute = AppFilesLinksRouteImport.update({
+  id: '/files-links',
+  path: '/files-links',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppContentStudioRoute = AppContentStudioRouteImport.update({
+  id: '/content-studio',
+  path: '/content-studio',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBloggersRoute = AppBloggersRouteImport.update({
+  id: '/bloggers',
+  path: '/bloggers',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppBloggerRoute = AppBloggerRouteImport.update({
   id: '/blogger',
   path: '/blogger',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAuditLogRoute = AppAuditLogRouteImport.update({
+  id: '/audit-log',
+  path: '/audit-log',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAtelierRoute = AppAtelierRouteImport.update({
+  id: '/atelier',
+  path: '/atelier',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppApplicationsRoute = AppApplicationsRouteImport.update({
+  id: '/applications',
+  path: '/applications',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAdminRoute = AppAdminRouteImport.update({
@@ -84,6 +133,11 @@ const LangLoginRoute = LangLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => LangRoute,
 } as any)
+const LangLinksRoute = LangLinksRouteImport.update({
+  id: '/links',
+  path: '/links',
+  getParentRoute: () => LangRoute,
+} as any)
 const LangApplyRoute = LangApplyRouteImport.update({
   id: '/apply',
   path: '/apply',
@@ -101,12 +155,21 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/$lang/about': typeof LangAboutRoute
   '/$lang/apply': typeof LangApplyRoute
+  '/$lang/links': typeof LangLinksRoute
   '/$lang/login': typeof LangLoginRoute
   '/$lang/newsletter': typeof LangNewsletterRoute
   '/$lang/releases': typeof LangReleasesRoute
   '/$lang/shop-info': typeof LangShopInfoRoute
   '/app/admin': typeof AppAdminRoute
+  '/app/applications': typeof AppApplicationsRoute
+  '/app/atelier': typeof AppAtelierRoute
+  '/app/audit-log': typeof AppAuditLogRoute
   '/app/blogger': typeof AppBloggerRoute
+  '/app/bloggers': typeof AppBloggersRoute
+  '/app/content-studio': typeof AppContentStudioRoute
+  '/app/files-links': typeof AppFilesLinksRoute
+  '/app/managers': typeof AppManagersRoute
+  '/app/profile': typeof AppProfileRoute
   '/app/super-admin': typeof AppSuperAdminRoute
   '/$lang/': typeof LangIndexRoute
   '/app/': typeof AppIndexRoute
@@ -115,12 +178,21 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$lang/about': typeof LangAboutRoute
   '/$lang/apply': typeof LangApplyRoute
+  '/$lang/links': typeof LangLinksRoute
   '/$lang/login': typeof LangLoginRoute
   '/$lang/newsletter': typeof LangNewsletterRoute
   '/$lang/releases': typeof LangReleasesRoute
   '/$lang/shop-info': typeof LangShopInfoRoute
   '/app/admin': typeof AppAdminRoute
+  '/app/applications': typeof AppApplicationsRoute
+  '/app/atelier': typeof AppAtelierRoute
+  '/app/audit-log': typeof AppAuditLogRoute
   '/app/blogger': typeof AppBloggerRoute
+  '/app/bloggers': typeof AppBloggersRoute
+  '/app/content-studio': typeof AppContentStudioRoute
+  '/app/files-links': typeof AppFilesLinksRoute
+  '/app/managers': typeof AppManagersRoute
+  '/app/profile': typeof AppProfileRoute
   '/app/super-admin': typeof AppSuperAdminRoute
   '/$lang': typeof LangIndexRoute
   '/app': typeof AppIndexRoute
@@ -132,12 +204,21 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/$lang/about': typeof LangAboutRoute
   '/$lang/apply': typeof LangApplyRoute
+  '/$lang/links': typeof LangLinksRoute
   '/$lang/login': typeof LangLoginRoute
   '/$lang/newsletter': typeof LangNewsletterRoute
   '/$lang/releases': typeof LangReleasesRoute
   '/$lang/shop-info': typeof LangShopInfoRoute
   '/app/admin': typeof AppAdminRoute
+  '/app/applications': typeof AppApplicationsRoute
+  '/app/atelier': typeof AppAtelierRoute
+  '/app/audit-log': typeof AppAuditLogRoute
   '/app/blogger': typeof AppBloggerRoute
+  '/app/bloggers': typeof AppBloggersRoute
+  '/app/content-studio': typeof AppContentStudioRoute
+  '/app/files-links': typeof AppFilesLinksRoute
+  '/app/managers': typeof AppManagersRoute
+  '/app/profile': typeof AppProfileRoute
   '/app/super-admin': typeof AppSuperAdminRoute
   '/$lang/': typeof LangIndexRoute
   '/app/': typeof AppIndexRoute
@@ -150,12 +231,21 @@ export interface FileRouteTypes {
     | '/app'
     | '/$lang/about'
     | '/$lang/apply'
+    | '/$lang/links'
     | '/$lang/login'
     | '/$lang/newsletter'
     | '/$lang/releases'
     | '/$lang/shop-info'
     | '/app/admin'
+    | '/app/applications'
+    | '/app/atelier'
+    | '/app/audit-log'
     | '/app/blogger'
+    | '/app/bloggers'
+    | '/app/content-studio'
+    | '/app/files-links'
+    | '/app/managers'
+    | '/app/profile'
     | '/app/super-admin'
     | '/$lang/'
     | '/app/'
@@ -164,12 +254,21 @@ export interface FileRouteTypes {
     | '/'
     | '/$lang/about'
     | '/$lang/apply'
+    | '/$lang/links'
     | '/$lang/login'
     | '/$lang/newsletter'
     | '/$lang/releases'
     | '/$lang/shop-info'
     | '/app/admin'
+    | '/app/applications'
+    | '/app/atelier'
+    | '/app/audit-log'
     | '/app/blogger'
+    | '/app/bloggers'
+    | '/app/content-studio'
+    | '/app/files-links'
+    | '/app/managers'
+    | '/app/profile'
     | '/app/super-admin'
     | '/$lang'
     | '/app'
@@ -180,12 +279,21 @@ export interface FileRouteTypes {
     | '/app'
     | '/$lang/about'
     | '/$lang/apply'
+    | '/$lang/links'
     | '/$lang/login'
     | '/$lang/newsletter'
     | '/$lang/releases'
     | '/$lang/shop-info'
     | '/app/admin'
+    | '/app/applications'
+    | '/app/atelier'
+    | '/app/audit-log'
     | '/app/blogger'
+    | '/app/bloggers'
+    | '/app/content-studio'
+    | '/app/files-links'
+    | '/app/managers'
+    | '/app/profile'
     | '/app/super-admin'
     | '/$lang/'
     | '/app/'
@@ -241,11 +349,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSuperAdminRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/profile': {
+      id: '/app/profile'
+      path: '/profile'
+      fullPath: '/app/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/managers': {
+      id: '/app/managers'
+      path: '/managers'
+      fullPath: '/app/managers'
+      preLoaderRoute: typeof AppManagersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/files-links': {
+      id: '/app/files-links'
+      path: '/files-links'
+      fullPath: '/app/files-links'
+      preLoaderRoute: typeof AppFilesLinksRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/content-studio': {
+      id: '/app/content-studio'
+      path: '/content-studio'
+      fullPath: '/app/content-studio'
+      preLoaderRoute: typeof AppContentStudioRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/bloggers': {
+      id: '/app/bloggers'
+      path: '/bloggers'
+      fullPath: '/app/bloggers'
+      preLoaderRoute: typeof AppBloggersRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/blogger': {
       id: '/app/blogger'
       path: '/blogger'
       fullPath: '/app/blogger'
       preLoaderRoute: typeof AppBloggerRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/audit-log': {
+      id: '/app/audit-log'
+      path: '/audit-log'
+      fullPath: '/app/audit-log'
+      preLoaderRoute: typeof AppAuditLogRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/atelier': {
+      id: '/app/atelier'
+      path: '/atelier'
+      fullPath: '/app/atelier'
+      preLoaderRoute: typeof AppAtelierRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/applications': {
+      id: '/app/applications'
+      path: '/applications'
+      fullPath: '/app/applications'
+      preLoaderRoute: typeof AppApplicationsRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/admin': {
@@ -283,6 +447,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LangLoginRouteImport
       parentRoute: typeof LangRoute
     }
+    '/$lang/links': {
+      id: '/$lang/links'
+      path: '/links'
+      fullPath: '/$lang/links'
+      preLoaderRoute: typeof LangLinksRouteImport
+      parentRoute: typeof LangRoute
+    }
     '/$lang/apply': {
       id: '/$lang/apply'
       path: '/apply'
@@ -303,6 +474,7 @@ declare module '@tanstack/react-router' {
 interface LangRouteChildren {
   LangAboutRoute: typeof LangAboutRoute
   LangApplyRoute: typeof LangApplyRoute
+  LangLinksRoute: typeof LangLinksRoute
   LangLoginRoute: typeof LangLoginRoute
   LangNewsletterRoute: typeof LangNewsletterRoute
   LangReleasesRoute: typeof LangReleasesRoute
@@ -313,6 +485,7 @@ interface LangRouteChildren {
 const LangRouteChildren: LangRouteChildren = {
   LangAboutRoute: LangAboutRoute,
   LangApplyRoute: LangApplyRoute,
+  LangLinksRoute: LangLinksRoute,
   LangLoginRoute: LangLoginRoute,
   LangNewsletterRoute: LangNewsletterRoute,
   LangReleasesRoute: LangReleasesRoute,
@@ -324,14 +497,30 @@ const LangRouteWithChildren = LangRoute._addFileChildren(LangRouteChildren)
 
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
+  AppApplicationsRoute: typeof AppApplicationsRoute
+  AppAtelierRoute: typeof AppAtelierRoute
+  AppAuditLogRoute: typeof AppAuditLogRoute
   AppBloggerRoute: typeof AppBloggerRoute
+  AppBloggersRoute: typeof AppBloggersRoute
+  AppContentStudioRoute: typeof AppContentStudioRoute
+  AppFilesLinksRoute: typeof AppFilesLinksRoute
+  AppManagersRoute: typeof AppManagersRoute
+  AppProfileRoute: typeof AppProfileRoute
   AppSuperAdminRoute: typeof AppSuperAdminRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRoute,
+  AppApplicationsRoute: AppApplicationsRoute,
+  AppAtelierRoute: AppAtelierRoute,
+  AppAuditLogRoute: AppAuditLogRoute,
   AppBloggerRoute: AppBloggerRoute,
+  AppBloggersRoute: AppBloggersRoute,
+  AppContentStudioRoute: AppContentStudioRoute,
+  AppFilesLinksRoute: AppFilesLinksRoute,
+  AppManagersRoute: AppManagersRoute,
+  AppProfileRoute: AppProfileRoute,
   AppSuperAdminRoute: AppSuperAdminRoute,
   AppIndexRoute: AppIndexRoute,
 }
@@ -346,3 +535,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
