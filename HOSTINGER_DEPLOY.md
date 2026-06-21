@@ -6,7 +6,9 @@ Use a opcao **Node.js** da Hostinger.
 
 - Build command: `npm run build`
 - Start command: `npm start`
-- Node version: `20` ou mais recente
+- Node version: `24.x` recomendado. Minimo: `22.12.0`
+
+Importante: nao use Node `20.x` na Hostinger. O build atual precisa de Node `22.12.0` ou mais novo para gerar as paginas e carregar as bibliotecas do app.
 
 ## Variaveis
 
