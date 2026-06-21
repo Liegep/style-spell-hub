@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { readFile, stat } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -25,6 +25,7 @@ const mimeTypes = new Map([
 ]);
 
 let serverEntryPromise;
+let shellAssetsPromise;
 
 function getServerEntry() {
   if (!serverEntryPromise) {
@@ -92,6 +93,7 @@ async function serveHealth(response) {
     has_server_entry: await pathExists(path.join(__dirname, "dist", "server", "server.js")),
     has_supabase_url: Boolean(process.env.VITE_SUPABASE_URL),
     has_supabase_key: Boolean(process.env.VITE_SUPABASE_ANON_KEY),
+    hostinger_render_mode: "client_shell",
   };
 
   response.writeHead(200, {
@@ -99,6 +101,92 @@ async function serveHealth(response) {
     "cache-control": "no-store",
   });
   response.end(JSON.stringify(payload, null, 2));
+}
+
+async function getShellAssets() {
+  if (!shellAssetsPromise) {
+    shellAssetsPromise = (async () => {
+      const serverAssetsDir = path.join(__dirname, "dist", "server", "assets");
+      const clientAssetsDir = path.join(clientDir, "assets");
+      const [serverAssets, clientAssets] = await Promise.all([
+        readdir(serverAssetsDir),
+        readdir(clientAssetsDir),
+      ]);
+      const manifestFile = serverAssets.find(
+        (file) => file.startsWith("_tanstack-start-manifest") && file.endsWith(".js"),
+      );
+
+      if (!manifestFile) {
+        throw new Error("Could not find TanStack client manifest.");
+      }
+
+      const manifestUrl = pathToFileURL(path.join(serverAssetsDir, manifestFile)).href;
+      const manifestModule = await import(manifestUrl);
+      const manifest = manifestModule.tsrStartManifest();
+      const rootRoute = manifest.routes.__root__;
+      const scriptSrc = rootRoute.scripts?.[0]?.attrs?.src;
+
+      if (!scriptSrc) {
+        throw new Error("Could not find Love Potion client script.");
+      }
+
+      return {
+        scriptSrc,
+        stylesheetHref: `/assets/${clientAssets.find(
+          (file) => file.startsWith("styles-") && file.endsWith(".css"),
+        )}`,
+        preloads: [...new Set(rootRoute.preloads ?? [])],
+      };
+    })();
+  }
+
+  return shellAssetsPromise;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+async function serveClientShell(request, response) {
+  if (!["GET", "HEAD"].includes(request.method ?? "GET")) return false;
+
+  const { scriptSrc, stylesheetHref, preloads } = await getShellAssets();
+  const preloadTags = preloads
+    .map((href) => `<link rel="modulepreload" href="${escapeHtml(href)}" />`)
+    .join("");
+  const stylesheetTag = stylesheetHref
+    ? `<link rel="stylesheet" href="${escapeHtml(stylesheetHref)}" />`
+    : "";
+
+  const body = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Love Potion - Style that casts a spell</title>
+    <meta name="description" content="Love Potion - a fashion house for Second Life." />
+    ${stylesheetTag}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Hind:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Caveat:wght@400;600;700&display=swap" />
+    ${preloadTags}
+  </head>
+  <body>
+    <script type="module" async src="${escapeHtml(scriptSrc)}"></script>
+  </body>
+</html>`;
+
+  response.writeHead(200, {
+    "content-type": "text/html; charset=utf-8",
+    "cache-control": "no-store",
+  });
+
+  response.end(request.method === "HEAD" ? undefined : body);
+  return true;
 }
 
 async function sendFetchResponse(response, fetchResponse) {
@@ -149,6 +237,14 @@ const server = createServer(async (request, response) => {
     }
 
     if (await serveStaticFile(request, response, url.pathname)) return;
+
+    if (url.pathname === "/") {
+      response.writeHead(307, { location: "/en" });
+      response.end();
+      return;
+    }
+
+    if (await serveClientShell(request, response)) return;
 
     const handler = await getServerEntry();
     const fetchResponse = await handler.fetch(buildRequest(request), {}, {});
