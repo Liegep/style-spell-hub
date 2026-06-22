@@ -36,8 +36,8 @@ function AboutPage() {
           </div>
         </div>
 
-        <div className="mt-16 grid gap-10 md:grid-cols-12">
-          <div className="md:col-span-5">
+        <div className="mt-16 grid items-start gap-10 md:grid-cols-12">
+          <div className="md:col-span-6">
             {aboutAssetUrl ? (
               <img
                 src={aboutAssetUrl}
@@ -52,7 +52,7 @@ function AboutPage() {
               Fig. 01 — The first potion.
             </p>
           </div>
-          <div className="md:col-span-7 md:pl-10">
+          <div className="md:col-span-6 md:pl-6">
             <p className="font-display text-2xl leading-snug md:text-3xl">{content.about_body1}</p>
             <p className="mt-8 max-w-xl text-base leading-relaxed text-foreground/80">
               {content.about_body2}
