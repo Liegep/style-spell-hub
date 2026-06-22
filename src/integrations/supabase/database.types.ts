@@ -97,6 +97,7 @@ export type BlogSubmission = {
   claim_id: string | null;
   status: SubmissionStatus;
   blogger_note: string | null;
+  promotion_consent: boolean;
   reviewed_by: string | null;
   review_comment: string | null;
   submitted_at: string;

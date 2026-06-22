@@ -1594,6 +1594,7 @@ function ProductSubmissionModal({
   ]);
   const [copied, setCopied] = useState(false);
   const [bloggerNote, setBloggerNote] = useState("");
+  const [promotionConsent, setPromotionConsent] = useState(submission?.promotion_consent ?? false);
   const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [loadingExisting, setLoadingExisting] = useState(false);
@@ -1639,6 +1640,7 @@ function ProductSubmissionModal({
         setLatestReviewerNote(payload.latestReviewNote);
         setLatestReviewer(payload.latestReviewer);
         if (payload.latest.blogger_note) setBloggerNote(payload.latest.blogger_note);
+        setPromotionConsent(payload.latest.promotion_consent);
         setClaimState("delivered");
 
         if (payload.links.length > 0) {
@@ -1764,6 +1766,7 @@ function ProductSubmissionModal({
         productId: product.id,
         bloggerId: profileId,
         bloggerNote: bloggerNote.trim() || null,
+        promotionConsent,
         links: normalizedLinks,
       });
 
@@ -1781,6 +1784,7 @@ function ProductSubmissionModal({
         status: saved.status,
         submitted_at: saved.submitted_at,
         review_comment: saved.review_comment,
+        promotion_consent: promotionConsent,
         links_count: normalizedLinks.length,
       });
     } catch (error) {
@@ -1990,6 +1994,27 @@ function ProductSubmissionModal({
                 This note is sent together with your links when you press Submit portfolio.
               </p>
             </div>
+
+            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/50 bg-white/55 p-4 shadow-sm transition hover:border-[var(--brand-magenta)]/40 hover:bg-white/70">
+              <input
+                type="checkbox"
+                checked={promotionConsent}
+                onChange={(event) => setPromotionConsent(event.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-foreground/20 accent-[var(--brand-magenta)]"
+              />
+              <span className="text-sm leading-relaxed text-foreground/70">
+                <span className="block font-medium text-foreground">
+                  {language === "es"
+                    ? "Permito que Love Potion use mis imágenes o vistas previas enviadas como material promocional."
+                    : "I allow Love Potion to use my submitted images or post previews as promotional material."}
+                </span>
+                <span className="mt-1 block text-xs text-foreground/45">
+                  {language === "es"
+                    ? "Tus links siguen acreditados a ti."
+                    : "Your links stay credited to you."}
+                </span>
+              </span>
+            </label>
 
             {message ? (
               <div

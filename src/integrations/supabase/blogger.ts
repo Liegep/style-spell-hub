@@ -26,7 +26,7 @@ export type BloggerProduct = Pick<
 
 export type BloggerSubmissionSummary = Pick<
   BlogSubmission,
-  "id" | "product_id" | "status" | "submitted_at" | "review_comment"
+  "id" | "product_id" | "status" | "submitted_at" | "review_comment" | "promotion_consent"
 > & {
   links_count: number;
 };
@@ -65,14 +65,14 @@ export async function listAvailableProductsForBlogger() {
 export async function listSubmissionSummariesForBlogger(bloggerId: string) {
   const { data, error } = await supabase
     .from("blog_submissions")
-    .select("id,product_id,status,submitted_at,review_comment,blog_submission_links(id)")
+    .select("id,product_id,status,submitted_at,review_comment,promotion_consent,blog_submission_links(id)")
     .eq("blogger_id", bloggerId)
     .order("submitted_at", { ascending: false });
 
   if (error) throw error;
 
   const rows = (data ?? []) as Array<
-    Pick<BlogSubmission, "id" | "product_id" | "status" | "submitted_at" | "review_comment"> & {
+    Pick<BlogSubmission, "id" | "product_id" | "status" | "submitted_at" | "review_comment" | "promotion_consent"> & {
       blog_submission_links?: Array<{ id: string }>;
     }
   >;
@@ -83,6 +83,7 @@ export async function listSubmissionSummariesForBlogger(bloggerId: string) {
     status: row.status,
     submitted_at: row.submitted_at,
     review_comment: row.review_comment,
+    promotion_consent: row.promotion_consent,
     links_count: row.blog_submission_links?.length ?? 0,
   })) satisfies BloggerSubmissionSummary[];
 }
@@ -101,7 +102,7 @@ export async function listProductClaimsForBlogger(bloggerId: string) {
 export async function getLatestSubmissionForProduct(bloggerId: string, productId: string) {
   const { data, error } = await supabase
     .from("blog_submissions")
-    .select("id,product_id,status,submitted_at,review_comment,blogger_note,reviewed_by")
+    .select("id,product_id,status,submitted_at,review_comment,blogger_note,promotion_consent,reviewed_by")
     .eq("blogger_id", bloggerId)
     .eq("product_id", productId)
     .order("submitted_at", { ascending: false });
@@ -110,7 +111,10 @@ export async function getLatestSubmissionForProduct(bloggerId: string, productId
 
   const rows =
     (data ?? []) as Array<
-      Pick<BlogSubmission, "id" | "product_id" | "status" | "submitted_at" | "review_comment" | "blogger_note" | "reviewed_by">
+      Pick<
+        BlogSubmission,
+        "id" | "product_id" | "status" | "submitted_at" | "review_comment" | "blogger_note" | "promotion_consent" | "reviewed_by"
+      >
     >;
 
   if (rows.length === 0) return null;
@@ -300,6 +304,7 @@ export async function submitLinksForProduct(input: {
   productId: string;
   bloggerId: string;
   bloggerNote: string | null;
+  promotionConsent: boolean;
   links: SubmissionLinkInput[];
 }) {
   const claim = await claimProductForBlogger(input.productId, input.bloggerId);
@@ -324,6 +329,7 @@ export async function submitLinksForProduct(input: {
         .update({
           status: "pending",
           blogger_note: input.bloggerNote,
+          promotion_consent: input.promotionConsent,
           review_comment: null,
           submitted_at: new Date().toISOString(),
         })
@@ -338,6 +344,7 @@ export async function submitLinksForProduct(input: {
           claim_id: claim.id,
           status: "pending",
           blogger_note: input.bloggerNote,
+          promotion_consent: input.promotionConsent,
         })
         .select("id,product_id,status,submitted_at,review_comment")
         .single<Pick<BlogSubmission, "id" | "product_id" | "status" | "submitted_at" | "review_comment">>();

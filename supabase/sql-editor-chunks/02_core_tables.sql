@@ -75,6 +75,7 @@ create table if not exists public.blog_submissions (
   claim_id uuid references public.product_claims(id) on delete set null,
   status public.submission_status not null default 'pending',
   blogger_note text,
+  promotion_consent boolean not null default false,
   reviewed_by uuid references public.profiles(id) on delete set null,
   review_comment text,
   submitted_at timestamptz not null default now(),
