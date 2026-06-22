@@ -70,6 +70,16 @@ export type ProductRelease = {
   updated_at: string;
 };
 
+export type ProductReleaseImage = {
+  id: string;
+  product_id: string;
+  image_url: string;
+  alt_text: string | null;
+  is_cover: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
 export type ProductClaim = {
   id: string;
   product_id: string;

@@ -1,6 +1,6 @@
 import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Archive, ImagePlus, Save, Trash2 } from "lucide-react";
+import { Archive, Check, ImagePlus, Save, Star, Trash2, X } from "lucide-react";
 import heroImg from "@/assets/hero-marie.png";
 import loginImg from "@/assets/login-editorial.jpg";
 import aboutImg from "@/assets/about-editorial.jpg";
@@ -15,7 +15,9 @@ import {
   archiveProductRelease,
   deleteProductRelease,
   getProductRelease,
+  listProductReleaseImages,
   makeProductId,
+  replaceProductReleaseImages,
   upsertProductRelease,
   uploadProductImage,
   type ProductReleaseInput,
@@ -273,6 +275,16 @@ function productToInput(product: ProductRelease): ProductReleaseInput {
   };
 }
 
+type ProductPhotoDraft = {
+  key: string;
+  id?: string;
+  imageUrl: string;
+  file?: File;
+  fileName?: string;
+  isExisting: boolean;
+  sortOrder: number;
+};
+
 function ProductEditor({
   mode,
   onClose,
@@ -283,7 +295,8 @@ function ProductEditor({
   onSaved: () => void;
 }) {
   const [form, setForm] = useState<ProductReleaseInput>(emptyProduct);
-  const [editorialFile, setEditorialFile] = useState<File | null>(null);
+  const [photos, setPhotos] = useState<ProductPhotoDraft[]>([]);
+  const [coverKey, setCoverKey] = useState<string | null>(null);
   const [vendorFile, setVendorFile] = useState<File | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "saving" | "deleting">(
     mode.type === "edit" ? "loading" : "ready",
@@ -297,9 +310,37 @@ function ProductEditor({
     async function loadProduct() {
       if (mode.type !== "edit") return;
       try {
-        const product = await getProductRelease(mode.id);
+        const [product, galleryImages] = await Promise.all([
+          getProductRelease(mode.id),
+          listProductReleaseImages(mode.id),
+        ]);
         if (isMounted) {
+          const coverUrl = product.editorial_image_url ?? product.image_url;
+          const nextPhotos = galleryImages.map<ProductPhotoDraft>((image, index) => ({
+            key: `existing:${image.id}`,
+            id: image.id,
+            imageUrl: image.image_url,
+            isExisting: true,
+            sortOrder: image.sort_order ?? index,
+          }));
+
+          if (coverUrl && !nextPhotos.some((image) => image.imageUrl === coverUrl)) {
+            nextPhotos.unshift({
+              key: `legacy-cover:${coverUrl}`,
+              imageUrl: coverUrl,
+              isExisting: true,
+              sortOrder: -1,
+            });
+          }
+
           setForm(productToInput(product));
+          setPhotos(nextPhotos);
+          setCoverKey(
+            nextPhotos.find((image) => image.imageUrl === coverUrl)?.key ??
+              nextPhotos.find((image) => galleryImages.some((gallery) => gallery.is_cover && gallery.image_url === image.imageUrl))?.key ??
+              nextPhotos[0]?.key ??
+              null,
+          );
           setInitialStatus(product.status);
           setState("ready");
         }
@@ -323,6 +364,41 @@ function ProductEditor({
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  function addPhotos(fileList: FileList | null) {
+    const selectedFiles = Array.from(fileList ?? []);
+    if (selectedFiles.length === 0) return;
+
+    setPhotos((current) => {
+      const nextPhotos = [
+        ...current,
+        ...selectedFiles.map<ProductPhotoDraft>((file, index) => ({
+          key: `new:${Date.now()}:${index}:${file.name}`,
+          imageUrl: URL.createObjectURL(file),
+          file,
+          fileName: file.name,
+          isExisting: false,
+          sortOrder: current.length + index,
+        })),
+      ];
+
+      if (!coverKey && nextPhotos.length > 0) {
+        setCoverKey(nextPhotos[0].key);
+      }
+
+      return nextPhotos;
+    });
+  }
+
+  function removePhoto(key: string) {
+    setPhotos((current) => {
+      const nextPhotos = current.filter((photo) => photo.key !== key);
+      if (coverKey === key) {
+        setCoverKey(nextPhotos[0]?.key ?? null);
+      }
+      return nextPhotos;
+    });
+  }
+
   async function saveProduct(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setState("saving");
@@ -330,22 +406,39 @@ function ProductEditor({
 
     try {
       const productId = form.id ?? makeProductId();
-      let editorialUrl = form.editorial_image_url;
       let vendorUrl = form.vendor_poster_url;
-
-      if (editorialFile) {
-        editorialUrl = await uploadProductImage(productId, "editorial", editorialFile);
-      }
 
       if (vendorFile) {
         vendorUrl = await uploadProductImage(productId, "vendor", vendorFile);
       }
 
+      const uploadedPhotos: ProductPhotoDraft[] = [];
+      for (const [index, photo] of photos.entries()) {
+        if (photo.file) {
+          const imageUrl = await uploadProductImage(productId, "gallery", photo.file);
+          uploadedPhotos.push({
+            ...photo,
+            imageUrl,
+            file: undefined,
+            fileName: undefined,
+            sortOrder: index,
+          });
+        } else {
+          uploadedPhotos.push({ ...photo, sortOrder: index });
+        }
+      }
+
+      const selectedCover =
+        uploadedPhotos.find((photo) => photo.key === coverKey) ??
+        uploadedPhotos[0] ??
+        null;
+      const coverUrl = selectedCover?.imageUrl ?? form.editorial_image_url ?? form.image_url ?? null;
+
       const savedProduct = await upsertProductRelease({
         ...form,
         id: productId,
-        editorial_image_url: editorialUrl,
-        image_url: editorialUrl,
+        editorial_image_url: coverUrl,
+        image_url: coverUrl,
         vendor_poster_url: vendorUrl,
         deadline_at: form.deadline_at ? dateToTimestamptz(form.deadline_at) : null,
         auto_archive_at: form.auto_archive_at
@@ -362,6 +455,16 @@ function ProductEditor({
         marketplace_link: emptyToNull(form.marketplace_link),
         delivery_item_key: emptyToNull(form.delivery_item_key),
       });
+
+      await replaceProductReleaseImages(
+        productId,
+        uploadedPhotos.map((photo, index) => ({
+          image_url: photo.imageUrl,
+          alt_text: `${form.name || "Product"} photo ${index + 1}`,
+          is_cover: photo.key === (selectedCover?.key ?? coverKey),
+          sort_order: index,
+        })),
+      );
 
       const becameAvailable =
         savedProduct.status === "available" &&
@@ -468,12 +571,12 @@ function ProductEditor({
         ) : (
           <div className="mt-10 grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
             <div className="space-y-6">
-              <ImagePicker
-                label="Editorial image"
-                helper="Used on landing page and blogger cards. Converted to WebP, 1200x1600, 3:4 vertical."
-                imageUrl={form.editorial_image_url ?? form.image_url}
-                file={editorialFile}
-                onChange={setEditorialFile}
+              <ProductPhotosPicker
+                photos={photos}
+                coverKey={coverKey}
+                onAdd={addPhotos}
+                onCoverChange={setCoverKey}
+                onRemove={removePhoto}
               />
               <ImagePicker
                 label="Vendor poster"
@@ -651,6 +754,122 @@ function ProductEditor({
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function ProductPhotosPicker({
+  photos,
+  coverKey,
+  onAdd,
+  onCoverChange,
+  onRemove,
+}: {
+  photos: ProductPhotoDraft[];
+  coverKey: string | null;
+  onAdd: (files: FileList | null) => void;
+  onCoverChange: (key: string) => void;
+  onRemove: (key: string) => void;
+}) {
+  return (
+    <div className="block">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/45">
+            Product photos
+          </div>
+          <p className="mt-2 text-sm text-foreground/55">
+            Add multiple images and choose one cover. The cover appears on the landing page, product cards, and blogger dashboard.
+          </p>
+        </div>
+        <label className="shrink-0 cursor-pointer rounded-full bg-[var(--brand-magenta)] px-4 py-3 font-mono text-[9px] uppercase tracking-[0.25em] text-white shadow-lg shadow-[var(--brand-magenta)]/15 hover:opacity-90">
+          <ImagePlus className="mr-2 inline h-4 w-4" />
+          Add photos
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(event) => {
+              onAdd(event.target.files);
+              event.currentTarget.value = "";
+            }}
+            className="sr-only"
+          />
+        </label>
+      </div>
+
+      {photos.length === 0 ? (
+        <label className="mt-4 block cursor-pointer overflow-hidden rounded-3xl border border-dashed border-foreground/20 bg-foreground/[0.03]">
+          <div className="flex aspect-[3/4] flex-col items-center justify-center gap-3 text-foreground/45">
+            <ImagePlus className="h-9 w-9" />
+            <span className="font-mono text-[10px] uppercase tracking-[0.3em]">Select product photos</span>
+          </div>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(event) => {
+              onAdd(event.target.files);
+              event.currentTarget.value = "";
+            }}
+            className="sr-only"
+          />
+        </label>
+      ) : (
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {photos.map((photo, index) => {
+            const isCover = photo.key === coverKey;
+            return (
+              <div
+                key={photo.key}
+                className={`group relative overflow-hidden rounded-3xl border bg-foreground/[0.03] ${
+                  isCover ? "border-[var(--brand-magenta)] ring-2 ring-[var(--brand-magenta)]/20" : "border-foreground/10"
+                }`}
+              >
+                <img src={photo.imageUrl} alt={photo.fileName ?? `Product photo ${index + 1}`} className="aspect-[3/4] w-full object-cover" />
+                <div className="absolute inset-x-2 top-2 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onCoverChange(photo.key)}
+                    className={`rounded-full px-3 py-2 font-mono text-[8px] uppercase tracking-[0.2em] shadow ${
+                      isCover
+                        ? "bg-[var(--brand-magenta)] text-white"
+                        : "bg-background/85 text-foreground hover:bg-[var(--brand-pink)]"
+                    }`}
+                  >
+                    {isCover ? (
+                      <>
+                        <Check className="mr-1 inline h-3 w-3" />
+                        Cover
+                      </>
+                    ) : (
+                      <>
+                        <Star className="mr-1 inline h-3 w-3" />
+                        Make cover
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onRemove(photo.key)}
+                    className="rounded-full bg-background/85 p-2 text-foreground shadow hover:bg-red-50 hover:text-red-500"
+                    aria-label="Remove photo"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <div className="absolute inset-x-2 bottom-2 rounded-full bg-background/85 px-3 py-2 font-mono text-[8px] uppercase tracking-[0.2em] text-foreground/55 shadow">
+                  Photo {index + 1}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="mt-3 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/40">
+        Converted to WebP, 1200x1600, 3:4 vertical.
+      </div>
     </div>
   );
 }

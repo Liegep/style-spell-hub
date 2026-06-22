@@ -1,5 +1,6 @@
 alter table public.profiles enable row level security;
 alter table public.product_releases enable row level security;
+alter table public.product_release_images enable row level security;
 alter table public.product_claims enable row level security;
 alter table public.blog_submissions enable row level security;
 alter table public.blog_submission_links enable row level security;
@@ -38,6 +39,26 @@ using (status = 'available' or public.is_staff());
 drop policy if exists "Super admins manage product releases" on public.product_releases;
 create policy "Super admins manage product releases"
 on public.product_releases for all
+to authenticated
+using (public.is_super_admin())
+with check (public.is_super_admin());
+
+drop policy if exists "Anyone can read available product images" on public.product_release_images;
+create policy "Anyone can read available product images"
+on public.product_release_images for select
+to anon, authenticated
+using (
+  exists (
+    select 1
+    from public.product_releases pr
+    where pr.id = product_id
+      and (pr.status = 'available' or public.is_staff())
+  )
+);
+
+drop policy if exists "Super admins manage product images" on public.product_release_images;
+create policy "Super admins manage product images"
+on public.product_release_images for all
 to authenticated
 using (public.is_super_admin())
 with check (public.is_super_admin());

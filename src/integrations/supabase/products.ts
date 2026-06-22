@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { logAuditEvent } from "@/integrations/supabase/audit-log";
-import type { ProductRelease, ProductStatus } from "@/integrations/supabase/database.types";
+import type { ProductRelease, ProductReleaseImage, ProductStatus } from "@/integrations/supabase/database.types";
 import type { ProductSummary } from "@/integrations/supabase/dashboard";
 
 export type ProductReleaseInput = {
@@ -62,6 +62,70 @@ export async function getProductRelease(id: string) {
 
   if (error) throw error;
   return data;
+}
+
+export async function listProductReleaseImages(productId: string) {
+  const { data, error } = await supabase
+    .from("product_release_images")
+    .select("id,product_id,image_url,alt_text,is_cover,sort_order,created_at")
+    .eq("product_id", productId)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    if (/product_release_images|schema cache|relation/i.test(error.message ?? "")) {
+      return [];
+    }
+    throw error;
+  }
+
+  return (data ?? []) as ProductReleaseImage[];
+}
+
+export async function replaceProductReleaseImages(
+  productId: string,
+  images: Array<{
+    image_url: string;
+    alt_text?: string | null;
+    is_cover?: boolean;
+    sort_order: number;
+  }>,
+) {
+  const { error: deleteError } = await supabase
+    .from("product_release_images")
+    .delete()
+    .eq("product_id", productId);
+
+  if (deleteError) {
+    if (/product_release_images|schema cache|relation/i.test(deleteError.message ?? "")) {
+      return [];
+    }
+    throw deleteError;
+  }
+
+  if (images.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("product_release_images")
+    .insert(
+      images.map((image, index) => ({
+        product_id: productId,
+        image_url: image.image_url,
+        alt_text: image.alt_text ?? null,
+        is_cover: image.is_cover ?? index === 0,
+        sort_order: image.sort_order,
+      })),
+    )
+    .select("id,product_id,image_url,alt_text,is_cover,sort_order,created_at");
+
+  if (error) {
+    if (/product_release_images|schema cache|relation/i.test(error.message ?? "")) {
+      return [];
+    }
+    throw error;
+  }
+
+  return (data ?? []) as ProductReleaseImage[];
 }
 
 export async function upsertProductRelease(input: ProductReleaseInput) {
@@ -171,10 +235,13 @@ export async function deleteProductRelease(id: string) {
 
 export async function uploadProductImage(
   productId: string,
-  kind: "editorial" | "vendor",
+  kind: "editorial" | "vendor" | "gallery",
   file: File,
 ) {
-  const webp = await fileToWebp(file, kind === "editorial" ? { width: 1200, height: 1600 } : undefined);
+  const webp = await fileToWebp(
+    file,
+    kind === "editorial" || kind === "gallery" ? { width: 1200, height: 1600 } : undefined,
+  );
   const path = `${productId}/${kind}-${Date.now()}.webp`;
 
   const { error } = await supabase.storage

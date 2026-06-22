@@ -47,6 +47,16 @@ create table if not exists public.product_releases (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.product_release_images (
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid not null references public.product_releases(id) on delete cascade,
+  image_url text not null,
+  alt_text text,
+  is_cover boolean not null default false,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.product_claims (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references public.product_releases(id) on delete cascade,
