@@ -516,6 +516,8 @@ function ProductEditor({
     }
   }
 
+  const handwrittenPreview = form.handwritten_note?.trim() || "your note";
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-foreground/55 px-4 py-8 backdrop-blur-sm">
       <form
@@ -619,6 +621,7 @@ function ProductEditor({
                   <input
                     value={form.handwritten_note ?? ""}
                     onChange={(event) => update("handwritten_note", event.target.value)}
+                    onInput={(event) => update("handwritten_note", event.currentTarget.value)}
                     className={inputClass}
                     placeholder="So chic!"
                   />
@@ -628,7 +631,7 @@ function ProductEditor({
                     Preview
                   </div>
                   <div className="mt-2 min-h-12 rounded-2xl bg-[var(--brand-pink)]/50 px-4 py-2 font-hand text-3xl text-[var(--brand-magenta)]">
-                    {form.handwritten_note || "your note"}
+                    {handwrittenPreview}
                   </div>
                 </div>
               </div>
