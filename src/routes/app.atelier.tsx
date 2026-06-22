@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
-import { bloggers, products, stats } from "@/mocks/data";
 import bloggerAvatar from "@/assets/blogger-avatar.jpg";
 import {
   getAtelierStats,
@@ -28,10 +27,19 @@ export const Route = createFileRoute("/app/atelier")({
   component: AtelierPage,
 });
 
+const emptyAtelierStats: AtelierStats = {
+  activeBloggers: 0,
+  inactiveBloggers: 0,
+  postsThisMonth: 0,
+  productsLive: 0,
+  archiveSoon: 0,
+  subscribers: 0,
+};
+
 function AtelierPage() {
   const language = useLang();
   const tr = (value: string) => translateAppPhrase(value, language);
-  const [liveStats, setLiveStats] = useState<AtelierStats>(stats);
+  const [liveStats, setLiveStats] = useState<AtelierStats>(emptyAtelierStats);
   const [liveBloggers, setLiveBloggers] = useState<BloggerPulse[]>([]);
   const [upcomingArchives, setUpcomingArchives] = useState<{ id: string; name: string; auto_archive_at: string | null }[]>([]);
   const [reviewQueue, setReviewQueue] = useState<ReviewQueueItem[]>([]);
@@ -180,7 +188,7 @@ function AtelierPage() {
     { n: liveStats.subscribers, l: tr("Subscribers"), tone: "light" as const },
   ];
   const archiveRows = upcomingArchives;
-  const bloggerRows = liveBloggers.length > 0 ? liveBloggers : bloggers.slice(0, 4);
+  const bloggerRows = liveBloggers;
   const selectedReview = selectedReviewId
     ? reviewQueue.find((item) => item.id === selectedReviewId) ?? null
     : null;
@@ -193,20 +201,14 @@ function AtelierPage() {
     return `${diff} days`;
   }
 
-  function bloggerName(blogger: BloggerPulse | (typeof bloggers)[number]) {
-    if ("display_name" in blogger) {
-      return blogger.display_name ?? blogger.full_name ?? blogger.email;
-    }
-    return blogger.name;
+  function bloggerName(blogger: BloggerPulse) {
+    return blogger.display_name ?? blogger.full_name ?? blogger.email;
   }
 
-  function bloggerStatus(blogger: BloggerPulse | (typeof bloggers)[number]) {
-    if ("account_status" in blogger) {
-      if (blogger.account_status === "blocked") return "blocked";
-      if (blogger.account_status === "left") return "deleted";
-      return "";
-    }
-    return `${blogger.status} · ${blogger.posts} posts`;
+  function bloggerStatus(blogger: BloggerPulse) {
+    if (blogger.account_status === "blocked") return "blocked";
+    if (blogger.account_status === "left") return "deleted";
+    return "";
   }
 
   function statusTone(status: SubmissionStatus) {
