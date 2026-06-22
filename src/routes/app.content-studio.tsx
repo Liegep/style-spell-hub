@@ -188,11 +188,19 @@ function ProductsPanel({
             >
               Edit
             </button>
-            <img
-              src={release.editorial_image_url ?? release.image_url ?? ""}
-              alt={release.name}
-              className="aspect-[3/4] w-full bg-[var(--brand-pink)] object-cover"
-            />
+            <button
+              type="button"
+              onClick={() => onEdit(release.id)}
+              className="block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-magenta)]"
+              aria-label={`Edit ${release.name}`}
+              title="Edit product"
+            >
+              <img
+                src={release.editorial_image_url ?? release.image_url ?? ""}
+                alt={release.name}
+                className="aspect-[3/4] w-full bg-[var(--brand-pink)] object-cover transition duration-300 group-hover:scale-[1.02]"
+              />
+            </button>
             <div className="p-5">
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
                 {release.category ?? "General"}
