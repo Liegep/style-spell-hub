@@ -17,7 +17,15 @@ Configure estas variaveis no painel Node.js da Hostinger:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
-Use os mesmos valores do arquivo `.env.local` local. A chave `anon` e publica; nunca use a `service_role` no site.
+Use os mesmos valores do arquivo `.env.local` local. A chave `anon`/`publishable` e publica; nunca use a `service_role` no site.
+
+Para este projeto, a URL publica do Supabase comeca com:
+
+`https://dvhrisqlybqsrzsfoyfx.supabase.co`
+
+Nao use os valores de exemplo do `.env.example`, como `https://your-project-ref.supabase.co`.
+
+Depois do deploy, abra `/env.js` no dominio. Ele precisa mostrar a URL real do Supabase, nao `your-project-ref`.
 
 ## Atualizacoes futuras
 

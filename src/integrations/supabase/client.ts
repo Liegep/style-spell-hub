@@ -10,9 +10,10 @@ declare global {
 }
 
 const runtimeEnv = typeof window !== "undefined" ? window.__LOVE_POTION_ENV__ : undefined;
-const supabaseUrl = runtimeEnv?.VITE_SUPABASE_URL || (import.meta.env.VITE_SUPABASE_URL as string | undefined);
-const supabaseAnonKey =
-  runtimeEnv?.VITE_SUPABASE_ANON_KEY || (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined);
+const supabaseUrl = cleanEnvValue(runtimeEnv?.VITE_SUPABASE_URL || (import.meta.env.VITE_SUPABASE_URL as string | undefined));
+const supabaseAnonKey = cleanEnvValue(
+  runtimeEnv?.VITE_SUPABASE_ANON_KEY || (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined),
+);
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
@@ -23,3 +24,11 @@ export const supabase = createClient(supabaseUrl ?? "https://placeholder.supabas
     persistSession: true,
   },
 });
+
+function cleanEnvValue(value: string | undefined) {
+  const text = value?.trim();
+  if (!text || text.includes("your-project-ref") || text.includes("your-supabase-anon-public-key")) {
+    return undefined;
+  }
+  return text;
+}
