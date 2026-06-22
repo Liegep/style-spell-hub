@@ -158,11 +158,11 @@ function Landing() {
       <section className="relative overflow-hidden px-3 pt-6 md:px-6">
         <div className="relative mx-auto max-w-[1600px]">
           {/* huge headline behind image */}
-          <div className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-center">
+          <div className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-center gap-[1.5vw] md:gap-[0.75vw]">
             <h1 className="font-display text-[22vw] leading-[0.85] text-[var(--brand-ink)] md:text-[18vw] tracking-tighter">
               {content.hero_headline_top}
             </h1>
-            <h1 className="font-display text-[22vw] leading-[0.85] text-[var(--brand-ink)] md:text-[18vw] tracking-tighter -mt-[3vw]">
+            <h1 className="font-display text-[22vw] leading-[0.85] text-[var(--brand-ink)] md:text-[18vw] tracking-tighter">
               {content.hero_headline_bottom}
             </h1>
           </div>
