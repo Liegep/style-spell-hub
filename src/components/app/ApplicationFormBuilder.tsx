@@ -167,7 +167,7 @@ export function ApplicationFormBuilder() {
             </div>
             <h3 className="mt-2 font-display text-3xl leading-none">Question stack.</h3>
           </div>
-          <span className="rounded-full bg-white/70 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/55">
+          <span className="inline-flex min-w-[88px] items-center justify-center whitespace-nowrap rounded-full bg-white/70 px-4 py-2 font-mono text-[9px] uppercase tracking-[0.18em] text-foreground/55">
             {publishedCount} live
           </span>
         </div>
