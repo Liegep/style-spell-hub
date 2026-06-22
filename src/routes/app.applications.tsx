@@ -4,6 +4,8 @@ import { ApplicationFormBuilder } from "@/components/app/ApplicationFormBuilder"
 import { ApplicationsPanel } from "@/components/app/ApplicationsPanel";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
+import { translateAppPhrase } from "@/i18n/app-text";
+import { useLang } from "@/i18n/dict";
 
 export const Route = createFileRoute("/app/applications")({
   component: ApplicationsPage,
@@ -12,6 +14,8 @@ export const Route = createFileRoute("/app/applications")({
 type ApplicationsTab = "queue" | "builder";
 
 function ApplicationsPage() {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const [tab, setTab] = useState<ApplicationsTab>("queue");
 
   return (
@@ -19,13 +23,13 @@ function ApplicationsPage() {
       <header className="flex items-end justify-between gap-6">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-            LOVE POTION · APPLICATIONS
+            {tr("Love Potion · Applications")}
           </div>
           <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">
-            Blogger applications.
+            {tr("Blogger applications.")}
           </h1>
         </div>
-        <HandwrittenNote>{tab === "queue" ? "review with care" : "ask beautifully"}</HandwrittenNote>
+        <HandwrittenNote>{tr(tab === "queue" ? "review with care" : "ask beautifully")}</HandwrittenNote>
       </header>
 
       <div className="mt-8">
@@ -33,8 +37,8 @@ function ApplicationsPage() {
           value={tab}
           onChange={setTab}
           tabs={[
-            { id: "queue", label: "Review queue", sub: "01" },
-            { id: "builder", label: "Form builder", sub: "02" },
+            { id: "queue", label: tr("Review queue"), sub: "01" },
+            { id: "builder", label: tr("Form builder"), sub: "02" },
           ]}
         />
       </div>
