@@ -37,6 +37,7 @@ export type ProductSummary = Pick<
   | "image_url"
   | "vendor_poster_url"
   | "release_date"
+  | "blogging_deadline_days"
   | "status"
   | "featured_on_landing"
   | "display_order"
@@ -180,7 +181,7 @@ export async function getProductSummaries() {
   const { data, error } = await supabase
     .from("product_releases")
     .select(
-      "id,name,category,short_description,handwritten_note,editorial_image_url,image_url,vendor_poster_url,release_date,status,featured_on_landing,display_order,auto_archive_at",
+      "id,name,category,short_description,handwritten_note,editorial_image_url,image_url,vendor_poster_url,release_date,blogging_deadline_days,status,featured_on_landing,display_order,auto_archive_at",
     )
     .order("display_order", { ascending: true })
     .order("release_date", { ascending: false })

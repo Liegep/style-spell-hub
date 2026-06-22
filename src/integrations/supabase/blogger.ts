@@ -20,6 +20,7 @@ export type BloggerProduct = Pick<
   | "vendor_poster_url"
   | "release_date"
   | "deadline_at"
+  | "blogging_deadline_days"
   | "second_life_link"
   | "status"
 >;
@@ -39,11 +40,11 @@ export type SubmissionCommentProfile = Pick<
 >;
 export type BloggerProductClaimSummary = Pick<
   ProductClaim,
-  "id" | "product_id" | "status" | "claimed_at" | "delivered_at"
+  "id" | "product_id" | "status" | "claimed_at" | "delivered_at" | "due_at"
 >;
 export type ClaimProductResult = Pick<
   ProductClaim,
-  "id" | "product_id" | "status" | "delivery_response" | "claimed_at" | "delivered_at"
+  "id" | "product_id" | "status" | "delivery_response" | "claimed_at" | "delivered_at" | "due_at"
 > & {
   deliveryNotice?: string;
 };
@@ -52,7 +53,7 @@ export async function listAvailableProductsForBlogger() {
   const { data, error } = await supabase
     .from("product_releases")
     .select(
-      "id,name,category,short_description,blogging_recommendations,editorial_image_url,image_url,vendor_poster_url,release_date,deadline_at,second_life_link,status",
+      "id,name,category,short_description,blogging_recommendations,editorial_image_url,image_url,vendor_poster_url,release_date,deadline_at,blogging_deadline_days,second_life_link,status",
     )
     .eq("status", "available")
     .order("display_order", { ascending: true })
@@ -91,7 +92,7 @@ export async function listSubmissionSummariesForBlogger(bloggerId: string) {
 export async function listProductClaimsForBlogger(bloggerId: string) {
   const { data, error } = await supabase
     .from("product_claims")
-    .select("id,product_id,status,claimed_at,delivered_at")
+    .select("id,product_id,status,claimed_at,delivered_at,due_at")
     .eq("blogger_id", bloggerId)
     .order("claimed_at", { ascending: false });
 
@@ -240,40 +241,77 @@ async function getFunctionErrorMessage(error: unknown) {
 async function getProductClaimById(claimId: string) {
   const { data, error } = await supabase
     .from("product_claims")
-    .select("id,product_id,status,delivery_response,claimed_at,delivered_at")
+    .select("id,product_id,status,delivery_response,claimed_at,delivered_at,due_at")
     .eq("id", claimId)
     .maybeSingle<
-      Pick<ProductClaim, "id" | "product_id" | "status" | "delivery_response" | "claimed_at" | "delivered_at">
+      Pick<ProductClaim, "id" | "product_id" | "status" | "delivery_response" | "claimed_at" | "delivered_at" | "due_at">
     >();
 
   if (error) throw error;
   return data;
 }
 
+async function getProductBloggingDeadlineDays(productId: string) {
+  const { data, error } = await supabase
+    .from("product_releases")
+    .select("blogging_deadline_days")
+    .eq("id", productId)
+    .maybeSingle<Pick<ProductRelease, "blogging_deadline_days">>();
+
+  if (error) throw error;
+  return data?.blogging_deadline_days ?? null;
+}
+
+function deadlineFromNow(days: number | null) {
+  if (!days) return null;
+  const due = new Date();
+  due.setDate(due.getDate() + days);
+  return due.toISOString();
+}
+
 export async function claimProductForBlogger(productId: string, bloggerId: string): Promise<ClaimProductResult> {
   const { data: existingClaim, error: findError } = await supabase
     .from("product_claims")
-    .select("id,product_id,status,delivery_response,claimed_at,delivered_at")
+    .select("id,product_id,status,delivery_response,claimed_at,delivered_at,due_at")
     .eq("product_id", productId)
     .eq("blogger_id", bloggerId)
     .maybeSingle<
-      Pick<ProductClaim, "id" | "product_id" | "status" | "delivery_response" | "claimed_at" | "delivered_at">
+      Pick<ProductClaim, "id" | "product_id" | "status" | "delivery_response" | "claimed_at" | "delivered_at" | "due_at">
     >();
 
   if (findError) throw findError;
   if (existingClaim) {
-    if (existingClaim.status === "delivered") return existingClaim;
+    let claimForDelivery = existingClaim;
+    if (!existingClaim.due_at) {
+      const bloggingDeadlineDays = await getProductBloggingDeadlineDays(productId);
+      const dueAt = deadlineFromNow(bloggingDeadlineDays);
+      if (dueAt) {
+        const { data: updatedClaim } = await supabase
+          .from("product_claims")
+          .update({ due_at: dueAt })
+          .eq("id", existingClaim.id)
+          .select("id,product_id,status,delivery_response,claimed_at,delivered_at,due_at")
+          .maybeSingle<
+            Pick<ProductClaim, "id" | "product_id" | "status" | "delivery_response" | "claimed_at" | "delivered_at" | "due_at">
+          >();
+        claimForDelivery = updatedClaim ?? existingClaim;
+      }
+    }
 
-    const delivery = await requestSecondLifeDelivery(productId, existingClaim.id);
-    const refreshedClaim = await getProductClaimById(existingClaim.id).catch(() => null);
+    if (claimForDelivery.status === "delivered") return claimForDelivery;
+
+    const delivery = await requestSecondLifeDelivery(productId, claimForDelivery.id);
+    const refreshedClaim = await getProductClaimById(claimForDelivery.id).catch(() => null);
 
     return {
-      ...(refreshedClaim ?? existingClaim),
-      status: refreshedClaim?.status ?? (delivery.delivered ? "delivered" : existingClaim.status),
-      delivered_at: refreshedClaim?.delivered_at ?? (delivery.delivered ? new Date().toISOString() : existingClaim.delivered_at),
+      ...(refreshedClaim ?? claimForDelivery),
+      status: refreshedClaim?.status ?? (delivery.delivered ? "delivered" : claimForDelivery.status),
+      delivered_at: refreshedClaim?.delivered_at ?? (delivery.delivered ? new Date().toISOString() : claimForDelivery.delivered_at),
       deliveryNotice: delivery.notice,
     };
   }
+
+  const bloggingDeadlineDays = await getProductBloggingDeadlineDays(productId);
 
   const { data, error } = await supabase
     .from("product_claims")
@@ -281,10 +319,11 @@ export async function claimProductForBlogger(productId: string, bloggerId: strin
       product_id: productId,
       blogger_id: bloggerId,
       status: "claimed",
+      due_at: deadlineFromNow(bloggingDeadlineDays),
     })
-    .select("id,product_id,status,delivery_response,claimed_at,delivered_at")
+    .select("id,product_id,status,delivery_response,claimed_at,delivered_at,due_at")
     .single<
-      Pick<ProductClaim, "id" | "product_id" | "status" | "delivery_response" | "claimed_at" | "delivered_at">
+      Pick<ProductClaim, "id" | "product_id" | "status" | "delivery_response" | "claimed_at" | "delivered_at" | "due_at">
     >();
 
   if (error) throw error;

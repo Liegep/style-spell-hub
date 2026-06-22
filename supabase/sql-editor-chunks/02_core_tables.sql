@@ -37,6 +37,10 @@ create table if not exists public.product_releases (
   marketplace_link text,
   release_date date,
   deadline_at timestamptz,
+  blogging_deadline_days int check (
+    blogging_deadline_days is null
+    or blogging_deadline_days in (10, 15, 30)
+  ),
   status public.product_status not null default 'draft',
   featured_on_landing boolean not null default false,
   display_order int not null default 0,
@@ -65,6 +69,7 @@ create table if not exists public.product_claims (
   delivery_response text,
   claimed_at timestamptz not null default now(),
   delivered_at timestamptz,
+  due_at timestamptz,
   unique (product_id, blogger_id)
 );
 

@@ -244,6 +244,7 @@ const emptyProduct = (): ProductReleaseInput => ({
   marketplace_link: "",
   release_date: new Date().toISOString().slice(0, 10),
   deadline_at: "",
+  blogging_deadline_days: 30,
   status: "draft",
   featured_on_landing: false,
   display_order: 0,
@@ -267,6 +268,7 @@ function productToInput(product: ProductRelease): ProductReleaseInput {
     marketplace_link: product.marketplace_link ?? "",
     release_date: product.release_date,
     deadline_at: toDateInput(product.deadline_at),
+    blogging_deadline_days: product.blogging_deadline_days,
     status: product.status,
     featured_on_landing: product.featured_on_landing,
     display_order: product.display_order,
@@ -440,7 +442,8 @@ function ProductEditor({
         editorial_image_url: coverUrl,
         image_url: coverUrl,
         vendor_poster_url: vendorUrl,
-        deadline_at: form.deadline_at ? dateToTimestamptz(form.deadline_at) : null,
+        deadline_at: null,
+        blogging_deadline_days: form.blogging_deadline_days,
         auto_archive_at: form.auto_archive_at
           ? dateToTimestamptz(form.auto_archive_at)
           : form.release_date
@@ -689,13 +692,25 @@ function ProductEditor({
                     className={inputClass}
                   />
                 </Field>
-                <Field label="Blogger deadline">
-                  <input
-                    type="date"
-                    value={form.deadline_at ?? ""}
-                    onChange={(event) => update("deadline_at", event.target.value)}
+                <Field
+                  label="Blogger deadline"
+                  helper="Starts counting when a blogger claims this product. Product auto-archive still follows the 90-day rule."
+                >
+                  <select
+                    value={form.blogging_deadline_days ?? ""}
+                    onChange={(event) =>
+                      update(
+                        "blogging_deadline_days",
+                        event.target.value ? Number(event.target.value) : null,
+                      )
+                    }
                     className={inputClass}
-                  />
+                  >
+                    <option value="">No deadline</option>
+                    <option value="10">10 days after claim</option>
+                    <option value="15">15 days after claim</option>
+                    <option value="30">30 days after claim</option>
+                  </select>
                 </Field>
                 <Field label="Release status">
                   <select

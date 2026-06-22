@@ -18,6 +18,7 @@ export type ProductReleaseInput = {
   marketplace_link: string | null;
   release_date: string | null;
   deadline_at: string | null;
+  blogging_deadline_days: number | null;
   status: ProductStatus;
   featured_on_landing: boolean;
   display_order: number;
@@ -34,6 +35,7 @@ export type ProductEditorSeed = ProductSummary &
       | "second_life_link"
       | "marketplace_link"
       | "deadline_at"
+      | "blogging_deadline_days"
       | "delivery_item_key"
     >
   >;

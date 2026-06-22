@@ -50,6 +50,7 @@ type Product = {
   added: string;
   expires: string;
   deadline: string;
+  bloggingDeadlineDays: number | null;
   location: string;
   recommendation: string;
   vendorPoster: string | null;
@@ -462,20 +463,7 @@ function BloggerDash() {
 function mapProductForUi(product: BloggerProduct, language: Lang = "en"): Product {
   const image = product.editorial_image_url ?? product.image_url ?? "";
   const releaseDate = product.release_date ? formatPrettyDate(product.release_date, language) : language === "es" ? "recientemente" : "recently";
-  const deadlineDate = product.deadline_at ? formatPrettyDate(product.deadline_at, language) : language === "es" ? "Sin plazo" : "No deadline";
-  const deadlineLeft = product.deadline_at ? daysUntil(product.deadline_at) : null;
-  const expires =
-    deadlineLeft === null
-      ? language === "es"
-        ? "sin plazo"
-        : "no deadline"
-      : deadlineLeft <= 0
-        ? language === "es"
-          ? "plazo vencido"
-          : "deadline reached"
-        : language === "es"
-          ? `${deadlineLeft} días restantes`
-          : `${deadlineLeft} days left`;
+  const deadlineDate = formatClaimWindow(product.blogging_deadline_days, language);
 
   return {
     id: product.id,
@@ -483,8 +471,9 @@ function mapProductForUi(product: BloggerProduct, language: Lang = "en"): Produc
     category: product.category ?? "General",
     img: image,
     added: releaseDate,
-    expires,
+    expires: deadlineDate.toLowerCase(),
     deadline: deadlineDate,
+    bloggingDeadlineDays: product.blogging_deadline_days,
     location: product.second_life_link ?? (language === "es" ? "Sin ubicación" : "No location provided"),
     recommendation: product.blogging_recommendations ?? (language === "es" ? "Aún no hay recomendaciones." : "No recommendations yet."),
     vendorPoster: product.vendor_poster_url,
@@ -501,10 +490,38 @@ function mapMockProductForUi(product: (typeof products)[number], language: Lang 
     added: language === "es" ? "recientemente" : product.added,
     expires: language === "es" ? "sin plazo" : product.expires,
     deadline: language === "es" ? "Sin plazo" : product.deadline,
+    bloggingDeadlineDays: null,
     location: product.location,
     recommendation: product.recommendation,
     vendorPoster: product.vendorPoster,
     shortDescription: null,
+  };
+}
+
+function formatClaimWindow(days: number | null, language: Lang = "en") {
+  if (!days) return language === "es" ? "Sin plazo" : "No deadline";
+  return language === "es" ? `${days} días después de reclamar` : `${days} days after claim`;
+}
+
+function formatClaimDeadline(claim: BloggerProductClaimSummary | undefined, product: Product, language: Lang = "en") {
+  if (!claim?.due_at) {
+    return {
+      deadline: product.deadline,
+      expires: product.expires,
+    };
+  }
+
+  const daysLeft = daysUntil(claim.due_at);
+  return {
+    deadline: formatPrettyDate(claim.due_at, language),
+    expires:
+      daysLeft <= 0
+        ? language === "es"
+          ? "plazo vencido"
+          : "deadline reached"
+        : language === "es"
+          ? `${daysLeft} días restantes`
+          : `${daysLeft} days left`,
   };
 }
 
@@ -866,6 +883,8 @@ function ProductsTab({
   loading: boolean;
   locked: boolean;
 }) {
+  const language = useLang();
+
   if (loading) {
     return (
       <GlassCard tone="pink" className="p-8">
@@ -879,6 +898,7 @@ function ProductsTab({
       {products.slice(0, 6).map((p) => {
         const submission = submissionByProduct[p.id];
         const claim = claimByProduct[p.id];
+        const claimDeadline = formatClaimDeadline(claim, p, language);
         const claimBadge =
           claim?.status === "delivered"
             ? "Delivered"
@@ -904,7 +924,7 @@ function ProductsTab({
               <p className="mt-1 text-sm italic text-foreground/70">“{p.shortDescription}”</p>
             ) : null}
             <div className="mt-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--brand-magenta)]">
-              <span>Deadline</span> · {p.deadline}
+              <span>Deadline</span> · {claimDeadline.deadline}
             </div>
             {submission ? (
               <div className="mt-2 inline-flex rounded-full bg-foreground/10 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/80">
@@ -1611,6 +1631,7 @@ function ProductSubmissionModal({
     Boolean(submission) ||
     Boolean(claim);
   const isDelivered = claimState === "delivered" || Boolean(submission) || claim?.status === "delivered";
+  const modalDeadline = formatClaimDeadline(claim, product, language);
   const accountLockMessage =
     accountStatus === "blocked"
       ? "Your account is paused by the monthly rule. Love Potion HQ needs to reactivate it before you can claim products or submit links."
@@ -1817,6 +1838,7 @@ function ProductSubmissionModal({
         status: claim.status,
         claimed_at: claim.claimed_at,
         delivered_at: claim.delivered_at,
+        due_at: claim.due_at,
       });
       setMessage(
         claim.deliveryNotice ??
@@ -1850,7 +1872,7 @@ function ProductSubmissionModal({
               Deadline
             </div>
             <div className="mt-1 flex items-end justify-between gap-4">
-              <span className="font-display text-2xl">{product.deadline}</span>
+              <span className="font-display text-2xl">{modalDeadline.deadline}</span>
               {submission ? (
                 <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-emerald-700">
                   <Check className="h-3.5 w-3.5" />
@@ -1858,7 +1880,7 @@ function ProductSubmissionModal({
                 </span>
               ) : (
                 <span className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--brand-magenta)]">
-                  {product.expires}
+                  {modalDeadline.expires}
                 </span>
               )}
             </div>

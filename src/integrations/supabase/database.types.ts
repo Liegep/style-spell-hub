@@ -60,6 +60,7 @@ export type ProductRelease = {
   marketplace_link: string | null;
   release_date: string | null;
   deadline_at: string | null;
+  blogging_deadline_days: number | null;
   status: ProductStatus;
   featured_on_landing: boolean;
   display_order: number;
@@ -88,6 +89,7 @@ export type ProductClaim = {
   delivery_response: string | null;
   claimed_at: string;
   delivered_at: string | null;
+  due_at: string | null;
 };
 
 export type BlogSubmission = {
