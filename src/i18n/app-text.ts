@@ -402,10 +402,16 @@ export const appText = {
     "publish the spell": "publish the spell",
     "Published questions appear on the public application page. Core identity fields stay locked so account creation keeps working.":
       "Published questions appear on the public application page. Core identity fields stay locked so account creation keeps working.",
+    "Published questions appear on the public application page. You can remove every question and publish a clean, empty form.":
+      "Published questions appear on the public application page. You can remove every question and publish a clean, empty form.",
     "Publish form": "Publish form",
     "Publishing...": "Publishing...",
+    "Clear and publish empty form": "Clear and publish empty form",
+    "Clearing...": "Clearing...",
     "Application form published. The public apply page will use these questions.":
       "Application form published. The public apply page will use these questions.",
+    "Application form cleared. The public apply page has no custom questions.":
+      "Application form cleared. The public apply page has no custom questions.",
     "Could not publish the form.": "Could not publish the form.",
     "Short text": "Short text",
     "Long text": "Long text",
@@ -415,6 +421,9 @@ export const appText = {
     "Date": "Date",
     "live": "live",
     "Live application form": "Live application form",
+    "clean slate": "clean slate",
+    "No questions are in this form. Add one on the left when you are ready.":
+      "No questions are in this form. Add one on the left when you are ready.",
     "New question": "New question",
     "Untitled question": "Untitled question",
     "core": "core",
@@ -1015,10 +1024,16 @@ export const appText = {
     "publish the spell": "publica el hechizo",
     "Published questions appear on the public application page. Core identity fields stay locked so account creation keeps working.":
       "Las preguntas publicadas aparecen en la página pública de aplicación. Los campos de identidad principales quedan bloqueados para que la creación de cuentas siga funcionando.",
+    "Published questions appear on the public application page. You can remove every question and publish a clean, empty form.":
+      "Las preguntas publicadas aparecen en la página pública de aplicación. Puedes quitar todas las preguntas y publicar un formulario vacío.",
     "Publish form": "Publicar formulario",
     "Publishing...": "Publicando...",
+    "Clear and publish empty form": "Limpiar y publicar formulario vacío",
+    "Clearing...": "Limpiando...",
     "Application form published. The public apply page will use these questions.":
       "Formulario publicado. La página pública de aplicación usará estas preguntas.",
+    "Application form cleared. The public apply page has no custom questions.":
+      "Formulario limpio. La página pública de aplicación no tiene preguntas personalizadas.",
     "Could not publish the form.": "No se pudo publicar el formulario.",
     "Short text": "Texto corto",
     "Long text": "Texto largo",
@@ -1028,6 +1043,9 @@ export const appText = {
     "Date": "Fecha",
     "live": "en vivo",
     "Live application form": "Formulario activo de aplicación",
+    "clean slate": "lienzo limpio",
+    "No questions are in this form. Add one on the left when you are ready.":
+      "No hay preguntas en este formulario. Agrega una a la izquierda cuando quieras.",
     "New question": "Nueva pregunta",
     "Untitled question": "Pregunta sin título",
     "core": "principal",

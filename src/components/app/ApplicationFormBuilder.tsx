@@ -141,6 +141,22 @@ export function ApplicationFormBuilder() {
     }
   }
 
+  async function clearAndPublish() {
+    setState("saving");
+    setMessage("");
+
+    try {
+      await publishApplicationFormFields([]);
+      setFields([]);
+      setSelectedKey("");
+      setState("saved");
+      setMessage("Application form cleared. The public apply page has no custom questions.");
+    } catch (error) {
+      setState("error");
+      setMessage(error instanceof Error ? error.message : "Could not publish the form.");
+    }
+  }
+
   return (
     <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
       <GlassCard tone="pink" className="p-6">
@@ -183,6 +199,15 @@ export function ApplicationFormBuilder() {
           >
             <Save className="h-4 w-4" />
             {state === "saving" ? "Publishing..." : "Publish form"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void clearAndPublish()}
+            disabled={state === "saving" || fields.length === 0}
+            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[var(--brand-magenta)] bg-white/60 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--brand-magenta)] transition hover:bg-[var(--brand-magenta)] hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            <Trash2 className="h-4 w-4" />
+            {state === "saving" ? "Clearing..." : "Clear and publish empty form"}
           </button>
           {message ? (
             <div
