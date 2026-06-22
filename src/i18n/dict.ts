@@ -31,6 +31,8 @@ export const dict = {
     about: {
       title: "About the house",
       kicker: "Manifesto",
+      note: "since MMXXVI",
+      caption: "Fig. 01 — The first potion.",
       body1:
         "Love Potion was born in a dim corner of the grid, mixing satin, smoke and code. We dress avatars for the moments they actually remember — the slow dance, the long walk home, the first photograph.",
       body2:
@@ -131,6 +133,8 @@ export const dict = {
     about: {
       title: "Sobre la casa",
       kicker: "Manifiesto",
+      note: "desde MMXXVI",
+      caption: "Fig. 01 — La primera poción.",
       body1:
         "Love Potion nació en un rincón tenue del grid, mezclando satén, humo y código. Vestimos avatares para los momentos que de verdad recuerdan — el baile lento, el camino a casa, la primera fotografía.",
       body2:

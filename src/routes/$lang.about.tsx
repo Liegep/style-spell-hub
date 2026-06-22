@@ -15,6 +15,8 @@ function AboutPage() {
   const content = useSiteContent(lang, {
     about_kicker: t.about.kicker,
     about_title: t.about.title,
+    about_note: t.about.note,
+    about_caption: t.about.caption,
     about_body1: t.about.body1,
     about_body2: t.about.body2,
     about_pull: t.about.pull,
@@ -32,7 +34,7 @@ function AboutPage() {
             </h1>
           </div>
           <div className="hidden md:block">
-            <HandwrittenNote withArrow>since MMXXVI</HandwrittenNote>
+            <HandwrittenNote withArrow>{content.about_note}</HandwrittenNote>
           </div>
         </div>
 
@@ -49,7 +51,7 @@ function AboutPage() {
               <div className="aspect-[4/3] w-full rounded-2xl bg-[var(--brand-pink)]/50" />
             )}
             <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-              Fig. 01 — The first potion.
+              {content.about_caption}
             </p>
           </div>
           <div className="md:col-span-6 md:pl-6">
