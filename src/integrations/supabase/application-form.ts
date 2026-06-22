@@ -3,8 +3,6 @@ import type { ApplicationFormField } from "@/integrations/supabase/database.type
 
 export type ApplicationFieldType = ApplicationFormField["field_type"];
 
-const CORE_FIELD_KEYS = ["displayName", "slAvatarName", "email"] as const;
-
 export const DEFAULT_APPLICATION_FORM_FIELDS: ApplicationFormField[] = [
   {
     id: "displayName",
@@ -148,10 +146,6 @@ export const DEFAULT_APPLICATION_FORM_FIELDS: ApplicationFormField[] = [
   },
 ];
 
-export function isCoreApplicationField(fieldKey: string) {
-  return (CORE_FIELD_KEYS as readonly string[]).includes(fieldKey);
-}
-
 export async function listApplicationFormFields(options: { includeDisabled?: boolean } = {}) {
   const { data, error } = await supabase
     .from("application_form_fields")
@@ -164,22 +158,43 @@ export async function listApplicationFormFields(options: { includeDisabled?: boo
   }
 
   const fields = normalizeFields(data ?? []);
-  const safeFields = ensureCoreFields(fields);
-  return options.includeDisabled ? safeFields : safeFields.filter((field) => field.enabled);
+  return options.includeDisabled ? fields : fields.filter((field) => field.enabled);
 }
 
 export async function publishApplicationFormFields(fields: ApplicationFormField[]) {
-  const normalized = ensureCoreFields(fields).map((field, index) => ({
+  const normalized = fields.map((field, index) => ({
     field_key: field.field_key,
     label: field.label.trim() || "Untitled question",
     field_type: field.field_type,
     placeholder: field.placeholder?.trim() || null,
     help_text: field.help_text?.trim() || null,
     options: field.options.filter(Boolean),
-    required: isCoreApplicationField(field.field_key) ? true : field.required,
-    enabled: isCoreApplicationField(field.field_key) ? true : field.enabled,
+    required: field.required,
+    enabled: field.enabled,
     sort_order: index + 1,
   }));
+
+  const { data: existingRows, error: listError } = await supabase
+    .from("application_form_fields")
+    .select("field_key");
+
+  if (listError) throw listError;
+
+  const publishedKeys = new Set(normalized.map((field) => field.field_key));
+  const staleKeys = (existingRows ?? [])
+    .map((row) => String(row.field_key ?? ""))
+    .filter((fieldKey) => fieldKey && !publishedKeys.has(fieldKey));
+
+  if (staleKeys.length > 0) {
+    const { error: deleteError } = await supabase
+      .from("application_form_fields")
+      .delete()
+      .in("field_key", staleKeys);
+
+    if (deleteError) throw deleteError;
+  }
+
+  if (normalized.length === 0) return;
 
   const { error } = await supabase
     .from("application_form_fields")
@@ -213,23 +228,6 @@ function normalizeFields(rows: Array<Record<string, unknown>>): ApplicationFormF
       };
     })
     .filter((field) => field.field_key);
-}
-
-function ensureCoreFields(fields: ApplicationFormField[]) {
-  const byKey = new Map(fields.map((field) => [field.field_key, field]));
-  const merged = [...fields];
-
-  for (const coreField of DEFAULT_APPLICATION_FORM_FIELDS.filter((field) => isCoreApplicationField(field.field_key))) {
-    const existing = byKey.get(coreField.field_key);
-    if (existing) {
-      existing.required = true;
-      existing.enabled = true;
-    } else {
-      merged.unshift(coreField);
-    }
-  }
-
-  return merged.sort((a, b) => a.sort_order - b.sort_order);
 }
 
 function normalizeType(value: unknown): ApplicationFieldType {

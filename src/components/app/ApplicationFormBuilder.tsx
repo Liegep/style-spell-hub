@@ -5,7 +5,6 @@ import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_APPLICATION_FORM_FIELDS,
-  isCoreApplicationField,
   listApplicationFormFields,
   publishApplicationFormFields,
 } from "@/integrations/supabase/application-form";
@@ -73,12 +72,9 @@ export function ApplicationFormBuilder() {
     setFields((current) =>
       current.map((field) => {
         if (field.field_key !== fieldKey) return field;
-        const locked = isCoreApplicationField(field.field_key);
         return {
           ...field,
           ...patch,
-          enabled: locked ? true : patch.enabled ?? field.enabled,
-          required: locked ? true : patch.required ?? field.required,
         };
       }),
     );
@@ -123,7 +119,6 @@ export function ApplicationFormBuilder() {
   }
 
   function removeField(fieldKey: string) {
-    if (isCoreApplicationField(fieldKey)) return;
     setFields((current) => current.filter((field) => field.field_key !== fieldKey));
     setSelectedKey((current) => {
       if (current !== fieldKey) return current;
@@ -178,7 +173,7 @@ export function ApplicationFormBuilder() {
         <div className="mt-8 rounded-2xl border border-white/70 bg-white/50 p-4">
           <HandwrittenNote>publish the spell</HandwrittenNote>
           <p className="mt-3 text-sm text-foreground/60">
-            Published questions appear on the public application page. Core identity fields stay locked so account creation keeps working.
+            Published questions appear on the public application page. You can remove every question and publish a clean, empty form.
           </p>
           <button
             type="button"
@@ -218,8 +213,13 @@ export function ApplicationFormBuilder() {
         </div>
 
         <div className="mt-8 grid gap-4">
+          {fields.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-foreground/15 bg-background/40 p-8 text-center">
+              <HandwrittenNote>clean slate</HandwrittenNote>
+              <p className="mt-3 text-sm text-foreground/55">No questions are in this form. Add one on the left when you are ready.</p>
+            </div>
+          ) : null}
           {fields.map((field, index) => {
-            const locked = isCoreApplicationField(field.field_key);
             const active = selected?.field_key === field.field_key;
             return (
               <div
@@ -237,7 +237,6 @@ export function ApplicationFormBuilder() {
                   <button type="button" onClick={() => setSelectedKey(field.field_key)} className="text-left">
                     <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/45">
                       {String(index + 1).padStart(2, "0")} · {field.field_type.replace("_", " ")}
-                      {locked ? " · core" : ""}
                     </div>
                     <h4 className="mt-1 font-display text-2xl">{field.label || "Untitled question"}</h4>
                   </button>
@@ -251,11 +250,10 @@ export function ApplicationFormBuilder() {
                     <IconButton
                       label={field.enabled ? "Hide" : "Show"}
                       onClick={() => updateField(field.field_key, { enabled: !field.enabled })}
-                      disabled={locked}
                     >
                       {field.enabled ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                     </IconButton>
-                    <IconButton label="Remove" onClick={() => removeField(field.field_key)} disabled={locked}>
+                    <IconButton label="Remove" onClick={() => removeField(field.field_key)}>
                       <Trash2 className="h-4 w-4" />
                     </IconButton>
                   </div>
@@ -273,7 +271,6 @@ export function ApplicationFormBuilder() {
                       <select
                         value={field.field_type}
                         onChange={(event) => updateField(field.field_key, { field_type: event.target.value as ApplicationFieldType })}
-                        disabled={locked}
                         className="mt-2 w-full rounded-full border border-foreground/15 bg-white/70 px-4 py-3 text-sm outline-none focus:border-[var(--brand-magenta)] disabled:opacity-50"
                       >
                         {FIELD_TYPES.map((type) => (
@@ -310,7 +307,6 @@ export function ApplicationFormBuilder() {
                       <input
                         type="checkbox"
                         checked={field.required}
-                        disabled={locked}
                         onChange={(event) => updateField(field.field_key, { required: event.target.checked })}
                         className="h-4 w-4 accent-[var(--brand-magenta)]"
                       />
