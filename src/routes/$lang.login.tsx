@@ -36,16 +36,20 @@ function LoginPage() {
     let mounted = true;
 
     async function bounceIfAlreadyLogged() {
-      const { data, error } = await supabase.auth.getSession();
-      if (!mounted || error || !data.session) return;
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (!mounted || error || !data.session) return;
 
-      const profile = await getCurrentProfile(data.session.user.id);
-      if (!mounted) return;
+        const profile = await getCurrentProfile(data.session.user.id);
+        if (!mounted) return;
 
-      if (profile) {
-        await enterAppWithProfileLanguage(profile);
-      } else {
-        await navigate({ to: "/app/atelier" });
+        if (profile) {
+          await enterAppWithProfileLanguage(profile);
+        } else {
+          await navigate({ to: "/app/atelier" });
+        }
+      } catch (error) {
+        console.warn("[Login] Could not restore existing session.", error);
       }
     }
 

@@ -105,6 +105,12 @@ function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "window.__LOVE_POTION_ENV__=window.__LOVE_POTION_ENV__||{};",
+          }}
+        />
+        <script src="/env.js" />
         <HeadContent />
       </head>
       <body>

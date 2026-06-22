@@ -111,6 +111,20 @@ async function serveHealth(response) {
   response.end(JSON.stringify(payload, null, 2));
 }
 
+function serveRuntimeEnv(response) {
+  const payload = {
+    VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL || "",
+    VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY || "",
+  };
+  const json = JSON.stringify(payload).replace(/</g, "\\u003c");
+
+  response.writeHead(200, {
+    "content-type": "application/javascript; charset=utf-8",
+    "cache-control": "no-store",
+  });
+  response.end(`window.__LOVE_POTION_ENV__=${json};`);
+}
+
 async function getShellAssets() {
   if (!shellAssetsPromise) {
     shellAssetsPromise = (async () => {
@@ -241,6 +255,11 @@ const server = createServer(async (request, response) => {
 
     if (url.pathname === "/__health") {
       await serveHealth(response);
+      return;
+    }
+
+    if (url.pathname === "/env.js") {
+      serveRuntimeEnv(response);
       return;
     }
 
