@@ -131,24 +131,27 @@ export async function getAtelierStats(): Promise<AtelierStats> {
       .is("unsubscribed_at", null),
   ]);
 
-  const errors = [
-    activeBloggers.error,
-    inactiveBloggers.error,
-    postsThisMonth.error,
-    productsLive.error,
-    archiveSoon.error,
-    subscribers.error,
-  ].filter(Boolean);
-
-  if (errors[0]) throw errors[0];
+  const countOrZero = (
+    label: string,
+    result: {
+      count: number | null;
+      error: { message?: string } | null;
+    },
+  ) => {
+    if (result.error) {
+      console.warn(`[Atelier stats] Could not load ${label}`, result.error);
+      return 0;
+    }
+    return result.count ?? 0;
+  };
 
   return {
-    activeBloggers: activeBloggers.count ?? 0,
-    inactiveBloggers: inactiveBloggers.count ?? 0,
-    postsThisMonth: postsThisMonth.count ?? 0,
-    productsLive: productsLive.count ?? 0,
-    archiveSoon: archiveSoon.count ?? 0,
-    subscribers: subscribers.count ?? 0,
+    activeBloggers: countOrZero("active bloggers", activeBloggers),
+    inactiveBloggers: countOrZero("inactive bloggers", inactiveBloggers),
+    postsThisMonth: countOrZero("posts this month", postsThisMonth),
+    productsLive: countOrZero("products live", productsLive),
+    archiveSoon: countOrZero("archive soon", archiveSoon),
+    subscribers: countOrZero("subscribers", subscribers),
   };
 }
 

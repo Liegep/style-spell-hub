@@ -60,28 +60,36 @@ function AtelierPage() {
     let isMounted = true;
 
     async function loadDashboard() {
-      try {
-        const [profile, nextStats, nextBloggers, nextArchives, nextQueue, nextDeliveryDesk] = await Promise.all([
-          getCurrentProfile(),
-          getAtelierStats(),
-          getBloggerPulse(),
-          getUpcomingArchives(),
-          getReviewQueue(reviewFilter),
-          getDeliveryDeskClaims(),
-        ]);
+      const [profile, nextStats, nextBloggers, nextArchives, nextQueue, nextDeliveryDesk] = await Promise.allSettled([
+        getCurrentProfile(),
+        getAtelierStats(),
+        getBloggerPulse(),
+        getUpcomingArchives(),
+        getReviewQueue(reviewFilter),
+        getDeliveryDeskClaims(),
+      ]);
 
-        if (!isMounted) return;
-        setCurrentProfile(profile);
-        setLiveStats(nextStats);
-        setLiveBloggers(nextBloggers);
-        setUpcomingArchives(nextArchives);
-        setReviewQueue(nextQueue);
-        setDeliveryDesk(nextDeliveryDesk);
-        setDataState("live");
-      } catch (error) {
-        console.error("[Atelier] Failed to load live dashboard data", error);
-        if (isMounted) setDataState("fallback");
-      }
+      if (!isMounted) return;
+
+      if (profile.status === "fulfilled") setCurrentProfile(profile.value);
+      else console.error("[Atelier] Failed to load current profile", profile.reason);
+
+      if (nextStats.status === "fulfilled") setLiveStats(nextStats.value);
+      else console.error("[Atelier] Failed to load stats", nextStats.reason);
+
+      if (nextBloggers.status === "fulfilled") setLiveBloggers(nextBloggers.value);
+      else console.error("[Atelier] Failed to load blogger pulse", nextBloggers.reason);
+
+      if (nextArchives.status === "fulfilled") setUpcomingArchives(nextArchives.value);
+      else console.error("[Atelier] Failed to load archives", nextArchives.reason);
+
+      if (nextQueue.status === "fulfilled") setReviewQueue(nextQueue.value);
+      else console.error("[Atelier] Failed to load review queue", nextQueue.reason);
+
+      if (nextDeliveryDesk.status === "fulfilled") setDeliveryDesk(nextDeliveryDesk.value);
+      else console.error("[Atelier] Failed to load delivery desk", nextDeliveryDesk.reason);
+
+      setDataState([profile, nextStats, nextBloggers, nextArchives, nextQueue, nextDeliveryDesk].some((result) => result.status === "fulfilled") ? "live" : "fallback");
     }
 
     void loadDashboard();
