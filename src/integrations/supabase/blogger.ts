@@ -59,6 +59,23 @@ export async function listAvailableProductsForBlogger() {
     .order("display_order", { ascending: true })
     .order("release_date", { ascending: false });
 
+  if (error && /blogging_deadline_days|schema cache|column/i.test(error.message ?? "")) {
+    const fallback = await supabase
+      .from("product_releases")
+      .select(
+        "id,name,category,short_description,blogging_recommendations,editorial_image_url,image_url,vendor_poster_url,release_date,deadline_at,second_life_link,status",
+      )
+      .eq("status", "available")
+      .order("display_order", { ascending: true })
+      .order("release_date", { ascending: false });
+
+    if (fallback.error) throw fallback.error;
+    return ((fallback.data ?? []) as Omit<BloggerProduct, "blogging_deadline_days">[]).map((product) => ({
+      ...product,
+      blogging_deadline_days: null,
+    })) as BloggerProduct[];
+  }
+
   if (error) throw error;
   return (data ?? []) as BloggerProduct[];
 }
@@ -95,6 +112,20 @@ export async function listProductClaimsForBlogger(bloggerId: string) {
     .select("id,product_id,status,claimed_at,delivered_at,due_at")
     .eq("blogger_id", bloggerId)
     .order("claimed_at", { ascending: false });
+
+  if (error && /due_at|schema cache|column/i.test(error.message ?? "")) {
+    const fallback = await supabase
+      .from("product_claims")
+      .select("id,product_id,status,claimed_at,delivered_at")
+      .eq("blogger_id", bloggerId)
+      .order("claimed_at", { ascending: false });
+
+    if (fallback.error) throw fallback.error;
+    return ((fallback.data ?? []) as Omit<BloggerProductClaimSummary, "due_at">[]).map((claim) => ({
+      ...claim,
+      due_at: null,
+    })) as BloggerProductClaimSummary[];
+  }
 
   if (error) throw error;
   return (data ?? []) as BloggerProductClaimSummary[];
@@ -247,6 +278,19 @@ async function getProductClaimById(claimId: string) {
       Pick<ProductClaim, "id" | "product_id" | "status" | "delivery_response" | "claimed_at" | "delivered_at" | "due_at">
     >();
 
+  if (error && /due_at|schema cache|column/i.test(error.message ?? "")) {
+    const fallback = await supabase
+      .from("product_claims")
+      .select("id,product_id,status,delivery_response,claimed_at,delivered_at")
+      .eq("id", claimId)
+      .maybeSingle<
+        Pick<ProductClaim, "id" | "product_id" | "status" | "delivery_response" | "claimed_at" | "delivered_at">
+      >();
+
+    if (fallback.error) throw fallback.error;
+    return fallback.data ? { ...fallback.data, due_at: null } : null;
+  }
+
   if (error) throw error;
   return data;
 }
@@ -257,6 +301,10 @@ async function getProductBloggingDeadlineDays(productId: string) {
     .select("blogging_deadline_days")
     .eq("id", productId)
     .maybeSingle<Pick<ProductRelease, "blogging_deadline_days">>();
+
+  if (error && /blogging_deadline_days|schema cache|column/i.test(error.message ?? "")) {
+    return null;
+  }
 
   if (error) throw error;
   return data?.blogging_deadline_days ?? null;
@@ -270,7 +318,7 @@ function deadlineFromNow(days: number | null) {
 }
 
 export async function claimProductForBlogger(productId: string, bloggerId: string): Promise<ClaimProductResult> {
-  const { data: existingClaim, error: findError } = await supabase
+  let { data: existingClaim, error: findError } = await supabase
     .from("product_claims")
     .select("id,product_id,status,delivery_response,claimed_at,delivered_at,due_at")
     .eq("product_id", productId)
@@ -278,6 +326,20 @@ export async function claimProductForBlogger(productId: string, bloggerId: strin
     .maybeSingle<
       Pick<ProductClaim, "id" | "product_id" | "status" | "delivery_response" | "claimed_at" | "delivered_at" | "due_at">
     >();
+
+  if (findError && /due_at|schema cache|column/i.test(findError.message ?? "")) {
+    const fallback = await supabase
+      .from("product_claims")
+      .select("id,product_id,status,delivery_response,claimed_at,delivered_at")
+      .eq("product_id", productId)
+      .eq("blogger_id", bloggerId)
+      .maybeSingle<
+        Pick<ProductClaim, "id" | "product_id" | "status" | "delivery_response" | "claimed_at" | "delivered_at">
+      >();
+
+    existingClaim = fallback.data ? { ...fallback.data, due_at: null } : null;
+    findError = fallback.error;
+  }
 
   if (findError) throw findError;
   if (existingClaim) {
@@ -313,7 +375,7 @@ export async function claimProductForBlogger(productId: string, bloggerId: strin
 
   const bloggingDeadlineDays = await getProductBloggingDeadlineDays(productId);
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("product_claims")
     .insert({
       product_id: productId,
@@ -326,7 +388,25 @@ export async function claimProductForBlogger(productId: string, bloggerId: strin
       Pick<ProductClaim, "id" | "product_id" | "status" | "delivery_response" | "claimed_at" | "delivered_at" | "due_at">
     >();
 
+  if (error && /due_at|schema cache|column/i.test(error.message ?? "")) {
+    const fallback = await supabase
+      .from("product_claims")
+      .insert({
+        product_id: productId,
+        blogger_id: bloggerId,
+        status: "claimed",
+      })
+      .select("id,product_id,status,delivery_response,claimed_at,delivered_at")
+      .single<
+        Pick<ProductClaim, "id" | "product_id" | "status" | "delivery_response" | "claimed_at" | "delivered_at">
+      >();
+
+    data = fallback.data ? { ...fallback.data, due_at: null } : null;
+    error = fallback.error;
+  }
+
   if (error) throw error;
+  if (!data) throw new Error("Could not create claim.");
 
   const delivery = await requestSecondLifeDelivery(productId, data.id);
   const refreshedClaim = await getProductClaimById(data.id).catch(() => null);

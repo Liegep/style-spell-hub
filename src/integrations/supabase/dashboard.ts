@@ -187,6 +187,23 @@ export async function getProductSummaries() {
     .order("release_date", { ascending: false })
     .limit(50);
 
+  if (error && /blogging_deadline_days|schema cache|column/i.test(error.message ?? "")) {
+    const fallback = await supabase
+      .from("product_releases")
+      .select(
+        "id,name,category,short_description,handwritten_note,editorial_image_url,image_url,vendor_poster_url,release_date,status,featured_on_landing,display_order,auto_archive_at",
+      )
+      .order("display_order", { ascending: true })
+      .order("release_date", { ascending: false })
+      .limit(50);
+
+    if (fallback.error) throw fallback.error;
+    return ((fallback.data ?? []) as Omit<ProductSummary, "blogging_deadline_days">[]).map((product) => ({
+      ...product,
+      blogging_deadline_days: null,
+    })) as ProductSummary[];
+  }
+
   if (error) throw error;
   return (data ?? []) as ProductSummary[];
 }

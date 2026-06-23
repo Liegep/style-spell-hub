@@ -139,13 +139,26 @@ export async function upsertProductRelease(input: ProductReleaseInput) {
     slug: makeSlug(input.name) || id,
   };
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("product_releases")
     .upsert(payload, { onConflict: "id" })
     .select("*")
     .single<ProductRelease>();
 
+  if (error && /blogging_deadline_days|schema cache|column/i.test(error.message ?? "")) {
+    const { blogging_deadline_days: _bloggingDeadlineDays, ...fallbackPayload } = payload;
+    const fallback = await supabase
+      .from("product_releases")
+      .upsert(fallbackPayload, { onConflict: "id" })
+      .select("*")
+      .single<Omit<ProductRelease, "blogging_deadline_days">>();
+
+    data = fallback.data ? { ...fallback.data, blogging_deadline_days: null } : null;
+    error = fallback.error;
+  }
+
   if (error) throw error;
+  if (!data) throw new Error("Could not save product release.");
 
   void logAuditEvent({
     action: isUpdate ? "Updated product release" : "Created product release",
