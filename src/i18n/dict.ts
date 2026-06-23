@@ -70,6 +70,12 @@ export const dict = {
       kicker: "Form · 12 questions",
       intro:
         "Tell us who you are and where your photographs live. We read every application by hand.",
+      loading: "Loading applications",
+      closedKicker: "Applications paused",
+      closedTitle: "Our blogger list is full for now.",
+      closedBody:
+        "We are not opening new blogger applications at the moment. Please keep visiting the store and the website — when Love Potion opens new spots, this page will bloom again.",
+      closedNote: "come back soon",
       sl: "SL avatar name",
       mail: "Contact email",
       flickr: "Flickr URL",
@@ -172,6 +178,12 @@ export const dict = {
       kicker: "Formulario · 12 preguntas",
       intro:
         "Cuéntanos quién eres y dónde viven tus fotografías. Leemos cada aplicación a mano.",
+      loading: "Cargando aplicaciones",
+      closedKicker: "Aplicaciones pausadas",
+      closedTitle: "Nuestra lista de bloggers está llena por ahora.",
+      closedBody:
+        "En este momento no estamos abriendo nuevas aplicaciones para bloggers. Sigue visitando la tienda y el sitio — cuando Love Potion abra nuevos cupos, esta página volverá a florecer.",
+      closedNote: "vuelve pronto",
       sl: "Nombre de avatar SL",
       mail: "Email de contacto",
       flickr: "URL de Flickr",

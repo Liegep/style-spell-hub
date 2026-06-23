@@ -399,6 +399,18 @@ export const appText = {
     "Copy failed": "Copy failed",
     "Copy": "Copy",
     "Question stack.": "Question stack.",
+    "Blogger admissions": "Blogger admissions",
+    "Applications are open.": "Applications are open.",
+    "Applications are paused.": "Applications are paused.",
+    "The public apply page shows the blogger application form.":
+      "The public apply page shows the blogger application form.",
+    "The public apply page shows a soft closed message instead of the form.":
+      "The public apply page shows a soft closed message instead of the form.",
+    "Open admissions": "Open admissions",
+    "Close admissions": "Close admissions",
+    "Blogger applications are open.": "Blogger applications are open.",
+    "Blogger applications are paused.": "Blogger applications are paused.",
+    "Could not update blogger admissions.": "Could not update blogger admissions.",
     "publish the spell": "publish the spell",
     "Published questions appear on the public application page. Core identity fields stay locked so account creation keeps working.":
       "Published questions appear on the public application page. Core identity fields stay locked so account creation keeps working.",
@@ -1021,6 +1033,18 @@ export const appText = {
     "Copy failed": "No se pudo copiar",
     "Copy": "Copiar",
     "Question stack.": "Lista de preguntas.",
+    "Blogger admissions": "Admisiones de bloggers",
+    "Applications are open.": "Las aplicaciones están abiertas.",
+    "Applications are paused.": "Las aplicaciones están pausadas.",
+    "The public apply page shows the blogger application form.":
+      "La página pública de aplicación muestra el formulario de bloggers.",
+    "The public apply page shows a soft closed message instead of the form.":
+      "La página pública de aplicación muestra un aviso bonito en lugar del formulario.",
+    "Open admissions": "Abrir admisiones",
+    "Close admissions": "Cerrar admisiones",
+    "Blogger applications are open.": "Las aplicaciones de bloggers están abiertas.",
+    "Blogger applications are paused.": "Las aplicaciones de bloggers están pausadas.",
+    "Could not update blogger admissions.": "No se pudieron actualizar las admisiones de bloggers.",
     "publish the spell": "publica el hechizo",
     "Published questions appear on the public application page. Core identity fields stay locked so account creation keeps working.":
       "Las preguntas publicadas aparecen en la página pública de aplicación. Los campos de identidad principales quedan bloqueados para que la creación de cuentas siga funcionando.",

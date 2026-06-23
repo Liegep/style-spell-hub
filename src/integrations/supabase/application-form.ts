@@ -2,6 +2,12 @@ import { supabase } from "@/integrations/supabase/client";
 import type { ApplicationFormField } from "@/integrations/supabase/database.types";
 
 export type ApplicationFieldType = ApplicationFormField["field_type"];
+export type BloggerAdmissionsSettings = {
+  open: boolean;
+};
+
+const BLOGGER_ADMISSIONS_KEY = "blogger_admissions";
+const DEFAULT_BLOGGER_ADMISSIONS: BloggerAdmissionsSettings = { open: true };
 
 export const DEFAULT_APPLICATION_FORM_FIELDS: ApplicationFormField[] = [
   {
@@ -203,6 +209,31 @@ export async function publishApplicationFormFields(fields: ApplicationFormField[
   if (error) throw error;
 }
 
+export async function getBloggerAdmissionsSettings(): Promise<BloggerAdmissionsSettings> {
+  const { data, error } = await supabase
+    .from("application_settings")
+    .select("value")
+    .eq("key", BLOGGER_ADMISSIONS_KEY)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("[Application Form] using default admissions settings", error);
+    return DEFAULT_BLOGGER_ADMISSIONS;
+  }
+
+  return normalizeAdmissionsSettings(data?.value);
+}
+
+export async function updateBloggerAdmissionsSettings(settings: BloggerAdmissionsSettings) {
+  const normalized = normalizeAdmissionsSettings(settings);
+  const { error } = await supabase
+    .from("application_settings")
+    .upsert({ key: BLOGGER_ADMISSIONS_KEY, value: normalized }, { onConflict: "key" });
+
+  if (error) throw error;
+  return normalized;
+}
+
 function normalizeFields(rows: Array<Record<string, unknown>>): ApplicationFormField[] {
   return rows
     .map((row) => {
@@ -228,6 +259,14 @@ function normalizeFields(rows: Array<Record<string, unknown>>): ApplicationFormF
       };
     })
     .filter((field) => field.field_key);
+}
+
+function normalizeAdmissionsSettings(value: unknown): BloggerAdmissionsSettings {
+  if (!value || typeof value !== "object") return DEFAULT_BLOGGER_ADMISSIONS;
+  const record = value as Record<string, unknown>;
+  return {
+    open: record.open !== false,
+  };
 }
 
 function normalizeType(value: unknown): ApplicationFieldType {

@@ -20,6 +20,13 @@ export type NotificationType =
 export type NotificationStatus = "pending" | "sent" | "failed" | "cancelled";
 export type ApplicationFieldType = "short_text" | "long_text" | "email" | "url" | "select" | "checkbox" | "date";
 
+export type ApplicationSettings = {
+  key: string;
+  value: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Profile = {
   id: string;
   email: string;

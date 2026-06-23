@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import aboutImg from "@/assets/about-editorial.jpg";
 import { useT } from "@/i18n/dict";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { submitBloggerApplication } from "@/integrations/supabase/applications";
-import { listApplicationFormFields } from "@/integrations/supabase/application-form";
+import { getBloggerAdmissionsSettings, listApplicationFormFields } from "@/integrations/supabase/application-form";
 import type { ApplicationFormField } from "@/integrations/supabase/database.types";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -17,17 +18,23 @@ function ApplyPage() {
   const { t, lang } = useT();
   const [fields, setFields] = useState<ApplicationFormField[]>([]);
   const [form, setForm] = useState<Record<string, string>>({});
-  const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [state, setState] = useState<"loading" | "idle" | "sending" | "sent" | "error">("loading");
+  const [admissionsOpen, setAdmissionsOpen] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let mounted = true;
 
     async function loadForm() {
-      const rows = await listApplicationFormFields();
+      const [settings, rows] = await Promise.all([
+        getBloggerAdmissionsSettings(),
+        listApplicationFormFields(),
+      ]);
       if (!mounted) return;
+      setAdmissionsOpen(settings.open);
       setFields(rows);
       setForm(createEmptyForm(rows));
+      setState("idle");
     }
 
     void loadForm();
@@ -100,6 +107,41 @@ function ApplyPage() {
         </div>
         <p className="mt-6 max-w-xl text-lg text-foreground/80">{t.apply.intro}</p>
 
+        {state === "loading" ? (
+          <GlassCard tone="pink" className="mt-12 p-8 text-center md:p-12">
+            <HandwrittenNote>{t.apply.loading}</HandwrittenNote>
+          </GlassCard>
+        ) : null}
+
+        {state !== "loading" && !admissionsOpen ? (
+          <GlassCard tone="pink" className="mt-12 overflow-hidden p-0">
+            <div className="grid gap-0 lg:grid-cols-[0.9fr_1.1fr]">
+              <div className="min-h-[360px] overflow-hidden">
+                <img
+                  src={aboutImg}
+                  alt=""
+                  className="h-full min-h-[360px] w-full object-cover"
+                />
+              </div>
+              <div className="flex flex-col justify-center p-8 md:p-12">
+                <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
+                  {t.apply.closedKicker}
+                </div>
+                <h2 className="mt-3 font-display text-5xl leading-[0.95] md:text-7xl">
+                  {t.apply.closedTitle}
+                </h2>
+                <p className="mt-6 max-w-2xl text-lg leading-relaxed text-foreground/70">
+                  {t.apply.closedBody}
+                </p>
+                <div className="mt-8">
+                  <HandwrittenNote withArrow>{t.apply.closedNote}</HandwrittenNote>
+                </div>
+              </div>
+            </div>
+          </GlassCard>
+        ) : null}
+
+        {state !== "loading" && admissionsOpen ? (
         <GlassCard tone="pink" className="mt-12 p-8 md:p-12">
           <form onSubmit={onSubmit}>
           <div className="grid gap-6 md:grid-cols-2">
@@ -166,6 +208,7 @@ function ApplyPage() {
           ) : null}
           </form>
         </GlassCard>
+        ) : null}
       </div>
     </main>
   );

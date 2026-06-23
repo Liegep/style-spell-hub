@@ -5,10 +5,14 @@ import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_APPLICATION_FORM_FIELDS,
+  getBloggerAdmissionsSettings,
   listApplicationFormFields,
   publishApplicationFormFields,
+  updateBloggerAdmissionsSettings,
 } from "@/integrations/supabase/application-form";
 import type { ApplicationFieldType, ApplicationFormField } from "@/integrations/supabase/database.types";
+import { translateAppPhrase } from "@/i18n/app-text";
+import { useLang } from "@/i18n/dict";
 
 const FIELD_TYPES: Array<{ value: ApplicationFieldType; label: string }> = [
   { value: "short_text", label: "Short text" },
@@ -21,10 +25,14 @@ const FIELD_TYPES: Array<{ value: ApplicationFieldType; label: string }> = [
 ];
 
 export function ApplicationFormBuilder() {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const [fields, setFields] = useState<ApplicationFormField[]>(DEFAULT_APPLICATION_FORM_FIELDS);
   const [selectedKey, setSelectedKey] = useState(DEFAULT_APPLICATION_FORM_FIELDS[0]?.field_key ?? "");
   const [scrollToKey, setScrollToKey] = useState("");
   const [state, setState] = useState<"idle" | "loading" | "saving" | "saved" | "error">("loading");
+  const [admissionsOpen, setAdmissionsOpen] = useState(true);
+  const [admissionsState, setAdmissionsState] = useState<"idle" | "saving" | "error">("idle");
   const [message, setMessage] = useState("");
   const fieldRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -34,8 +42,12 @@ export function ApplicationFormBuilder() {
     async function loadFields() {
       setState("loading");
       setMessage("");
-      const rows = await listApplicationFormFields({ includeDisabled: true });
+      const [settings, rows] = await Promise.all([
+        getBloggerAdmissionsSettings(),
+        listApplicationFormFields({ includeDisabled: true }),
+      ]);
       if (!mounted) return;
+      setAdmissionsOpen(settings.open);
       setFields(rows);
       setSelectedKey(rows[0]?.field_key ?? "");
       setState("idle");
@@ -134,10 +146,10 @@ export function ApplicationFormBuilder() {
     try {
       await publishApplicationFormFields(fields);
       setState("saved");
-      setMessage("Application form published. The public apply page will use these questions.");
+      setMessage(tr("Application form published. The public apply page will use these questions."));
     } catch (error) {
       setState("error");
-      setMessage(error instanceof Error ? error.message : "Could not publish the form.");
+      setMessage(error instanceof Error ? error.message : tr("Could not publish the form."));
     }
   }
 
@@ -150,15 +162,73 @@ export function ApplicationFormBuilder() {
       setFields([]);
       setSelectedKey("");
       setState("saved");
-      setMessage("Application form cleared. The public apply page has no custom questions.");
+      setMessage(tr("Application form cleared. The public apply page has no custom questions."));
     } catch (error) {
       setState("error");
-      setMessage(error instanceof Error ? error.message : "Could not publish the form.");
+      setMessage(error instanceof Error ? error.message : tr("Could not publish the form."));
+    }
+  }
+
+  async function toggleAdmissions() {
+    const nextOpen = !admissionsOpen;
+    setAdmissionsState("saving");
+    setMessage("");
+
+    try {
+      const settings = await updateBloggerAdmissionsSettings({ open: nextOpen });
+      setAdmissionsOpen(settings.open);
+      setAdmissionsState("idle");
+      setState("saved");
+      setMessage(settings.open ? tr("Blogger applications are open.") : tr("Blogger applications are paused."));
+    } catch (error) {
+      setAdmissionsState("error");
+      setState("error");
+      setMessage(error instanceof Error ? error.message : tr("Could not update blogger admissions."));
     }
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+    <div className="grid gap-6">
+      <GlassCard tone={admissionsOpen ? "pink" : "light"} className="p-6 md:p-8">
+        <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
+              {tr("Blogger admissions")}
+            </div>
+            <h3 className="mt-2 font-display text-4xl leading-none">
+              {tr(admissionsOpen ? "Applications are open." : "Applications are paused.")}
+            </h3>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground/60">
+              {tr(
+                admissionsOpen
+                  ? "The public apply page shows the blogger application form."
+                  : "The public apply page shows a soft closed message instead of the form.",
+              )}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void toggleAdmissions()}
+            disabled={admissionsState === "saving"}
+            aria-pressed={admissionsOpen}
+            className={cn(
+              "inline-flex min-w-[260px] items-center justify-center gap-4 rounded-full border px-5 py-4 font-mono text-[10px] uppercase tracking-[0.24em] transition disabled:cursor-not-allowed disabled:opacity-50",
+              admissionsOpen
+                ? "border-[var(--brand-magenta)] bg-[var(--brand-magenta)] text-white"
+                : "border-foreground/15 bg-white/70 text-foreground/65 hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]",
+            )}
+          >
+            <span className={cn("inline-flex h-9 w-12 items-center justify-center rounded-full bg-white text-[var(--brand-magenta)] transition", !admissionsOpen && "bg-foreground text-background")}>
+              {admissionsOpen ? "ON" : "OFF"}
+            </span>
+            <span>
+              {admissionsState === "saving" ? tr("Saving...") : tr(admissionsOpen ? "Close admissions" : "Open admissions")}
+            </span>
+          </button>
+        </div>
+      </GlassCard>
+
+      <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
       <GlassCard tone="pink" className="p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -344,6 +414,7 @@ export function ApplicationFormBuilder() {
           })}
         </div>
       </GlassCard>
+      </div>
     </div>
   );
 }
