@@ -185,15 +185,9 @@ function ProductsPanel({
         {rows.map((release) => (
           <GlassCard key={release.id} className="group overflow-hidden p-0">
             <button
-              onClick={() => onEdit(release.id)}
-              className="absolute right-4 top-4 z-10 rounded-full bg-background/80 px-3 py-2 font-mono text-[9px] uppercase tracking-[0.25em] opacity-0 shadow transition hover:bg-[var(--brand-pink)] group-hover:opacity-100"
-            >
-              Edit
-            </button>
-            <button
               type="button"
               onClick={() => onEdit(release.id)}
-              className="block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-magenta)]"
+              className="block w-full cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-magenta)]"
               aria-label={`Edit ${release.name}`}
               title="Edit product"
             >
