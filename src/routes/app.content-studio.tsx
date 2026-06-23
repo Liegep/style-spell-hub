@@ -438,11 +438,7 @@ function ProductEditor({
         vendor_poster_url: vendorUrl,
         deadline_at: null,
         blogging_deadline_days: form.blogging_deadline_days,
-        auto_archive_at: form.auto_archive_at
-          ? dateToTimestamptz(form.auto_archive_at)
-          : form.release_date
-            ? dateToTimestamptz(addDays(form.release_date, 90))
-            : null,
+        auto_archive_at: getAutoArchiveAt(form),
         category: emptyToNull(form.category),
         short_description: emptyToNull(form.short_description),
         long_description: emptyToNull(form.long_description),
@@ -1462,6 +1458,16 @@ function addDays(value: string, days: number) {
   const date = new Date(`${value}T12:00:00`);
   date.setDate(date.getDate() + days);
   return date.toISOString().slice(0, 10);
+}
+
+function getAutoArchiveAt(form: ProductReleaseInput) {
+  const today = new Date().toISOString().slice(0, 10);
+  if (form.auto_archive_at && (form.status !== "available" || form.auto_archive_at > today)) {
+    return dateToTimestamptz(form.auto_archive_at);
+  }
+
+  const baseDate = form.release_date && form.release_date > today ? form.release_date : today;
+  return dateToTimestamptz(addDays(baseDate, 90));
 }
 
 async function notifyActiveBloggersOfNewProduct(product: ProductRelease) {
