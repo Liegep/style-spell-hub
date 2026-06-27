@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import aboutImg from "@/assets/about-editorial.jpg";
 import { useT } from "@/i18n/dict";
@@ -21,6 +21,7 @@ function ApplyPage() {
   const [state, setState] = useState<"loading" | "idle" | "sending" | "sent" | "error">("loading");
   const [admissionsOpen, setAdmissionsOpen] = useState(true);
   const [error, setError] = useState("");
+  const applicationsClosed = state !== "loading" && !admissionsOpen;
 
   useEffect(() => {
     let mounted = true;
@@ -94,18 +95,39 @@ function ApplyPage() {
   return (
     <main className="px-6 pt-16 md:px-12">
       <div className="mx-auto max-w-[1200px]">
-        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-          {t.apply.kicker}
-        </div>
-        <div className="mt-3 flex items-end justify-between gap-6">
-          <h1 className="font-display text-6xl leading-[0.9] md:text-[7rem]">
-            {t.apply.title}
-          </h1>
-          <div className="hidden md:block">
-            <HandwrittenNote withArrow>we read every word</HandwrittenNote>
-          </div>
-        </div>
-        <p className="mt-6 max-w-xl text-lg text-foreground/80">{t.apply.intro}</p>
+        {applicationsClosed ? (
+          <>
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
+              {t.apply.closedKicker}
+            </div>
+            <div className="mt-3 flex items-end justify-between gap-6">
+              <h1 className="max-w-4xl font-display text-6xl leading-[0.9] md:text-[7rem]">
+                {t.apply.closedTitle}
+              </h1>
+              <div className="hidden md:block">
+                <HandwrittenNote withArrow>{t.apply.closedNote}</HandwrittenNote>
+              </div>
+            </div>
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-foreground/80">
+              {t.apply.closedBody}
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
+              {t.apply.kicker}
+            </div>
+            <div className="mt-3 flex items-end justify-between gap-6">
+              <h1 className="font-display text-6xl leading-[0.9] md:text-[7rem]">
+                {t.apply.title}
+              </h1>
+              <div className="hidden md:block">
+                <HandwrittenNote withArrow>{t.apply.openNote}</HandwrittenNote>
+              </div>
+            </div>
+            <p className="mt-6 max-w-xl text-lg text-foreground/80">{t.apply.intro}</p>
+          </>
+        )}
 
         {state === "loading" ? (
           <GlassCard tone="pink" className="mt-12 p-8 text-center md:p-12">
@@ -113,28 +135,41 @@ function ApplyPage() {
           </GlassCard>
         ) : null}
 
-        {state !== "loading" && !admissionsOpen ? (
+        {applicationsClosed ? (
           <GlassCard tone="pink" className="mt-12 overflow-hidden p-0">
-            <div className="grid gap-0 lg:grid-cols-[0.9fr_1.1fr]">
-              <div className="min-h-[360px] overflow-hidden">
+            <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
+              <div className="min-h-[420px] overflow-hidden">
                 <img
                   src={aboutImg}
-                  alt=""
-                  className="h-full min-h-[360px] w-full object-cover"
+                  alt={t.apply.closedImageAlt}
+                  className="h-full min-h-[420px] w-full object-cover"
                 />
               </div>
-              <div className="flex flex-col justify-center p-8 md:p-12">
+              <div className="flex flex-col justify-center p-8 md:p-14">
                 <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-                  {t.apply.closedKicker}
+                  {t.apply.closedCardKicker}
                 </div>
-                <h2 className="mt-3 font-display text-5xl leading-[0.95] md:text-7xl">
-                  {t.apply.closedTitle}
+                <h2 className="mt-3 max-w-xl font-display text-5xl leading-[0.95] md:text-7xl">
+                  {t.apply.closedCardTitle}
                 </h2>
                 <p className="mt-6 max-w-2xl text-lg leading-relaxed text-foreground/70">
-                  {t.apply.closedBody}
+                  {t.apply.closedCardBody}
                 </p>
-                <div className="mt-8">
-                  <HandwrittenNote withArrow>{t.apply.closedNote}</HandwrittenNote>
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <Link
+                    to="/$lang/shop-info"
+                    params={{ lang }}
+                    className="rounded-full bg-foreground px-6 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-background transition hover:bg-[var(--brand-magenta)]"
+                  >
+                    {t.apply.closedPrimary}
+                  </Link>
+                  <Link
+                    to="/$lang/releases"
+                    params={{ lang }}
+                    className="rounded-full border border-foreground/25 bg-background/70 px-6 py-3 font-mono text-[10px] uppercase tracking-[0.3em] transition hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]"
+                  >
+                    {t.apply.closedSecondary}
+                  </Link>
                 </div>
               </div>
             </div>
