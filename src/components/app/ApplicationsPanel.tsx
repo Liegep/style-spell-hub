@@ -183,6 +183,9 @@ export function ApplicationsPanel() {
         slAvatarUuid: created.profile.sl_avatar_uuid,
       });
 
+      let welcomeNoteCreated = false;
+      let slWelcomeAttempted = false;
+
       try {
         const staffProfile = await getCurrentProfile();
         if (staffProfile?.id) {
@@ -194,26 +197,36 @@ export function ApplicationsPanel() {
             subject: selected.language_preference === "es" ? "Bienvenida a Love Potion" : "Welcome to Love Potion",
             body: welcomeBody,
           });
+          welcomeNoteCreated = true;
 
-          void notifySecondLifeQuietly(
-            {
-              recipientId: created.userId,
-              type: "new_message",
-              title: selected.language_preference === "es" ? "Love Potion HQ" : "Love Potion HQ",
-              body:
-                selected.language_preference === "es"
-                  ? "Tu cuenta blogger esta lista. Entra en Love Potion HQ para ver tu bienvenida."
-                  : "Your blogger account is ready. Log in to Love Potion HQ to read your welcome note.",
-            },
-            "Blogger onboarding welcome",
-          );
+          if (created.profile.sl_avatar_uuid) {
+            slWelcomeAttempted = true;
+            void notifySecondLifeQuietly(
+              {
+                recipientId: created.userId,
+                type: "new_message",
+                title: selected.language_preference === "es" ? "Love Potion HQ" : "Love Potion HQ",
+                body:
+                  selected.language_preference === "es"
+                    ? "Tu cuenta blogger esta lista. Entra en Love Potion HQ para ver tu bienvenida."
+                    : "Your blogger account is ready. Log in to Love Potion HQ to read your welcome note.",
+              },
+              "Blogger onboarding welcome",
+            );
+          }
         }
       } catch (welcomeError) {
         console.warn("[Applications] Blogger account created, but welcome notification failed.", welcomeError);
       }
 
       setOnboardingState("saved");
-      setOnboardingMessage("Blogger account created. Welcome note sent and login summary is ready to copy.");
+      setOnboardingMessage(
+        welcomeNoteCreated
+          ? slWelcomeAttempted
+            ? "Blogger account created. Welcome note created, and the Second Life ping was attempted."
+            : "Blogger account created. Welcome note created. Add an SL UUID if you want Second Life pings."
+          : "Blogger account created. Welcome note could not be created, but the login summary is ready to copy.",
+      );
       setOnboardingPassword("");
     } catch (createError) {
       setOnboardingState("error");

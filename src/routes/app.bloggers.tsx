@@ -527,7 +527,7 @@ function BloggerDossierModal({
           </GlassCard>
 
           <div className="grid gap-6">
-            <div className="grid gap-4 sm:grid-cols-4">
+            <div className="grid max-w-3xl items-start gap-4 sm:grid-cols-4">
               <MiniStat label="Claims" value={claims.length} />
               <MiniStat label="Delivered" value={deliveredCount} tone="pink" />
               <MiniStat label="Posts" value={submissions.length} />
@@ -585,7 +585,10 @@ function BloggerDossierModal({
 
 function MiniStat({ label, value, tone = "plain" }: { label: string; value: number; tone?: "plain" | "pink" }) {
   return (
-    <GlassCard tone={tone === "pink" ? "pink" : undefined} className="p-4">
+    <GlassCard
+      tone={tone === "pink" ? "pink" : undefined}
+      className="aspect-square p-4"
+    >
       <div className="font-display text-3xl">{String(value).padStart(2, "0")}</div>
       <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.28em] text-foreground/50">{label}</div>
     </GlassCard>
