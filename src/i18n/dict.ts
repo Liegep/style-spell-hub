@@ -67,7 +67,7 @@ export const dict = {
     },
     apply: {
       title: "Apply to blog",
-      kicker: "Form · 12 questions",
+      kicker: "Blogger application",
       intro:
         "Tell us who you are and where your photographs live. We read every application by hand.",
       openNote: "we read every word",
@@ -185,7 +185,7 @@ export const dict = {
     },
     apply: {
       title: "Aplicar para bloguear",
-      kicker: "Formulario · 12 preguntas",
+      kicker: "Aplicación de blogger",
       intro:
         "Cuéntanos quién eres y dónde viven tus fotografías. Leemos cada aplicación a mano.",
       openNote: "leemos cada palabra",
