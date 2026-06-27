@@ -29,6 +29,7 @@ export function ApplicationsPanel() {
   const [selected, setSelected] = useState<BloggerApplication | null>(null);
   const [comment, setComment] = useState("");
   const [onboardingUuid, setOnboardingUuid] = useState("");
+  const [onboardingEmail, setOnboardingEmail] = useState("");
   const [onboardingPassword, setOnboardingPassword] = useState("");
   const [onboardingState, setOnboardingState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [onboardingMessage, setOnboardingMessage] = useState("");
@@ -70,6 +71,7 @@ export function ApplicationsPanel() {
     setSelected(application);
     setComment(application.review_comment ?? "");
     setOnboardingUuid(application.sl_avatar_uuid ?? "");
+    setOnboardingEmail(getApplicantEmail(application, formFields));
     setOnboardingPassword("");
     setOnboardingState("idle");
     setOnboardingMessage("");
@@ -142,6 +144,13 @@ export function ApplicationsPanel() {
       return;
     }
 
+    const loginEmail = onboardingEmail.trim().toLowerCase() || getApplicantEmail(selected, formFields);
+    if (!loginEmail || !loginEmail.includes("@")) {
+      setOnboardingState("error");
+      setOnboardingMessage("A valid email is required.");
+      return;
+    }
+
     if (onboardingUuid.trim() && !isUuid(onboardingUuid.trim())) {
       setOnboardingState("error");
       setOnboardingMessage("SL UUID format looks invalid. Use full UUID (8-4-4-4-12).");
@@ -155,19 +164,21 @@ export function ApplicationsPanel() {
 
     try {
       const temporaryPassword = onboardingPassword;
+      const displayName = getApplicantName(selected, formFields) || "Love Potion Blogger";
+      const avatarName = selected.sl_avatar_name?.trim() || findAnswerByKeys(selected.answers, ["slAvatarName", "sl_avatar_name", "avatarName", "avatar_name"]) || displayName;
       const created = await createBloggerAccount({
-        email: selected.email,
+        email: loginEmail,
         password: temporaryPassword,
-        displayName: selected.display_name,
-        avatarName: selected.sl_avatar_name ?? selected.display_name,
+        displayName,
+        avatarName,
         avatarUuid: onboardingUuid.trim() || null,
         language: selected.language_preference,
         accountStatus: "active",
       });
-      const loginName = created.profile.sl_avatar_name ?? selected.sl_avatar_name ?? selected.display_name;
+      const loginName = created.profile.sl_avatar_name ?? avatarName;
 
       setLoginSummary({
-        displayName: created.profile.display_name ?? selected.display_name,
+        displayName: created.profile.display_name ?? displayName,
         loginName,
         email: created.profile.email,
         temporaryPassword,
@@ -315,7 +326,7 @@ export function ApplicationsPanel() {
             </div>
             <h3 className="mt-2 font-display text-4xl leading-none">{formatApplicantName(selected, formFields)}</h3>
             <div className="mt-4 space-y-2 text-sm text-foreground/70">
-              <ApplicationLine label="Email" value={selected.email} />
+              <ApplicationLine label="Email" value={getApplicantEmail(selected, formFields)} />
               <ApplicationLine label="Applicant name" value={getApplicantName(selected, formFields)} />
               <ApplicationLine label="SL avatar" value={selected.sl_avatar_name} />
               <ApplicationLine label="Flickr" value={selected.flickr_url} link />
@@ -370,6 +381,18 @@ export function ApplicationsPanel() {
                 After approval, create the real blogger login from this application.
               </p>
               <div className="mt-4 grid gap-3">
+                <label className="block">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
+                    Login email
+                  </span>
+                  <input
+                    type="email"
+                    value={onboardingEmail}
+                    onChange={(event) => setOnboardingEmail(event.target.value)}
+                    className="mt-2 w-full rounded-full border border-foreground/15 bg-background/70 px-4 py-3 text-sm outline-none focus:border-[var(--brand-magenta)]"
+                    placeholder="blogger@email.com"
+                  />
+                </label>
                 <label className="block">
                   <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
                     SL avatar UUID
@@ -618,6 +641,38 @@ function getApplicantName(application: BloggerApplication, formFields: Applicati
   if (inferredName) return inferredName;
 
   return application.sl_avatar_name?.trim() || application.email.trim() || "";
+}
+
+function getApplicantEmail(application: BloggerApplication, formFields: ApplicationFormField[]) {
+  const directEmail = application.email?.trim();
+  if (directEmail) return directEmail;
+
+  const keyedEmail = findAnswerByKeys(application.answers, [
+    "email",
+    "emailAddress",
+    "email_address",
+    "mail",
+  ]);
+  if (isEmailLike(keyedEmail)) return keyedEmail;
+
+  const labeledField = formFields.find((field) => {
+    const label = field.label.trim();
+    return /email/i.test(label) || /e-mail/i.test(label) || /correo/i.test(label);
+  });
+  if (labeledField) {
+    const answer = formatAnswerValue(application.answers?.[labeledField.field_key]);
+    if (isEmailLike(answer)) return answer;
+  }
+
+  const answerEmail = Object.values(application.answers ?? {})
+    .map((value) => formatAnswerValue(value))
+    .find(isEmailLike);
+
+  return answerEmail ?? "";
+}
+
+function isEmailLike(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
 function findAnswerByKeys(answers: BloggerApplication["answers"], keys: string[]) {
