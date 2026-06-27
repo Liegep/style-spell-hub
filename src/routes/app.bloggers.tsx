@@ -159,7 +159,7 @@ function BloggersPage() {
             <GlassCard
               key={blogger.id}
               className={cn(
-                "grid gap-5 p-5 md:grid-cols-[1.4fr_1fr_1fr_auto] md:items-center",
+                "grid gap-5 p-5 xl:grid-cols-[1.15fr_0.75fr_1.15fr_auto] xl:items-center",
                 (blogger.account_status === "blocked" || blogger.account_status === "left") &&
                   "border-rose-200 bg-rose-50/40",
               )}
@@ -191,10 +191,8 @@ function BloggersPage() {
                 ) : null}
               </div>
               <StatusChip status={blogger.account_status} />
-              {blogger.account_status === "active" || blogger.account_status === "pending" ? (
-                <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/55">
-                  {blogger.availability_status.replace("_", " ")}
-                </div>
+              {blogger.account_status === "active" || blogger.account_status === "pending" || blogger.account_status === "blocked" ? (
+                <BloggerProgress blogger={blogger} />
               ) : (
                 <div aria-hidden="true" />
               )}
@@ -846,6 +844,80 @@ function StatusChip({ status }: { status: string }) {
     >
       {label}
     </span>
+  );
+}
+
+function BloggerProgress({ blogger }: { blogger: BloggerListItem }) {
+  const progress = blogger.progress ?? {
+    claims: 0,
+    delivered: 0,
+    posts: 0,
+    approved: 0,
+    pending: 0,
+    needsRevision: 0,
+    approvedThisMonth: 0,
+  };
+  const monthlyTarget = blogger.blogger_tier === "friend" ? 0 : 1;
+  const monthProgress = monthlyTarget === 0 ? 100 : Math.min(100, Math.round((progress.approvedThisMonth / monthlyTarget) * 100));
+  const isPaused = blogger.account_status === "blocked" || blogger.account_status === "left";
+  const statusText = isPaused
+    ? "paused"
+    : blogger.blogger_tier === "friend"
+      ? "honor guest"
+      : progress.approvedThisMonth >= monthlyTarget
+        ? "month done"
+        : "monthly post due";
+
+  return (
+    <div className="min-w-[220px] rounded-2xl border border-foreground/10 bg-background/55 px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="font-mono text-[9px] uppercase tracking-[0.28em] text-foreground/45">Progress</div>
+        <div
+          className={cn(
+            "rounded-full px-2.5 py-1 font-mono text-[8px] uppercase tracking-[0.22em]",
+            isPaused
+              ? "bg-rose-100 text-rose-700"
+              : progress.approvedThisMonth >= monthlyTarget || blogger.blogger_tier === "friend"
+                ? "bg-green-500/10 text-green-700"
+                : "bg-orange-500/10 text-orange-700",
+          )}
+        >
+          {statusText}
+        </div>
+      </div>
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-foreground/10">
+        <div
+          className="h-full rounded-full bg-[var(--brand-magenta)] transition-all"
+          style={{ width: `${isPaused ? 0 : monthProgress}%` }}
+        />
+      </div>
+      <div className="mt-3 grid grid-cols-4 gap-2 text-center">
+        <ProgressMetric label="claims" value={progress.claims} />
+        <ProgressMetric label="sent" value={progress.delivered} />
+        <ProgressMetric label="posts" value={progress.posts} />
+        <ProgressMetric label="ok" value={progress.approved} />
+      </div>
+      <div className="mt-2 flex flex-wrap gap-2 font-mono text-[8px] uppercase tracking-[0.22em] text-foreground/45">
+        <span>{progress.approvedThisMonth} this month</span>
+        <span>·</span>
+        <span>{progress.pending} pending</span>
+        {progress.needsRevision > 0 ? (
+          <>
+            <span>·</span>
+            <span>{progress.needsRevision} revision</span>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ProgressMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl bg-foreground/[0.035] px-2 py-2">
+      <div className="font-display text-xl leading-none">{value}</div>
+      <div className="mt-1 font-mono text-[7px] uppercase tracking-[0.22em] text-foreground/40">{label}</div>
+    </div>
   );
 }
 

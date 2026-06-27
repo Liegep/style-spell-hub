@@ -24,7 +24,19 @@ export type BloggerListItem = Pick<
   | "blogger_tier"
   | "created_at"
   | "sl_avatar_uuid"
->;
+> & {
+  progress?: BloggerProgressSummary;
+};
+
+export type BloggerProgressSummary = {
+  claims: number;
+  delivered: number;
+  posts: number;
+  approved: number;
+  pending: number;
+  needsRevision: number;
+  approvedThisMonth: number;
+};
 
 const BLOGGER_SELECT =
   "id,email,display_name,full_name,sl_avatar_name,language_preference,account_status,availability_status,blogger_tier,created_at,sl_avatar_uuid";
@@ -73,7 +85,13 @@ export async function listBloggers() {
     .order("created_at", { ascending: false });
 
   if (error) throw describeBloggerProfileError(error);
-  return (data ?? []) as BloggerListItem[];
+  const rows = (data ?? []) as BloggerListItem[];
+  const progress = await getBloggerProgressSummaries(rows.map((row) => row.id));
+
+  return rows.map((row) => ({
+    ...row,
+    progress: progress[row.id] ?? createEmptyProgress(),
+  }));
 }
 
 export async function createBloggerAccount(input: {
@@ -336,4 +354,72 @@ export async function getBloggerDossier(bloggerId: string): Promise<BloggerDossi
 
 function getProductPreviewImage(product: ProductPreview) {
   return product?.editorial_image_url ?? product?.image_url ?? product?.vendor_poster_url ?? null;
+}
+
+async function getBloggerProgressSummaries(bloggerIds: string[]) {
+  const summaries = bloggerIds.reduce<Record<string, BloggerProgressSummary>>((acc, id) => {
+    acc[id] = createEmptyProgress();
+    return acc;
+  }, {});
+
+  if (bloggerIds.length === 0) return summaries;
+
+  const [claimsResult, submissionsResult] = await Promise.all([
+    supabase
+      .from("product_claims")
+      .select("blogger_id,status")
+      .in("blogger_id", bloggerIds),
+    supabase
+      .from("blog_submissions")
+      .select("blogger_id,status,submitted_at,reviewed_at")
+      .in("blogger_id", bloggerIds),
+  ]);
+
+  if (claimsResult.error) throw claimsResult.error;
+  if (submissionsResult.error) throw submissionsResult.error;
+
+  for (const claim of (claimsResult.data ?? []) as Array<{ blogger_id: string; status: ClaimStatus }>) {
+    const summary = summaries[claim.blogger_id];
+    if (!summary) continue;
+    summary.claims += 1;
+    if (claim.status === "delivered") summary.delivered += 1;
+  }
+
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+
+  for (const submission of (submissionsResult.data ?? []) as Array<{
+    blogger_id: string;
+    status: SubmissionStatus;
+    submitted_at: string;
+    reviewed_at: string | null;
+  }>) {
+    const summary = summaries[submission.blogger_id];
+    if (!summary) continue;
+    summary.posts += 1;
+    if (submission.status === "approved") {
+      summary.approved += 1;
+      const acceptedAt = new Date(submission.reviewed_at ?? submission.submitted_at);
+      if (!Number.isNaN(acceptedAt.getTime()) && acceptedAt >= monthStart) {
+        summary.approvedThisMonth += 1;
+      }
+    }
+    if (submission.status === "pending") summary.pending += 1;
+    if (submission.status === "needs_revision") summary.needsRevision += 1;
+  }
+
+  return summaries;
+}
+
+function createEmptyProgress(): BloggerProgressSummary {
+  return {
+    claims: 0,
+    delivered: 0,
+    posts: 0,
+    approved: 0,
+    pending: 0,
+    needsRevision: 0,
+    approvedThisMonth: 0,
+  };
 }
