@@ -169,8 +169,9 @@ export function ApplicationFormBuilder() {
     }
   }
 
-  async function toggleAdmissions() {
-    const nextOpen = !admissionsOpen;
+  async function toggleAdmissions(nextOpen = !admissionsOpen) {
+    const previousOpen = admissionsOpen;
+    setAdmissionsOpen(nextOpen);
     setAdmissionsState("saving");
     setMessage("");
 
@@ -181,6 +182,7 @@ export function ApplicationFormBuilder() {
       setState("saved");
       setMessage(settings.open ? tr("Blogger applications are open.") : tr("Blogger applications are paused."));
     } catch (error) {
+      setAdmissionsOpen(previousOpen);
       setAdmissionsState("error");
       setState("error");
       setMessage(error instanceof Error ? error.message : tr("Could not update blogger admissions."));
@@ -212,7 +214,7 @@ export function ApplicationFormBuilder() {
             disabled={admissionsState === "saving"}
             aria-pressed={admissionsOpen}
             className={cn(
-              "inline-flex min-w-[200px] items-center justify-center gap-3 rounded-full border px-4 py-3 font-mono text-[9px] uppercase tracking-[0.24em] transition disabled:cursor-not-allowed disabled:opacity-50",
+              "inline-flex w-fit min-w-[176px] items-center justify-center gap-2 rounded-full border px-3 py-2 font-mono text-[8px] uppercase tracking-[0.22em] transition disabled:cursor-not-allowed disabled:opacity-50",
               admissionsOpen
                 ? "border-[var(--brand-magenta)] bg-[var(--brand-magenta)] text-white"
                 : "border-foreground/15 bg-white/70 text-foreground/65 hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]",
@@ -220,7 +222,7 @@ export function ApplicationFormBuilder() {
           >
             <span
               className={cn(
-                "inline-flex h-8 w-11 items-center justify-center rounded-full bg-white text-[var(--brand-magenta)] transition",
+                "inline-flex h-7 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[var(--brand-magenta)] transition",
                 !admissionsOpen && "bg-foreground text-background",
               )}
             >

@@ -602,7 +602,10 @@ function getApplicantName(application: BloggerApplication, formFields: Applicati
   ]);
   if (answerName) return answerName;
 
-  const labeledField = formFields.find((field) => /^(name|display name|full name)$/i.test(field.label.trim()));
+  const labeledField = formFields.find((field) => {
+    const label = field.label.trim();
+    return /name/i.test(label) || /display/i.test(label) || /full/i.test(label) || /applicant/i.test(label);
+  });
   if (labeledField) {
     const answer = application.answers?.[labeledField.field_key];
     const normalized = formatAnswerValue(answer);
