@@ -8,8 +8,6 @@ import { submitBloggerApplication } from "@/integrations/supabase/applications";
 import { getBloggerAdmissionsSettings, listApplicationFormFields } from "@/integrations/supabase/application-form";
 import type { ApplicationFormField } from "@/integrations/supabase/database.types";
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export const Route = createFileRoute("/$lang/apply")({
   component: ApplyPage,
 });
@@ -69,16 +67,12 @@ function ApplyPage() {
       if (requiredMissing) {
         throw new Error(`Please fill: ${requiredMissing.label}.`);
       }
-      const slAvatarUuid = readFormValue(form, "slAvatarUuid");
-      if (slAvatarUuid && !UUID_RE.test(slAvatarUuid)) {
-        throw new Error("SL avatar UUID format looks invalid. Use full UUID (8-4-4-4-12).");
-      }
 
       await submitBloggerApplication({
         displayName: readFormValue(form, "displayName"),
         email: readFormValue(form, "email"),
         slAvatarName: readFormValue(form, "slAvatarName"),
-        slAvatarUuid,
+        slAvatarUuid: readFormValue(form, "slAvatarUuid"),
         languagePreference: lang,
         flickrUrl: readFormValue(form, "flickrUrl"),
         instagramUrl: readFormValue(form, "instagramUrl"),
@@ -203,21 +197,6 @@ function ApplyPage() {
                 {field.help_text ? <p className="mt-2 text-xs text-foreground/55">{field.help_text}</p> : null}
               </label>
             ))}
-            <label className="block">
-              <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">
-                SL avatar UUID *
-              </span>
-              <input
-                value={form.slAvatarUuid ?? ""}
-                onChange={(event) => updateField("slAvatarUuid", event.target.value)}
-                required
-                className="mt-2 w-full rounded-full border border-foreground/30 bg-background/70 px-5 py-3 font-mono text-sm placeholder:text-foreground/40 focus:border-[var(--brand-magenta)] focus:outline-none"
-                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              />
-              <p className="mt-2 text-xs text-foreground/55">
-                This helps Love Potion identify previous applications and account history.
-              </p>
-            </label>
           </div>
 
           <div className="mt-8 grid gap-6 md:grid-cols-2">
@@ -336,7 +315,7 @@ function createEmptyForm(fields: ApplicationFormField[]) {
   return fields.reduce<Record<string, string>>((next, field) => {
     next[field.field_key] = "";
     return next;
-  }, { slAvatarUuid: "" });
+  }, {});
 }
 
 function readFormValue(form: Record<string, string>, fieldKey: string) {
