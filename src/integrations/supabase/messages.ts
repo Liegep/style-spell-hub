@@ -224,6 +224,59 @@ export async function sendInternalReply(input: {
   } satisfies InternalMessage;
 }
 
+export async function sendMessageToStaff(input: {
+  senderId: string;
+  subject: string;
+  body: string;
+}) {
+  const trimmedSubject = input.subject.trim();
+  const trimmedBody = input.body.trim();
+
+  const { data, error } = await supabase.rpc("send_message_to_staff", {
+    message_subject: trimmedSubject,
+    message_body: trimmedBody,
+  });
+
+  if (error) throw error;
+
+  const recipientIds = Array.isArray(data) ? (data as string[]) : [];
+
+  void logAuditEvent({
+    action: "Sent staff message",
+    targetType: "message",
+    targetId:
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `staff-${Date.now()}`,
+    targetName: trimmedSubject,
+    metadata: {
+      recipient_count: recipientIds.length,
+    },
+  });
+
+  void notifyStaffSecondLifeQuietly({
+    type: "new_message",
+    title: trimmedSubject,
+    body: trimmedBody,
+    actionUrl: "/app/admin?section=inbox",
+  });
+
+  return {
+    id:
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `staff-${Date.now()}`,
+    sender_id: input.senderId,
+    scope: "personal",
+    recipient_id: recipientIds[0] ?? null,
+    subject: trimmedSubject,
+    body: trimmedBody,
+    image_url: null,
+    read_at: null,
+    created_at: new Date().toISOString(),
+  } satisfies InternalMessage;
+}
+
 export async function sendSecondLifeNotification(input: {
   recipientId: string;
   title: string;

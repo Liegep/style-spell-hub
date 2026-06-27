@@ -29,6 +29,7 @@ import {
   markPersonalInboxMessagesRead,
   notifyStaffSecondLifeQuietly,
   sendInternalReply,
+  sendMessageToStaff,
   type InboxMessage,
 } from "@/integrations/supabase/messages";
 import {
@@ -1333,6 +1334,11 @@ function InboxTab({
   const [replyState, setReplyState] = useState<Record<string, "idle" | "sending" | "sent" | "error">>({});
   const [replyErrors, setReplyErrors] = useState<Record<string, string>>({});
   const [openReplyId, setOpenReplyId] = useState<string | null>(null);
+  const [staffComposerOpen, setStaffComposerOpen] = useState(false);
+  const [staffSubject, setStaffSubject] = useState("");
+  const [staffBody, setStaffBody] = useState("");
+  const [staffState, setStaffState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [staffError, setStaffError] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -1415,6 +1421,55 @@ function InboxTab({
     }
   }
 
+  async function onSendToStaff() {
+    if (!profileId) return;
+    const subject = staffSubject.trim();
+    const body = staffBody.trim();
+
+    if (!subject || !body) {
+      setStaffError(
+        language === "es"
+          ? "Escribe un asunto y un mensaje para los managers."
+          : "Write a subject and a message for the managers.",
+      );
+      setStaffState("error");
+      return;
+    }
+
+    setStaffError("");
+    setStaffState("sending");
+
+    try {
+      const sent = await sendMessageToStaff({
+        senderId: profileId,
+        subject,
+        body,
+      });
+
+      setMail((current) => [
+        { ...sent, sender_name: language === "es" ? "Tú" : "You" },
+        ...current,
+      ]);
+      setStaffSubject("");
+      setStaffBody("");
+      setStaffState("sent");
+      window.setTimeout(() => {
+        setStaffState("idle");
+        setStaffComposerOpen(false);
+      }, 2800);
+    } catch (error) {
+      console.error("[Blogger Mailbox] staff message failed", error);
+      setStaffError(
+        error instanceof Error
+          ? error.message
+          : language === "es"
+            ? "No se pudo enviar el mensaje."
+            : "Could not send the message.",
+      );
+      setStaffState("error");
+    }
+  }
+
   if (state === "loading") {
     return (
       <GlassCard className="p-8 text-center font-hand text-2xl text-[var(--brand-magenta)]">
@@ -1433,6 +1488,92 @@ function InboxTab({
 
   return (
     <div className="grid gap-4">
+      <GlassCard tone="pink" className="p-6">
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
+              {language === "es" ? "MANAGERS · CONTACTO" : "MANAGERS · CONTACT"}
+            </div>
+            <div className="mt-2 font-display text-3xl">
+              {language === "es" ? "Habla con Love Potion HQ." : "Talk to Love Potion HQ."}
+            </div>
+            <p className="mt-2 max-w-2xl text-sm text-foreground/65">
+              {language === "es"
+                ? "Envía una duda, aviso o pedido directamente al equipo."
+                : "Send a question, note, or request directly to the team."}
+            </p>
+          </div>
+          <button
+            onClick={() => setStaffComposerOpen((current) => !current)}
+            className="inline-flex items-center justify-center rounded-full bg-[var(--brand-magenta)] px-6 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-white shadow-[0_18px_45px_rgba(219,24,97,0.24)] transition hover:bg-foreground"
+          >
+            {staffComposerOpen
+              ? language === "es"
+                ? "Cerrar"
+                : "Close"
+              : language === "es"
+                ? "Mensaje a managers"
+                : "Message managers"}
+          </button>
+        </div>
+
+        {staffComposerOpen ? (
+          <div className="mt-5 rounded-[1.75rem] border border-white/70 bg-background/65 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
+            <div className="grid gap-3">
+              <input
+                value={staffSubject}
+                onChange={(event) => setStaffSubject(event.target.value)}
+                placeholder={language === "es" ? "Asunto" : "Subject"}
+                className="rounded-full border border-foreground/15 bg-background px-5 py-3 text-sm outline-none transition focus:border-[var(--brand-magenta)]"
+              />
+              <textarea
+                value={staffBody}
+                onChange={(event) => setStaffBody(event.target.value)}
+                rows={4}
+                placeholder={
+                  language === "es"
+                    ? "Escribe tu mensaje para los managers..."
+                    : "Write your message to the managers..."
+                }
+                className="resize-none rounded-[1.4rem] border border-foreground/15 bg-background px-5 py-4 text-sm outline-none transition focus:border-[var(--brand-magenta)]"
+              />
+            </div>
+            {staffState === "sent" || staffState === "error" ? (
+              <div
+                className={cn(
+                  "mt-4 rounded-full border px-5 py-3 text-sm",
+                  staffState === "sent"
+                    ? "border-green-300 bg-green-50 text-green-700"
+                    : "border-[var(--brand-magenta)] bg-background text-[var(--brand-magenta)]",
+                )}
+              >
+                {staffState === "sent"
+                  ? language === "es"
+                    ? "Mensaje enviado a los managers."
+                    : "Message sent to the managers."
+                  : staffError}
+              </div>
+            ) : null}
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => void onSendToStaff()}
+                disabled={staffState === "sending"}
+                className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-background transition hover:bg-[var(--brand-magenta)] disabled:opacity-60"
+              >
+                <Send className="h-4 w-4" />
+                {staffState === "sending"
+                  ? language === "es"
+                    ? "Enviando..."
+                    : "Sending..."
+                  : language === "es"
+                    ? "Enviar"
+                    : "Send"}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </GlassCard>
+
       {mail.map((message) => {
         const replyOpen = openReplyId === message.id;
         const canReply = message.scope === "personal" && Boolean(message.sender_id);
