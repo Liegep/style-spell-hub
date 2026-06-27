@@ -213,8 +213,13 @@ function BloggersPage() {
                   </button>
                 ) : null}
                 <button
-                  onClick={() => setSelectedBlogger(blogger)}
-                  className="rounded-full border border-foreground/25 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] hover:bg-foreground hover:text-background"
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setSelectedBlogger(blogger);
+                  }}
+                  aria-label={`Open ${blogger.display_name || blogger.full_name || blogger.sl_avatar_name || "blogger"} dossier`}
+                  className="cursor-pointer rounded-full border border-foreground/25 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] hover:bg-foreground hover:text-background"
                 >
                   Open →
                 </button>

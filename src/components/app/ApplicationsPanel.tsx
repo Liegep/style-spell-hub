@@ -208,8 +208,8 @@ export function ApplicationsPanel() {
                 title: selected.language_preference === "es" ? "Love Potion HQ" : "Love Potion HQ",
                 body:
                   selected.language_preference === "es"
-                    ? "Tu cuenta blogger esta lista. Entra en Love Potion HQ para ver tu bienvenida."
-                    : "Your blogger account is ready. Log in to Love Potion HQ to read your welcome note.",
+                    ? "Tu cuenta blogger esta lista. Espera tu notecard de bienvenida con tu login y contrasena temporal."
+                    : "Your blogger account is ready. Please wait for your welcome notecard with your login and temporary password.",
               },
               "Blogger onboarding welcome",
             );
@@ -454,7 +454,7 @@ export function ApplicationsPanel() {
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
                       <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-                        Login note
+                        Welcome notecard
                       </div>
                       <div className="mt-3 space-y-1 text-sm text-foreground/75">
                         <div>
@@ -765,7 +765,8 @@ function buildLoginSummaryText(summary: LoginSummary) {
     `Temporary password: ${summary.temporaryPassword}`,
     summary.slAvatarUuid ? `Second Life UUID: ${summary.slAvatarUuid}` : null,
     "",
-    "Please log in and change your password from your profile.",
+    "This is your welcome notecard with the information you need to enter the Love Potion platform.",
+    "Please log in and change your temporary password from your profile.",
   ]
     .filter(Boolean)
     .join("\n");
