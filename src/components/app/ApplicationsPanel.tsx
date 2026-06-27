@@ -18,6 +18,7 @@ type LoginSummary = {
   displayName: string;
   loginName: string;
   email: string;
+  usesInternalEmail: boolean;
   temporaryPassword: string;
   slAvatarUuid: string | null;
 };
@@ -144,13 +145,6 @@ export function ApplicationsPanel() {
       return;
     }
 
-    const loginEmail = onboardingEmail.trim().toLowerCase() || getApplicantEmail(selected, formFields);
-    if (!loginEmail || !loginEmail.includes("@")) {
-      setOnboardingState("error");
-      setOnboardingMessage("A valid email is required.");
-      return;
-    }
-
     if (onboardingUuid.trim() && !isUuid(onboardingUuid.trim())) {
       setOnboardingState("error");
       setOnboardingMessage("SL UUID format looks invalid. Use full UUID (8-4-4-4-12).");
@@ -166,6 +160,9 @@ export function ApplicationsPanel() {
       const temporaryPassword = onboardingPassword;
       const displayName = getApplicantName(selected, formFields) || "Love Potion Blogger";
       const avatarName = selected.sl_avatar_name?.trim() || findAnswerByKeys(selected.answers, ["slAvatarName", "sl_avatar_name", "avatarName", "avatar_name"]) || displayName;
+      const applicantEmail = onboardingEmail.trim().toLowerCase() || getApplicantEmail(selected, formFields);
+      const usesInternalEmail = !applicantEmail;
+      const loginEmail = applicantEmail || buildInternalBloggerEmail(selected, avatarName);
       const created = await createBloggerAccount({
         email: loginEmail,
         password: temporaryPassword,
@@ -181,6 +178,7 @@ export function ApplicationsPanel() {
         displayName: created.profile.display_name ?? displayName,
         loginName,
         email: created.profile.email,
+        usesInternalEmail,
         temporaryPassword,
         slAvatarUuid: created.profile.sl_avatar_uuid,
       });
@@ -383,15 +381,18 @@ export function ApplicationsPanel() {
               <div className="mt-4 grid gap-3">
                 <label className="block">
                   <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-                    Login email
+                    Login email · optional
                   </span>
                   <input
                     type="email"
                     value={onboardingEmail}
                     onChange={(event) => setOnboardingEmail(event.target.value)}
                     className="mt-2 w-full rounded-full border border-foreground/15 bg-background/70 px-4 py-3 text-sm outline-none focus:border-[var(--brand-magenta)]"
-                    placeholder="blogger@email.com"
+                placeholder="blogger@email.com"
                   />
+                  <p className="mt-2 text-xs text-foreground/55">
+                    Optional. If empty, Love Potion creates a private technical email and she logs in with her avatar name.
+                  </p>
                 </label>
                 <label className="block">
                   <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
@@ -447,7 +448,10 @@ export function ApplicationsPanel() {
                           <span className="font-semibold text-foreground">Login:</span> {loginSummary.loginName}
                         </div>
                         <div>
-                          <span className="font-semibold text-foreground">Email:</span> {loginSummary.email}
+                          <span className="font-semibold text-foreground">
+                            {loginSummary.usesInternalEmail ? "Internal email:" : "Email:"}
+                          </span>{" "}
+                          {loginSummary.email}
                         </div>
                         <div>
                           <span className="font-semibold text-foreground">Temporary password:</span>{" "}
@@ -675,6 +679,22 @@ function isEmailLike(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
+function buildInternalBloggerEmail(application: BloggerApplication, avatarName: string) {
+  const readableSlug = slugifyForEmail(avatarName || getApplicantName(application, []) || "blogger");
+  const stableId = application.id.replace(/[^a-z0-9]/gi, "").slice(0, 18).toLowerCase();
+  return `${readableSlug || "blogger"}-${stableId}@accounts.lovepotion-sl.com`;
+}
+
+function slugifyForEmail(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/^\.+|\.+$/g, "")
+    .slice(0, 36);
+}
+
 function findAnswerByKeys(answers: BloggerApplication["answers"], keys: string[]) {
   for (const key of keys) {
     const value = formatAnswerValue(answers?.[key]);
@@ -728,7 +748,7 @@ function buildLoginSummaryText(summary: LoginSummary) {
     "",
     `Name: ${summary.displayName}`,
     `Login: ${summary.loginName}`,
-    `Email: ${summary.email}`,
+    summary.usesInternalEmail ? `Internal email: ${summary.email}` : `Email: ${summary.email}`,
     `Temporary password: ${summary.temporaryPassword}`,
     summary.slAvatarUuid ? `Second Life UUID: ${summary.slAvatarUuid}` : null,
     "",
