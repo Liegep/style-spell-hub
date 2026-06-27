@@ -286,7 +286,7 @@ export function ApplicationsPanel() {
                   <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
                     {application.language_preference} · {formatDate(application.submitted_at)}
                   </div>
-                  <h4 className="mt-1 font-display text-2xl">{formatApplicantName(application)}</h4>
+                  <h4 className="mt-1 font-display text-2xl">{formatApplicantName(application, formFields)}</h4>
                   <div className="mt-1 text-sm text-foreground/60">{application.sl_avatar_name || application.email}</div>
                 </div>
                 <span
@@ -313,10 +313,10 @@ export function ApplicationsPanel() {
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
               Review dossier
             </div>
-            <h3 className="mt-2 font-display text-4xl leading-none">{formatApplicantName(selected)}</h3>
+            <h3 className="mt-2 font-display text-4xl leading-none">{formatApplicantName(selected, formFields)}</h3>
             <div className="mt-4 space-y-2 text-sm text-foreground/70">
               <ApplicationLine label="Email" value={selected.email} />
-              <ApplicationLine label="Applicant name" value={selected.display_name} />
+              <ApplicationLine label="Applicant name" value={getApplicantName(selected, formFields)} />
               <ApplicationLine label="SL avatar" value={selected.sl_avatar_name} />
               <ApplicationLine label="Flickr" value={selected.flickr_url} link />
               <ApplicationLine label="Instagram" value={selected.instagram_url} />
@@ -580,8 +580,44 @@ function formatDate(value: string) {
   return new Date(value).toLocaleDateString();
 }
 
-function formatApplicantName(application: BloggerApplication) {
-  return application.display_name?.trim() || application.sl_avatar_name?.trim() || application.email.trim() || "Untitled application";
+function formatApplicantName(application: BloggerApplication, formFields: ApplicationFormField[]) {
+  return (
+    getApplicantName(application, formFields) ||
+    application.sl_avatar_name?.trim() ||
+    application.email.trim() ||
+    "Untitled application"
+  );
+}
+
+function getApplicantName(application: BloggerApplication, formFields: ApplicationFormField[]) {
+  const directName = application.display_name?.trim();
+  if (directName) return directName;
+
+  const answerName = findAnswerByKeys(application.answers, [
+    "name",
+    "displayName",
+    "display_name",
+    "fullName",
+    "full_name",
+  ]);
+  if (answerName) return answerName;
+
+  const labeledField = formFields.find((field) => /^(name|display name|full name)$/i.test(field.label.trim()));
+  if (labeledField) {
+    const answer = application.answers?.[labeledField.field_key];
+    const normalized = formatAnswerValue(answer);
+    if (normalized) return normalized;
+  }
+
+  return application.sl_avatar_name?.trim() || application.email.trim() || "Untitled application";
+}
+
+function findAnswerByKeys(answers: BloggerApplication["answers"], keys: string[]) {
+  for (const key of keys) {
+    const value = formatAnswerValue(answers?.[key]);
+    if (value) return value;
+  }
+  return "";
 }
 
 function buildWelcomeMessage(language: "en" | "es", loginName: string) {

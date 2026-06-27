@@ -212,13 +212,18 @@ export function ApplicationFormBuilder() {
             disabled={admissionsState === "saving"}
             aria-pressed={admissionsOpen}
             className={cn(
-              "inline-flex min-w-[260px] items-center justify-center gap-4 rounded-full border px-5 py-4 font-mono text-[10px] uppercase tracking-[0.24em] transition disabled:cursor-not-allowed disabled:opacity-50",
+              "inline-flex min-w-[200px] items-center justify-center gap-3 rounded-full border px-4 py-3 font-mono text-[9px] uppercase tracking-[0.24em] transition disabled:cursor-not-allowed disabled:opacity-50",
               admissionsOpen
                 ? "border-[var(--brand-magenta)] bg-[var(--brand-magenta)] text-white"
                 : "border-foreground/15 bg-white/70 text-foreground/65 hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]",
             )}
           >
-            <span className={cn("inline-flex h-9 w-12 items-center justify-center rounded-full bg-white text-[var(--brand-magenta)] transition", !admissionsOpen && "bg-foreground text-background")}>
+            <span
+              className={cn(
+                "inline-flex h-8 w-11 items-center justify-center rounded-full bg-white text-[var(--brand-magenta)] transition",
+                !admissionsOpen && "bg-foreground text-background",
+              )}
+            >
               {admissionsOpen ? "ON" : "OFF"}
             </span>
             <span>
