@@ -6,7 +6,7 @@ export type BloggerAdmissionsSettings = {
   open: boolean;
 };
 
-const BLOGGER_ADMISSIONS_KEY = "blogger_admissions";
+const BLOGGER_ADMISSIONS_SETTINGS_FIELD_KEY = "__blogger_admissions_settings";
 const DEFAULT_BLOGGER_ADMISSIONS: BloggerAdmissionsSettings = { open: true };
 
 export const DEFAULT_APPLICATION_FORM_FIELDS: ApplicationFormField[] = [
@@ -189,7 +189,7 @@ export async function publishApplicationFormFields(fields: ApplicationFormField[
   const publishedKeys = new Set(normalized.map((field) => field.field_key));
   const staleKeys = (existingRows ?? [])
     .map((row) => String(row.field_key ?? ""))
-    .filter((fieldKey) => fieldKey && !publishedKeys.has(fieldKey));
+    .filter((fieldKey) => fieldKey && fieldKey !== BLOGGER_ADMISSIONS_SETTINGS_FIELD_KEY && !publishedKeys.has(fieldKey));
 
   if (staleKeys.length > 0) {
     const { error: deleteError } = await supabase
@@ -211,9 +211,9 @@ export async function publishApplicationFormFields(fields: ApplicationFormField[
 
 export async function getBloggerAdmissionsSettings(): Promise<BloggerAdmissionsSettings> {
   const { data, error } = await supabase
-    .from("application_settings")
-    .select("value")
-    .eq("key", BLOGGER_ADMISSIONS_KEY)
+    .from("application_form_fields")
+    .select("help_text,options")
+    .eq("field_key", BLOGGER_ADMISSIONS_SETTINGS_FIELD_KEY)
     .maybeSingle();
 
   if (error) {
@@ -221,27 +221,29 @@ export async function getBloggerAdmissionsSettings(): Promise<BloggerAdmissionsS
     return DEFAULT_BLOGGER_ADMISSIONS;
   }
 
-  return normalizeAdmissionsSettings(data?.value);
+  return normalizeAdmissionsSettings(readAdmissionsSettingsRow(data));
 }
 
 export async function updateBloggerAdmissionsSettings(settings: BloggerAdmissionsSettings) {
   const normalized = normalizeAdmissionsSettings(settings);
-  const { data, error: rpcError } = await supabase.rpc("set_blogger_admissions_open", {
-    next_open: normalized.open,
-  });
+  const { error } = await supabase
+    .from("application_form_fields")
+    .upsert(
+      {
+        field_key: BLOGGER_ADMISSIONS_SETTINGS_FIELD_KEY,
+        label: "Blogger admissions settings",
+        field_type: "checkbox",
+        placeholder: null,
+        help_text: JSON.stringify(normalized),
+        options: [normalized.open ? "open" : "closed"],
+        required: false,
+        enabled: true,
+        sort_order: -1000,
+      },
+      { onConflict: "field_key" },
+    );
 
-  if (!rpcError) {
-    return normalizeAdmissionsSettings(data);
-  }
-
-  console.warn("[Application Form] admissions RPC failed, trying direct update", rpcError);
-
-  const { error: updateError } = await supabase
-    .from("application_settings")
-    .update({ value: normalized })
-    .eq("key", BLOGGER_ADMISSIONS_KEY);
-
-  if (updateError) throw updateError;
+  if (error) throw error;
 
   return normalized;
 }
@@ -270,7 +272,7 @@ function normalizeFields(rows: Array<Record<string, unknown>>): ApplicationFormF
         updated_at: String(row.updated_at ?? ""),
       };
     })
-    .filter((field) => field.field_key);
+    .filter((field) => field.field_key && field.field_key !== BLOGGER_ADMISSIONS_SETTINGS_FIELD_KEY);
 }
 
 function normalizeAdmissionsSettings(value: unknown): BloggerAdmissionsSettings {
@@ -279,6 +281,23 @@ function normalizeAdmissionsSettings(value: unknown): BloggerAdmissionsSettings 
   return {
     open: record.open !== false,
   };
+}
+
+function readAdmissionsSettingsRow(row: unknown) {
+  if (!row || typeof row !== "object") return null;
+  const record = row as Record<string, unknown>;
+  if (typeof record.help_text === "string" && record.help_text.trim()) {
+    try {
+      return JSON.parse(record.help_text);
+    } catch {
+      return null;
+    }
+  }
+
+  const options = Array.isArray(record.options) ? record.options.map(String) : [];
+  if (options.includes("closed")) return { open: false };
+  if (options.includes("open")) return { open: true };
+  return null;
 }
 
 function normalizeType(value: unknown): ApplicationFieldType {

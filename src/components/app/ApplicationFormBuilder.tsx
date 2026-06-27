@@ -193,22 +193,15 @@ export function ApplicationFormBuilder() {
 
   return (
     <div className="grid gap-6">
-      <GlassCard tone={admissionsOpen ? "pink" : "light"} className="w-full max-w-3xl p-4 md:p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col items-start gap-2">
+        <div className="glass-pink inline-flex max-w-full flex-wrap items-center gap-3 rounded-full px-3 py-2 shadow-sm">
           <div>
-            <div className="font-mono text-[8px] uppercase tracking-[0.26em] text-[var(--brand-magenta)]">
+            <div className="font-mono text-[7px] uppercase tracking-[0.24em] text-[var(--brand-magenta)]">
               {tr("Blogger admissions")}
             </div>
-            <h3 className="mt-1.5 font-display text-2xl leading-none md:text-3xl">
+            <div className="mt-0.5 whitespace-nowrap font-display text-lg leading-none md:text-xl">
               {tr(admissionsOpen ? "Applications are open." : "Applications are paused.")}
-            </h3>
-            <p className="mt-1.5 max-w-md text-xs leading-relaxed text-foreground/60 md:text-[13px]">
-              {tr(
-                admissionsOpen
-                  ? "The public apply page shows the blogger application form."
-                  : "The public apply page shows a soft closed message instead of the form.",
-              )}
-            </p>
+            </div>
           </div>
           <button
             type="button"
@@ -216,7 +209,7 @@ export function ApplicationFormBuilder() {
             disabled={admissionsState === "saving"}
             aria-pressed={admissionsOpen}
             className={cn(
-              "inline-flex w-fit min-w-[132px] shrink-0 items-center justify-center gap-2 rounded-full border px-2 py-1.5 font-mono text-[7px] uppercase tracking-[0.18em] transition disabled:cursor-not-allowed disabled:opacity-50",
+              "inline-flex w-fit min-w-[118px] shrink-0 items-center justify-center gap-1.5 rounded-full border px-2 py-1.5 font-mono text-[7px] uppercase tracking-[0.16em] transition disabled:cursor-not-allowed disabled:opacity-50",
               admissionsOpen
                 ? "border-[var(--brand-magenta)] bg-[var(--brand-magenta)] text-white"
                 : "border-foreground/15 bg-white/70 text-foreground/65 hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]",
@@ -238,7 +231,7 @@ export function ApplicationFormBuilder() {
         {admissionsMessage ? (
           <div
             className={cn(
-              "mt-3 rounded-full border bg-white/70 px-3 py-2 text-xs",
+              "rounded-full border bg-white/70 px-3 py-2 text-xs",
               admissionsState === "error"
                 ? "border-[var(--brand-rose)] text-[var(--brand-magenta)]"
                 : "border-green-300 text-green-700",
@@ -247,7 +240,7 @@ export function ApplicationFormBuilder() {
             {admissionsMessage}
           </div>
         ) : null}
-      </GlassCard>
+      </div>
 
       <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
       <GlassCard tone="pink" className="p-6">
