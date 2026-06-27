@@ -1131,6 +1131,13 @@ function Newsletter({
 
   const activeSubscribers = subscribers.filter((subscriber) => subscriber.is_active && !subscriber.unsubscribed_at);
 
+  function formatSubscriberSource(source: string | null | undefined) {
+    if (source === "manual") return "manual";
+    if (source === "second_life_prim") return "kiosk";
+    if (source === "csv_import") return "csv";
+    return "kiosk";
+  }
+
   async function loadNewsletter() {
     try {
       const [subscriberRows, campaignRows] = await Promise.all([
@@ -1348,7 +1355,6 @@ function NewsletterSubscribersPanel({
   const [showManualAdd, setShowManualAdd] = useState(false);
   const [manualName, setManualName] = useState("");
   const [manualUuid, setManualUuid] = useState("");
-  const [manualLanguage, setManualLanguage] = useState<"en" | "es">("en");
   const [manualState, setManualState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [manualMessage, setManualMessage] = useState("");
   const activeSubscribers = subscribers.filter((subscriber) => subscriber.is_active && !subscriber.unsubscribed_at);
@@ -1362,11 +1368,9 @@ function NewsletterSubscribersPanel({
       await addNewsletterSubscriber({
         displayName: manualName,
         slAvatarUuid: manualUuid,
-        languagePreference: manualLanguage,
       });
       setManualName("");
       setManualUuid("");
-      setManualLanguage("en");
       setManualState("saved");
       setManualMessage("Subscriber added.");
       await onSubscriberAdded();
@@ -1379,7 +1383,7 @@ function NewsletterSubscribersPanel({
 
   const manualAddForm = showManualAdd ? (
     <form onSubmit={(event) => void onManualSubmit(event)} className="border-b border-foreground/10 bg-[var(--brand-pink)]/25 p-6">
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(260px,0.8fr)_110px_auto] md:items-end">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(260px,0.9fr)_auto] md:items-end">
         <label className="block">
           <span className="font-mono text-[9px] uppercase tracking-[0.26em] text-foreground/45">Subscriber name</span>
           <input
@@ -1397,17 +1401,6 @@ function NewsletterSubscribersPanel({
             placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
             className="mt-2 w-full rounded-full border border-foreground/15 bg-background/75 px-5 py-3 text-sm outline-none transition focus:border-[var(--brand-magenta)]"
           />
-        </label>
-        <label className="block">
-          <span className="font-mono text-[9px] uppercase tracking-[0.26em] text-foreground/45">Lang</span>
-          <select
-            value={manualLanguage}
-            onChange={(event) => setManualLanguage(event.target.value as "en" | "es")}
-            className="mt-2 w-full rounded-full border border-foreground/15 bg-background/75 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.24em] outline-none transition focus:border-[var(--brand-magenta)]"
-          >
-            <option value="en">EN</option>
-            <option value="es">ES</option>
-          </select>
         </label>
         <button
           type="submit"
@@ -1491,6 +1484,7 @@ function NewsletterSubscribersPanel({
           const displayName =
             subscriber.display_name || subscriber.sl_avatar_name || subscriber.email || "Second Life Resident";
           const active = subscriber.is_active && !subscriber.unsubscribed_at;
+          const source = formatSubscriberSource(subscriber.source);
 
           return (
             <div key={subscriber.id} className="grid gap-3 p-5 md:grid-cols-[minmax(0,1fr)_minmax(240px,0.8fr)_120px_120px] md:items-center">
@@ -1504,7 +1498,7 @@ function NewsletterSubscribersPanel({
                 {subscriber.sl_avatar_uuid || "no sl uuid"}
               </div>
               <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-foreground/55">
-                {subscriber.language_preference || "en"}
+                {source}
               </div>
               <div>
                 <span
