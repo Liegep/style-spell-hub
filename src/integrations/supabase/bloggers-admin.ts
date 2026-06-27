@@ -1,4 +1,3 @@
-import { createClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { logAuditEvent } from "@/integrations/supabase/audit-log";
 import { getBloggerRejoinHistory, notifyStaffAboutRejoinAttempt } from "@/integrations/supabase/blogger-rejoin";
@@ -29,6 +28,13 @@ export type BloggerListItem = Pick<
 
 const BLOGGER_SELECT =
   "id,email,display_name,full_name,sl_avatar_name,language_preference,account_status,availability_status,blogger_tier,created_at,sl_avatar_uuid";
+
+type CreateBloggerAccountResponse = {
+  ok?: boolean;
+  userId?: string;
+  profile?: BloggerListItem;
+  message?: string;
+};
 
 type ProductPreview = Pick<ProductRelease, "name" | "editorial_image_url" | "image_url" | "vendor_poster_url"> | null;
 
@@ -80,10 +86,6 @@ export async function createBloggerAccount(input: {
   accountStatus: "pending" | "active";
   bloggerTier?: BloggerTier;
 }) {
-  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-  if (!url || !anon) throw new Error("Supabase is not configured.");
-
   const rejoinHistory = await getBloggerRejoinHistory(input.avatarUuid);
   if (rejoinHistory && rejoinHistory.totalSignals > 0) {
     await notifyStaffAboutRejoinAttempt({
@@ -96,66 +98,28 @@ export async function createBloggerAccount(input: {
     );
   }
 
-  // Isolated auth client so the current super_admin session is not replaced.
-  const signupClient = createClient(url, anon, {
-    auth: {
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-      persistSession: false,
-      storageKey: `lp-onboarding-${Date.now()}`,
+  const { data, error } = await supabase.functions.invoke<CreateBloggerAccountResponse>(
+    "create-blogger-account",
+    {
+      body: {
+        email: input.email.trim().toLowerCase(),
+        password: input.password,
+        displayName: input.displayName.trim(),
+        avatarName: input.avatarName.trim(),
+        avatarUuid: input.avatarUuid,
+        language: input.language,
+        accountStatus: input.accountStatus,
+        bloggerTier: input.bloggerTier ?? "standard",
+      },
     },
-  });
+  );
 
-  const { data: signUpData, error: signUpError } = await signupClient.auth.signUp({
-    email: input.email.trim().toLowerCase(),
-    password: input.password,
-  });
-
-  if (signUpError) throw signUpError;
-  if (!signUpData.user?.id) {
-    throw new Error("Could not create auth user.");
+  if (error) throw new Error(error.message || "Could not create blogger account.");
+  if (!data?.ok || !data.userId || !data.profile) {
+    throw new Error(data?.message || "Could not create blogger account.");
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .insert({
-      id: signUpData.user.id,
-      email: input.email.trim().toLowerCase(),
-      display_name: input.displayName.trim(),
-      full_name: input.displayName.trim(),
-      sl_avatar_name: input.avatarName.trim(),
-      sl_legacy_name: input.avatarName.trim(),
-      sl_display_name: input.avatarName.trim(),
-      sl_avatar_uuid: input.avatarUuid,
-      role: "blogger",
-      account_status: input.accountStatus,
-      blogger_tier: input.bloggerTier ?? "standard",
-      language_preference: input.language,
-      availability_status: "available",
-    })
-    .select(
-      BLOGGER_SELECT,
-    )
-    .single<BloggerListItem>();
-
-  if (profileError) throw describeBloggerProfileError(profileError);
-
-  void logAuditEvent({
-    action: "Created blogger account",
-    targetType: "profile",
-    targetId: signUpData.user.id,
-    targetName: input.displayName.trim(),
-    metadata: {
-      email: input.email.trim().toLowerCase(),
-      sl_avatar_name: input.avatarName.trim(),
-      sl_avatar_uuid: input.avatarUuid,
-      account_status: input.accountStatus,
-      blogger_tier: input.bloggerTier ?? "standard",
-      language: input.language,
-    },
-  });
-
-  return { userId: signUpData.user.id, profile };
+  return { userId: data.userId, profile: data.profile };
 }
 
 export async function updateBloggerAccountStatus(bloggerId: string, accountStatus: AccountStatus) {
