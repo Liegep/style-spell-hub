@@ -33,6 +33,7 @@ export function ApplicationFormBuilder() {
   const [state, setState] = useState<"idle" | "loading" | "saving" | "saved" | "error">("loading");
   const [admissionsOpen, setAdmissionsOpen] = useState(true);
   const [admissionsState, setAdmissionsState] = useState<"idle" | "saving" | "error">("idle");
+  const [admissionsMessage, setAdmissionsMessage] = useState("");
   const [message, setMessage] = useState("");
   const fieldRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -173,6 +174,7 @@ export function ApplicationFormBuilder() {
     const previousOpen = admissionsOpen;
     setAdmissionsOpen(nextOpen);
     setAdmissionsState("saving");
+    setAdmissionsMessage("");
     setMessage("");
 
     try {
@@ -180,27 +182,27 @@ export function ApplicationFormBuilder() {
       setAdmissionsOpen(settings.open);
       setAdmissionsState("idle");
       setState("saved");
-      setMessage(settings.open ? tr("Blogger applications are open.") : tr("Blogger applications are paused."));
+      setAdmissionsMessage(settings.open ? tr("Blogger applications are open.") : tr("Blogger applications are paused."));
     } catch (error) {
       setAdmissionsOpen(previousOpen);
       setAdmissionsState("error");
       setState("error");
-      setMessage(error instanceof Error ? error.message : tr("Could not update blogger admissions."));
+      setAdmissionsMessage(error instanceof Error ? error.message : tr("Could not update blogger admissions."));
     }
   }
 
   return (
     <div className="grid gap-6">
-      <GlassCard tone={admissionsOpen ? "pink" : "light"} className="p-5 md:p-6">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+      <GlassCard tone={admissionsOpen ? "pink" : "light"} className="w-full max-w-3xl p-4 md:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--brand-magenta)]">
+            <div className="font-mono text-[8px] uppercase tracking-[0.26em] text-[var(--brand-magenta)]">
               {tr("Blogger admissions")}
             </div>
-            <h3 className="mt-2 font-display text-3xl leading-none md:text-[2.4rem]">
+            <h3 className="mt-1.5 font-display text-2xl leading-none md:text-3xl">
               {tr(admissionsOpen ? "Applications are open." : "Applications are paused.")}
             </h3>
-            <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-foreground/60 md:text-sm">
+            <p className="mt-1.5 max-w-md text-xs leading-relaxed text-foreground/60 md:text-[13px]">
               {tr(
                 admissionsOpen
                   ? "The public apply page shows the blogger application form."
@@ -214,7 +216,7 @@ export function ApplicationFormBuilder() {
             disabled={admissionsState === "saving"}
             aria-pressed={admissionsOpen}
             className={cn(
-              "inline-flex w-fit min-w-[150px] items-center justify-center gap-2 rounded-full border px-2.5 py-1.5 font-mono text-[7px] uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-50",
+              "inline-flex w-fit min-w-[132px] shrink-0 items-center justify-center gap-2 rounded-full border px-2 py-1.5 font-mono text-[7px] uppercase tracking-[0.18em] transition disabled:cursor-not-allowed disabled:opacity-50",
               admissionsOpen
                 ? "border-[var(--brand-magenta)] bg-[var(--brand-magenta)] text-white"
                 : "border-foreground/15 bg-white/70 text-foreground/65 hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]",
@@ -233,6 +235,18 @@ export function ApplicationFormBuilder() {
             </span>
           </button>
         </div>
+        {admissionsMessage ? (
+          <div
+            className={cn(
+              "mt-3 rounded-full border bg-white/70 px-3 py-2 text-xs",
+              admissionsState === "error"
+                ? "border-[var(--brand-rose)] text-[var(--brand-magenta)]"
+                : "border-green-300 text-green-700",
+            )}
+          >
+            {admissionsMessage}
+          </div>
+        ) : null}
       </GlassCard>
 
       <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">

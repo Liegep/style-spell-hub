@@ -226,13 +226,24 @@ export async function getBloggerAdmissionsSettings(): Promise<BloggerAdmissionsS
 
 export async function updateBloggerAdmissionsSettings(settings: BloggerAdmissionsSettings) {
   const normalized = normalizeAdmissionsSettings(settings);
-  const { data, error } = await supabase.rpc("set_blogger_admissions_open", {
+  const { data, error: rpcError } = await supabase.rpc("set_blogger_admissions_open", {
     next_open: normalized.open,
   });
 
-  if (error) throw error;
+  if (!rpcError) {
+    return normalizeAdmissionsSettings(data);
+  }
 
-  return normalizeAdmissionsSettings(data);
+  console.warn("[Application Form] admissions RPC failed, trying direct update", rpcError);
+
+  const { error: updateError } = await supabase
+    .from("application_settings")
+    .update({ value: normalized })
+    .eq("key", BLOGGER_ADMISSIONS_KEY);
+
+  if (updateError) throw updateError;
+
+  return normalized;
 }
 
 function normalizeFields(rows: Array<Record<string, unknown>>): ApplicationFormField[] {
