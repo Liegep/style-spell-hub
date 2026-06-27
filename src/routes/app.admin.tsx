@@ -1131,13 +1131,6 @@ function Newsletter({
 
   const activeSubscribers = subscribers.filter((subscriber) => subscriber.is_active && !subscriber.unsubscribed_at);
 
-  function formatSubscriberSource(source: string | null | undefined) {
-    if (source === "manual") return "manual";
-    if (source === "second_life_prim") return "kiosk";
-    if (source === "csv_import") return "csv";
-    return "kiosk";
-  }
-
   async function loadNewsletter() {
     try {
       const [subscriberRows, campaignRows] = await Promise.all([
@@ -1358,6 +1351,13 @@ function NewsletterSubscribersPanel({
   const [manualState, setManualState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [manualMessage, setManualMessage] = useState("");
   const activeSubscribers = subscribers.filter((subscriber) => subscriber.is_active && !subscriber.unsubscribed_at);
+
+  function formatSubscriberSource(source: string | null | undefined) {
+    if (source === "manual") return "manual";
+    if (source === "second_life_prim") return "kiosk";
+    if (source === "csv_import") return "csv";
+    return "kiosk";
+  }
 
   async function onManualSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
