@@ -8,10 +8,11 @@ import {
   reviewBloggerApplication,
   type ApplicationStatus,
 } from "@/integrations/supabase/applications";
+import { listApplicationFormFields } from "@/integrations/supabase/application-form";
 import { getBloggerRejoinHistory, type BloggerRejoinHistory } from "@/integrations/supabase/blogger-rejoin";
 import { createBloggerAccount } from "@/integrations/supabase/bloggers-admin";
 import { notifySecondLifeQuietly, sendInternalMessage } from "@/integrations/supabase/messages";
-import type { BloggerApplication } from "@/integrations/supabase/database.types";
+import type { ApplicationFormField, BloggerApplication } from "@/integrations/supabase/database.types";
 
 type LoginSummary = {
   displayName: string;
@@ -23,6 +24,7 @@ type LoginSummary = {
 
 export function ApplicationsPanel() {
   const [applications, setApplications] = useState<BloggerApplication[]>([]);
+  const [formFields, setFormFields] = useState<ApplicationFormField[]>([]);
   const [filter, setFilter] = useState<ApplicationStatus | "all">("pending");
   const [selected, setSelected] = useState<BloggerApplication | null>(null);
   const [comment, setComment] = useState("");
@@ -43,9 +45,13 @@ export function ApplicationsPanel() {
       setState("loading");
       setError("");
       try {
-        const rows = await listBloggerApplications(filter);
+        const [rows, fields] = await Promise.all([
+          listBloggerApplications(filter),
+          listApplicationFormFields({ includeDisabled: true }),
+        ]);
         if (!mounted) return;
         setApplications(rows);
+        setFormFields(fields);
         setState("idle");
       } catch (loadError) {
         if (!mounted) return;
@@ -280,7 +286,7 @@ export function ApplicationsPanel() {
                   <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
                     {application.language_preference} · {formatDate(application.submitted_at)}
                   </div>
-                  <h4 className="mt-1 font-display text-2xl">{application.display_name}</h4>
+                  <h4 className="mt-1 font-display text-2xl">{formatApplicantName(application)}</h4>
                   <div className="mt-1 text-sm text-foreground/60">{application.sl_avatar_name || application.email}</div>
                 </div>
                 <span
@@ -307,16 +313,17 @@ export function ApplicationsPanel() {
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
               Review dossier
             </div>
-            <h3 className="mt-2 font-display text-4xl leading-none">{selected.display_name}</h3>
+            <h3 className="mt-2 font-display text-4xl leading-none">{formatApplicantName(selected)}</h3>
             <div className="mt-4 space-y-2 text-sm text-foreground/70">
               <ApplicationLine label="Email" value={selected.email} />
+              <ApplicationLine label="Applicant name" value={selected.display_name} />
               <ApplicationLine label="SL avatar" value={selected.sl_avatar_name} />
               <ApplicationLine label="Flickr" value={selected.flickr_url} link />
               <ApplicationLine label="Instagram" value={selected.instagram_url} />
               <ApplicationLine label="Blog" value={selected.blog_url} link />
             </div>
 
-            <ApplicationAnswerList answers={selected.answers} />
+            <ApplicationAnswerList answers={selected.answers} formFields={formFields} />
 
             <label className="mt-6 block">
               <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
@@ -481,7 +488,13 @@ function ApplicationLine({ label, value, link = false }: { label: string; value?
   );
 }
 
-function ApplicationAnswerList({ answers }: { answers: BloggerApplication["answers"] }) {
+function ApplicationAnswerList({
+  answers,
+  formFields,
+}: {
+  answers: BloggerApplication["answers"];
+  formFields: ApplicationFormField[];
+}) {
   const entries = Object.entries(answers ?? {}).filter(([, value]) => formatAnswerValue(value));
 
   if (entries.length === 0) {
@@ -495,7 +508,7 @@ function ApplicationAnswerList({ answers }: { answers: BloggerApplication["answe
   return (
     <div className="mt-6 space-y-4">
       {entries.map(([key, value]) => (
-        <ApplicationAnswer key={key} label={formatAnswerLabel(key)} value={value} />
+        <ApplicationAnswer key={key} label={formatAnswerLabel(key, formFields)} value={value} />
       ))}
     </div>
   );
@@ -512,7 +525,7 @@ function ApplicationAnswer({ label, value }: { label: string; value: unknown }) 
   );
 }
 
-function formatAnswerLabel(key: string) {
+function formatAnswerLabel(key: string, formFields: ApplicationFormField[]) {
   const labels: Record<string, string> = {
     languages: "Languages",
     hours: "Hours in-world",
@@ -520,7 +533,16 @@ function formatAnswerLabel(key: string) {
     cameraStyle: "Camera & style",
     why_love_potion: "Why Love Potion?",
     whyLovePotion: "Why Love Potion?",
+    displayName: "Display name",
+    slAvatarName: "Second Life avatar name",
+    email: "Email",
+    flickrUrl: "Flickr",
+    instagramUrl: "Instagram",
+    blogUrl: "Blog",
   };
+
+  const fieldLabel = formFields.find((field) => field.field_key === key)?.label?.trim();
+  if (fieldLabel) return fieldLabel;
 
   return labels[key] ?? key.replace(/([A-Z])/g, " $1").replace(/[_-]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
@@ -556,6 +578,10 @@ function isUuid(value: string) {
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString();
+}
+
+function formatApplicantName(application: BloggerApplication) {
+  return application.display_name?.trim() || application.sl_avatar_name?.trim() || application.email.trim() || "Untitled application";
 }
 
 function buildWelcomeMessage(language: "en" | "es", loginName: string) {
