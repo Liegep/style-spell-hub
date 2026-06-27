@@ -1,5 +1,5 @@
 import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
@@ -27,6 +27,7 @@ import {
   type AppNotification,
 } from "@/integrations/supabase/notifications";
 import {
+  addNewsletterSubscriber,
   importNewsletterSubscribersFromCsv,
   listNewsletterCampaignsWithStats,
   listNewsletterSubscribers,
@@ -1325,7 +1326,11 @@ function Newsletter({
       ) : newsletterView === "sent" ? (
         <SentNewsletterCampaigns campaigns={campaigns} />
       ) : (
-        <NewsletterSubscribersPanel subscribers={subscribers} loading={state === "loading"} />
+        <NewsletterSubscribersPanel
+          subscribers={subscribers}
+          loading={state === "loading"}
+          onSubscriberAdded={loadNewsletter}
+        />
       )}
     </div>
   );
@@ -1334,11 +1339,98 @@ function Newsletter({
 function NewsletterSubscribersPanel({
   subscribers,
   loading,
+  onSubscriberAdded,
 }: {
   subscribers: NewsletterSubscriber[];
   loading: boolean;
+  onSubscriberAdded: () => Promise<void>;
 }) {
+  const [showManualAdd, setShowManualAdd] = useState(false);
+  const [manualName, setManualName] = useState("");
+  const [manualUuid, setManualUuid] = useState("");
+  const [manualLanguage, setManualLanguage] = useState<"en" | "es">("en");
+  const [manualState, setManualState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [manualMessage, setManualMessage] = useState("");
   const activeSubscribers = subscribers.filter((subscriber) => subscriber.is_active && !subscriber.unsubscribed_at);
+
+  async function onManualSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setManualState("saving");
+    setManualMessage("");
+
+    try {
+      await addNewsletterSubscriber({
+        displayName: manualName,
+        slAvatarUuid: manualUuid,
+        languagePreference: manualLanguage,
+      });
+      setManualName("");
+      setManualUuid("");
+      setManualLanguage("en");
+      setManualState("saved");
+      setManualMessage("Subscriber added.");
+      await onSubscriberAdded();
+    } catch (addError) {
+      console.error("[Newsletter] failed to add subscriber", addError);
+      setManualState("error");
+      setManualMessage(addError instanceof Error ? addError.message : "Could not add subscriber.");
+    }
+  }
+
+  const manualAddForm = showManualAdd ? (
+    <form onSubmit={(event) => void onManualSubmit(event)} className="border-b border-foreground/10 bg-[var(--brand-pink)]/25 p-6">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(260px,0.8fr)_110px_auto] md:items-end">
+        <label className="block">
+          <span className="font-mono text-[9px] uppercase tracking-[0.26em] text-foreground/45">Subscriber name</span>
+          <input
+            value={manualName}
+            onChange={(event) => setManualName(event.target.value)}
+            placeholder="Marie Whitfield"
+            className="mt-2 w-full rounded-full border border-foreground/15 bg-background/75 px-5 py-3 text-sm outline-none transition focus:border-[var(--brand-magenta)]"
+          />
+        </label>
+        <label className="block">
+          <span className="font-mono text-[9px] uppercase tracking-[0.26em] text-foreground/45">SL avatar UUID</span>
+          <input
+            value={manualUuid}
+            onChange={(event) => setManualUuid(event.target.value)}
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            className="mt-2 w-full rounded-full border border-foreground/15 bg-background/75 px-5 py-3 text-sm outline-none transition focus:border-[var(--brand-magenta)]"
+          />
+        </label>
+        <label className="block">
+          <span className="font-mono text-[9px] uppercase tracking-[0.26em] text-foreground/45">Lang</span>
+          <select
+            value={manualLanguage}
+            onChange={(event) => setManualLanguage(event.target.value as "en" | "es")}
+            className="mt-2 w-full rounded-full border border-foreground/15 bg-background/75 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.24em] outline-none transition focus:border-[var(--brand-magenta)]"
+          >
+            <option value="en">EN</option>
+            <option value="es">ES</option>
+          </select>
+        </label>
+        <button
+          type="submit"
+          disabled={manualState === "saving"}
+          className="rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.24em] text-white transition hover:bg-foreground disabled:opacity-60"
+        >
+          {manualState === "saving" ? "Adding..." : "Add"}
+        </button>
+      </div>
+      {manualMessage ? (
+        <div
+          className={cn(
+            "mt-4 rounded-2xl border px-5 py-3 text-sm",
+            manualState === "error"
+              ? "border-[var(--brand-magenta)]/35 bg-[var(--brand-magenta)]/10 text-[var(--brand-magenta)]"
+              : "border-green-300 bg-green-50 text-green-700",
+          )}
+        >
+          {manualMessage}
+        </div>
+      ) : null}
+    </form>
+  ) : null;
 
   if (loading) {
     return (
@@ -1350,12 +1442,24 @@ function NewsletterSubscribersPanel({
 
   if (subscribers.length === 0) {
     return (
-      <GlassCard tone="pink" className="p-8">
-        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">SUBSCRIBERS</div>
-        <h2 className="mt-2 font-display text-4xl leading-none">No subscribers yet.</h2>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-foreground/60">
-          When someone joins the newsletter, their name will appear here.
-        </p>
+      <GlassCard tone="pink" className="overflow-hidden p-0">
+        <div className="flex flex-wrap items-end justify-between gap-4 p-6">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">SUBSCRIBERS</div>
+            <h2 className="mt-2 font-display text-4xl leading-none">No subscribers yet.</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-foreground/60">
+              Add someone manually by name and SL UUID, or import a CSV when you have a bigger list.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowManualAdd((current) => !current)}
+            className="rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.24em] text-white transition hover:bg-foreground"
+          >
+            {showManualAdd ? "Close" : "+ Add subscriber"}
+          </button>
+        </div>
+        {manualAddForm}
       </GlassCard>
     );
   }
@@ -1372,7 +1476,15 @@ function NewsletterSubscribersPanel({
         <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-foreground/55">
           {activeSubscribers.length} <span>active</span> · {subscribers.length} <span>total</span>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowManualAdd((current) => !current)}
+          className="rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.24em] text-white transition hover:bg-foreground"
+        >
+          {showManualAdd ? "Close" : "+ Add subscriber"}
+        </button>
       </div>
+      {manualAddForm}
 
       <div className="divide-y divide-foreground/5">
         {subscribers.map((subscriber) => {

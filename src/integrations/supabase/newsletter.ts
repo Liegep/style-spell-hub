@@ -41,18 +41,67 @@ type CsvSubscriberRow = {
   unsubscribed_at: string | null;
 };
 
+type ManualSubscriberInput = {
+  displayName: string;
+  slAvatarUuid: string;
+  languagePreference?: "en" | "es";
+};
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const NEWSLETTER_SUBSCRIBER_SELECT =
+  "id,email,display_name,sl_avatar_name,sl_avatar_uuid,language_preference,source,is_active,notes,subscribed_at,unsubscribed_at,created_at,updated_at";
 
 export async function listNewsletterSubscribers() {
   const { data, error } = await supabase
     .from("newsletter_subscribers")
-    .select(
-      "id,email,display_name,sl_avatar_name,sl_avatar_uuid,language_preference,source,is_active,notes,subscribed_at,unsubscribed_at,created_at,updated_at",
-    )
+    .select(NEWSLETTER_SUBSCRIBER_SELECT)
     .order("subscribed_at", { ascending: false });
 
   if (error) throw error;
   return (data ?? []) as NewsletterSubscriber[];
+}
+
+export async function addNewsletterSubscriber(input: ManualSubscriberInput) {
+  const displayName = input.displayName.trim();
+  const slAvatarUuid = input.slAvatarUuid.trim();
+
+  if (!displayName) {
+    throw new Error("Subscriber name is required.");
+  }
+
+  if (!UUID_RE.test(slAvatarUuid)) {
+    throw new Error("Use the full Second Life UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.");
+  }
+
+  const { data, error } = await supabase
+    .from("newsletter_subscribers")
+    .upsert(
+      {
+        email: null,
+        display_name: displayName,
+        sl_avatar_name: displayName,
+        sl_avatar_uuid: slAvatarUuid,
+        language_preference: input.languagePreference ?? "en",
+        source: "manual",
+        is_active: true,
+        unsubscribed_at: null,
+      },
+      { onConflict: "sl_avatar_uuid" },
+    )
+    .select(NEWSLETTER_SUBSCRIBER_SELECT)
+    .single();
+
+  if (error) throw error;
+
+  await logAuditEvent({
+    action: "newsletter_subscriber_added",
+    targetType: "newsletter_subscriber",
+    targetId: data.id,
+    targetName: displayName,
+    metadata: { sl_avatar_uuid: slAvatarUuid, source: "manual" },
+  });
+
+  return data as NewsletterSubscriber;
 }
 
 export async function listNewsletterCampaigns(limit = 8) {
