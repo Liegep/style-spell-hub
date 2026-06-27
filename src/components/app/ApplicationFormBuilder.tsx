@@ -32,6 +32,7 @@ export function ApplicationFormBuilder() {
   const [scrollToKey, setScrollToKey] = useState("");
   const [state, setState] = useState<"idle" | "loading" | "saving" | "saved" | "error">("loading");
   const [admissionsOpen, setAdmissionsOpen] = useState(true);
+  const [rulesText, setRulesText] = useState("");
   const [admissionsState, setAdmissionsState] = useState<"idle" | "saving" | "error">("idle");
   const [admissionsMessage, setAdmissionsMessage] = useState("");
   const [message, setMessage] = useState("");
@@ -49,6 +50,7 @@ export function ApplicationFormBuilder() {
       ]);
       if (!mounted) return;
       setAdmissionsOpen(settings.open);
+      setRulesText(settings.rulesText);
       setFields(rows);
       setSelectedKey(rows[0]?.field_key ?? "");
       setState("idle");
@@ -170,25 +172,33 @@ export function ApplicationFormBuilder() {
     }
   }
 
-  async function toggleAdmissions(nextOpen = !admissionsOpen) {
+  async function saveAdmissionsSettings(nextOpen = admissionsOpen, nextRulesText = rulesText) {
     const previousOpen = admissionsOpen;
+    const previousRulesText = rulesText;
     setAdmissionsOpen(nextOpen);
+    setRulesText(nextRulesText);
     setAdmissionsState("saving");
     setAdmissionsMessage("");
     setMessage("");
 
     try {
-      const settings = await updateBloggerAdmissionsSettings({ open: nextOpen });
+      const settings = await updateBloggerAdmissionsSettings({ open: nextOpen, rulesText: nextRulesText });
       setAdmissionsOpen(settings.open);
+      setRulesText(settings.rulesText);
       setAdmissionsState("idle");
       setState("saved");
-      setAdmissionsMessage(settings.open ? tr("Blogger applications are open.") : tr("Blogger applications are paused."));
+      setAdmissionsMessage(tr("Blogger admissions settings saved."));
     } catch (error) {
       setAdmissionsOpen(previousOpen);
+      setRulesText(previousRulesText);
       setAdmissionsState("error");
       setState("error");
       setAdmissionsMessage(error instanceof Error ? error.message : tr("Could not update blogger admissions."));
     }
+  }
+
+  async function toggleAdmissions(nextOpen = !admissionsOpen) {
+    await saveAdmissionsSettings(nextOpen, rulesText);
   }
 
   return (
@@ -241,6 +251,39 @@ export function ApplicationFormBuilder() {
           </div>
         ) : null}
       </div>
+
+      <GlassCard className="p-6 md:p-8">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
+              {tr("Application rules")}
+            </div>
+            <h3 className="mt-2 font-display text-4xl leading-none">{tr("Before they apply.")}</h3>
+            <p className="mt-3 max-w-2xl text-sm text-foreground/60">
+              {tr("Write the rules bloggers should read before sending an application. Leave it blank to hide this block.")}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void saveAdmissionsSettings(admissionsOpen, rulesText)}
+            disabled={admissionsState === "saving"}
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-5 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-background transition hover:bg-[var(--brand-magenta)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Save className="h-4 w-4" />
+            {admissionsState === "saving" ? tr("Saving...") : tr("Save rules")}
+          </button>
+        </div>
+        <textarea
+          value={rulesText}
+          onChange={(event) => {
+            setRulesText(event.target.value);
+            setState("idle");
+          }}
+          rows={7}
+          className="mt-6 w-full rounded-3xl border border-foreground/15 bg-white/70 px-5 py-4 text-sm leading-relaxed outline-none placeholder:text-foreground/35 focus:border-[var(--brand-magenta)]"
+          placeholder={tr("Example: Bloggers must publish one post per claimed item, credit Love Potion, and submit links before the deadline.")}
+        />
+      </GlassCard>
 
       <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
       <GlassCard tone="pink" className="p-6">

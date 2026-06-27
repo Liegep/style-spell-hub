@@ -402,6 +402,14 @@ export const appText = {
     "Blogger admissions": "Blogger admissions",
     "Applications are open.": "Applications are open.",
     "Applications are paused.": "Applications are paused.",
+    "Application rules": "Application rules",
+    "Before they apply.": "Before they apply.",
+    "Write the rules bloggers should read before sending an application. Leave it blank to hide this block.":
+      "Write the rules bloggers should read before sending an application. Leave it blank to hide this block.",
+    "Save rules": "Save rules",
+    "Blogger admissions settings saved.": "Blogger admissions settings saved.",
+    "Example: Bloggers must publish one post per claimed item, credit Love Potion, and submit links before the deadline.":
+      "Example: Bloggers must publish one post per claimed item, credit Love Potion, and submit links before the deadline.",
     "The public apply page shows the blogger application form.":
       "The public apply page shows the blogger application form.",
     "The public apply page shows a soft closed message instead of the form.":
@@ -1036,6 +1044,14 @@ export const appText = {
     "Blogger admissions": "Admisiones de bloggers",
     "Applications are open.": "Las aplicaciones están abiertas.",
     "Applications are paused.": "Las aplicaciones están pausadas.",
+    "Application rules": "Reglas de aplicación",
+    "Before they apply.": "Antes de aplicar.",
+    "Write the rules bloggers should read before sending an application. Leave it blank to hide this block.":
+      "Escribe las reglas que las bloggers deben leer antes de enviar una aplicación. Déjalo en blanco para ocultar este bloque.",
+    "Save rules": "Guardar reglas",
+    "Blogger admissions settings saved.": "Configuración de admisiones guardada.",
+    "Example: Bloggers must publish one post per claimed item, credit Love Potion, and submit links before the deadline.":
+      "Ejemplo: Las bloggers deben publicar un post por cada producto reclamado, dar crédito a Love Potion y enviar los links antes del plazo.",
     "The public apply page shows the blogger application form.":
       "La página pública de aplicación muestra el formulario de bloggers.",
     "The public apply page shows a soft closed message instead of the form.":

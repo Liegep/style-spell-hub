@@ -20,6 +20,7 @@ function ApplyPage() {
   const [form, setForm] = useState<Record<string, string>>({});
   const [state, setState] = useState<"loading" | "idle" | "sending" | "sent" | "error">("loading");
   const [admissionsOpen, setAdmissionsOpen] = useState(true);
+  const [rulesText, setRulesText] = useState("");
   const [error, setError] = useState("");
   const applicationsClosed = state !== "loading" && !admissionsOpen;
 
@@ -33,6 +34,7 @@ function ApplyPage() {
       ]);
       if (!mounted) return;
       setAdmissionsOpen(settings.open);
+      setRulesText(settings.rulesText);
       setFields(rows);
       setForm(createEmptyForm(rows));
       setState("idle");
@@ -178,6 +180,17 @@ function ApplyPage() {
 
         {state !== "loading" && admissionsOpen ? (
         <GlassCard tone="pink" className="mt-12 p-8 md:p-12">
+          {rulesText.trim() ? (
+            <div className="mb-10 rounded-3xl border border-white/70 bg-white/55 p-6 md:p-8">
+              <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
+                {t.apply.rulesKicker}
+              </div>
+              <h2 className="mt-2 font-display text-4xl leading-none">{t.apply.rulesTitle}</h2>
+              <div className="mt-5 whitespace-pre-wrap text-sm leading-relaxed text-foreground/70 md:text-base">
+                {rulesText.trim()}
+              </div>
+            </div>
+          ) : null}
           <form onSubmit={onSubmit}>
           <div className="grid gap-6 md:grid-cols-2">
             {shortFields.map((field) => (

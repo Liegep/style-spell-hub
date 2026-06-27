@@ -4,10 +4,11 @@ import type { ApplicationFormField } from "@/integrations/supabase/database.type
 export type ApplicationFieldType = ApplicationFormField["field_type"];
 export type BloggerAdmissionsSettings = {
   open: boolean;
+  rulesText: string;
 };
 
 const BLOGGER_ADMISSIONS_SETTINGS_FIELD_KEY = "__blogger_admissions_settings";
-const DEFAULT_BLOGGER_ADMISSIONS: BloggerAdmissionsSettings = { open: true };
+const DEFAULT_BLOGGER_ADMISSIONS: BloggerAdmissionsSettings = { open: true, rulesText: "" };
 
 export const DEFAULT_APPLICATION_FORM_FIELDS: ApplicationFormField[] = [
   {
@@ -280,6 +281,7 @@ function normalizeAdmissionsSettings(value: unknown): BloggerAdmissionsSettings 
   const record = value as Record<string, unknown>;
   return {
     open: record.open !== false,
+    rulesText: typeof record.rulesText === "string" ? record.rulesText : "",
   };
 }
 

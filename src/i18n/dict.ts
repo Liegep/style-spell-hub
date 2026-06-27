@@ -72,6 +72,8 @@ export const dict = {
         "Tell us who you are and where your photographs live. We read every application by hand.",
       openNote: "we read every word",
       loading: "Loading applications",
+      rulesKicker: "Before you apply",
+      rulesTitle: "Read the house rules.",
       closedKicker: "Blogger applications · Paused",
       closedTitle: "Our blogger list is full for now.",
       closedBody:
@@ -188,6 +190,8 @@ export const dict = {
         "Cuéntanos quién eres y dónde viven tus fotografías. Leemos cada aplicación a mano.",
       openNote: "leemos cada palabra",
       loading: "Cargando aplicaciones",
+      rulesKicker: "Antes de aplicar",
+      rulesTitle: "Lee las reglas de la casa.",
       closedKicker: "Aplicaciones de bloggers · En pausa",
       closedTitle: "Nuestra lista de bloggers está llena por ahora.",
       closedBody:
