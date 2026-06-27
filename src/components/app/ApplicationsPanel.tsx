@@ -507,8 +507,8 @@ function ApplicationAnswerList({
 
   return (
     <div className="mt-6 space-y-4">
-      {entries.map(([key, value]) => (
-        <ApplicationAnswer key={key} label={formatAnswerLabel(key, formFields)} value={value} />
+      {entries.map(([key, value], index) => (
+        <ApplicationAnswer key={key} label={formatAnswerLabel(key, formFields, index)} value={value} />
       ))}
     </div>
   );
@@ -525,7 +525,7 @@ function ApplicationAnswer({ label, value }: { label: string; value: unknown }) 
   );
 }
 
-function formatAnswerLabel(key: string, formFields: ApplicationFormField[]) {
+function formatAnswerLabel(key: string, formFields: ApplicationFormField[], index = 0) {
   const labels: Record<string, string> = {
     languages: "Languages",
     hours: "Hours in-world",
@@ -543,6 +543,8 @@ function formatAnswerLabel(key: string, formFields: ApplicationFormField[]) {
 
   const fieldLabel = formFields.find((field) => field.field_key === key)?.label?.trim();
   if (fieldLabel) return fieldLabel;
+
+  if (/^custom[_-]?[a-z0-9]+$/i.test(key)) return `Answer ${index + 1}`;
 
   return labels[key] ?? key.replace(/([A-Z])/g, " $1").replace(/[_-]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
@@ -604,7 +606,7 @@ function getApplicantName(application: BloggerApplication, formFields: Applicati
 
   const labeledField = formFields.find((field) => {
     const label = field.label.trim();
-    return /name/i.test(label) || /display/i.test(label) || /full/i.test(label) || /applicant/i.test(label);
+    return /name/i.test(label) || /nombre/i.test(label) || /display/i.test(label) || /full/i.test(label) || /applicant/i.test(label);
   });
   if (labeledField) {
     const answer = application.answers?.[labeledField.field_key];
@@ -612,7 +614,10 @@ function getApplicantName(application: BloggerApplication, formFields: Applicati
     if (normalized) return normalized;
   }
 
-  return application.sl_avatar_name?.trim() || application.email.trim() || "Untitled application";
+  const inferredName = inferApplicantNameFromAnswers(application.answers);
+  if (inferredName) return inferredName;
+
+  return application.sl_avatar_name?.trim() || application.email.trim() || "";
 }
 
 function findAnswerByKeys(answers: BloggerApplication["answers"], keys: string[]) {
@@ -621,6 +626,23 @@ function findAnswerByKeys(answers: BloggerApplication["answers"], keys: string[]
     if (value) return value;
   }
   return "";
+}
+
+function inferApplicantNameFromAnswers(answers: BloggerApplication["answers"]) {
+  const values = Object.values(answers ?? {})
+    .map((value) => formatAnswerValue(value))
+    .filter(Boolean);
+
+  const likelyName = values.find((value) => {
+    const normalized = value.trim();
+    if (!normalized || normalized.length > 60) return false;
+    if (/^https?:\/\//i.test(normalized) || normalized.includes("@")) return false;
+    if (/^(yes|no|sim|não|nao|si)$/i.test(normalized)) return false;
+    if (/[.!?]{1,}$/.test(normalized)) return false;
+    return normalized.split(/\s+/).length >= 2;
+  });
+
+  return likelyName ?? "";
 }
 
 function buildWelcomeMessage(language: "en" | "es", loginName: string) {

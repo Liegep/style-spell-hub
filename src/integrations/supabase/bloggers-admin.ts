@@ -114,12 +114,38 @@ export async function createBloggerAccount(input: {
     },
   );
 
-  if (error) throw new Error(error.message || "Could not create blogger account.");
+  if (error) throw new Error(await describeFunctionError(error, "Could not create blogger account."));
   if (!data?.ok || !data.userId || !data.profile) {
     throw new Error(data?.message || "Could not create blogger account.");
   }
 
   return { userId: data.userId, profile: data.profile };
+}
+
+async function describeFunctionError(error: unknown, fallback: string) {
+  const response = getFunctionErrorResponse(error);
+  if (response) {
+    try {
+      const body = await response.clone().json();
+      if (typeof body?.message === "string" && body.message.trim()) return body.message.trim();
+      if (typeof body?.error === "string" && body.error.trim()) return body.error.trim();
+    } catch {
+      try {
+        const text = await response.clone().text();
+        if (text.trim()) return text.trim();
+      } catch {
+        // Keep the friendly fallback below.
+      }
+    }
+  }
+
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function getFunctionErrorResponse(error: unknown): Response | null {
+  if (!error || typeof error !== "object" || !("context" in error)) return null;
+  const context = (error as { context?: unknown }).context;
+  return context instanceof Response ? context : null;
 }
 
 export async function updateBloggerAccountStatus(bloggerId: string, accountStatus: AccountStatus) {
