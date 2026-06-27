@@ -191,16 +191,16 @@ export function ApplicationFormBuilder() {
 
   return (
     <div className="grid gap-6">
-      <GlassCard tone={admissionsOpen ? "pink" : "light"} className="p-6 md:p-8">
-        <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
+      <GlassCard tone={admissionsOpen ? "pink" : "light"} className="p-5 md:p-6">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
+            <div className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--brand-magenta)]">
               {tr("Blogger admissions")}
             </div>
-            <h3 className="mt-2 font-display text-4xl leading-none">
+            <h3 className="mt-2 font-display text-3xl leading-none md:text-[2.4rem]">
               {tr(admissionsOpen ? "Applications are open." : "Applications are paused.")}
             </h3>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground/60">
+            <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-foreground/60 md:text-sm">
               {tr(
                 admissionsOpen
                   ? "The public apply page shows the blogger application form."
@@ -214,7 +214,7 @@ export function ApplicationFormBuilder() {
             disabled={admissionsState === "saving"}
             aria-pressed={admissionsOpen}
             className={cn(
-              "inline-flex w-fit min-w-[176px] items-center justify-center gap-2 rounded-full border px-3 py-2 font-mono text-[8px] uppercase tracking-[0.22em] transition disabled:cursor-not-allowed disabled:opacity-50",
+              "inline-flex w-fit min-w-[150px] items-center justify-center gap-2 rounded-full border px-2.5 py-1.5 font-mono text-[7px] uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-50",
               admissionsOpen
                 ? "border-[var(--brand-magenta)] bg-[var(--brand-magenta)] text-white"
                 : "border-foreground/15 bg-white/70 text-foreground/65 hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]",
@@ -222,7 +222,7 @@ export function ApplicationFormBuilder() {
           >
             <span
               className={cn(
-                "inline-flex h-7 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[var(--brand-magenta)] transition",
+                "inline-flex h-6 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[var(--brand-magenta)] transition",
                 !admissionsOpen && "bg-foreground text-background",
               )}
             >

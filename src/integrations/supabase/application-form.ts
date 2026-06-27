@@ -226,12 +226,13 @@ export async function getBloggerAdmissionsSettings(): Promise<BloggerAdmissionsS
 
 export async function updateBloggerAdmissionsSettings(settings: BloggerAdmissionsSettings) {
   const normalized = normalizeAdmissionsSettings(settings);
-  const { error } = await supabase
-    .from("application_settings")
-    .upsert({ key: BLOGGER_ADMISSIONS_KEY, value: normalized }, { onConflict: "key" });
+  const { data, error } = await supabase.rpc("set_blogger_admissions_open", {
+    next_open: normalized.open,
+  });
 
   if (error) throw error;
-  return normalized;
+
+  return normalizeAdmissionsSettings(data);
 }
 
 function normalizeFields(rows: Array<Record<string, unknown>>): ApplicationFormField[] {
