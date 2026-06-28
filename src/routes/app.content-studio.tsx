@@ -356,6 +356,17 @@ function ProductEditor({
     };
   }, [mode]);
 
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && state !== "saving" && state !== "deleting") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose, state]);
+
   function update<K extends keyof ProductReleaseInput>(key: K, value: ProductReleaseInput[K]) {
     setForm((current) => ({ ...current, [key]: value }));
   }
@@ -510,12 +521,13 @@ function ProductEditor({
   }
 
   const handwrittenPreview = form.handwritten_note?.trim() || "your note";
+  const descriptionPreview = form.long_description?.trim() || "Describe the fabric, mood, fit, and little details here.";
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-foreground/55 px-4 py-8 backdrop-blur-sm">
       <form
         onSubmit={saveProduct}
-        className="mx-auto max-w-6xl rounded-[2rem] border border-[var(--brand-pink)] bg-background p-6 shadow-2xl md:p-10"
+        className="mx-auto max-h-[calc(100vh-4rem)] max-w-6xl overflow-y-auto rounded-[2rem] border border-[var(--brand-pink)] bg-background p-6 shadow-2xl [scrollbar-color:var(--brand-magenta)_rgba(255,214,224,0.35)] [scrollbar-width:thin] md:p-10"
       >
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
@@ -602,12 +614,20 @@ function ProductEditor({
               </Field>
               <Field label="Full dossier description">
                 <textarea
-                  rows={4}
+                  rows={7}
                   value={form.long_description ?? ""}
                   onChange={(event) => update("long_description", event.target.value)}
-                  className={textareaClass}
+                  className={`${textareaClass} leading-7`}
                   placeholder="Describe the mood, textures, and soul of the release..."
                 />
+                <div className="mt-3 rounded-3xl border border-foreground/10 bg-[var(--brand-pink)]/25 p-5">
+                  <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/45">
+                    Description preview
+                  </div>
+                  <p className="mt-3 whitespace-pre-line text-base leading-8 text-foreground/70">
+                    {descriptionPreview}
+                  </p>
+                </div>
               </Field>
               <div className="grid gap-5 md:grid-cols-2">
                 <Field label="Handwritten note">
