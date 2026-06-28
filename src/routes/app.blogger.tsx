@@ -2092,7 +2092,7 @@ function ProductSubmissionModal({
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
               Recommendations
             </div>
-            <p className="mt-3 max-w-2xl text-xl italic leading-relaxed text-foreground/75">
+            <p className="mt-3 max-w-3xl whitespace-pre-line rounded-3xl border border-foreground/10 bg-white/45 px-5 py-4 text-base leading-8 text-foreground/70 md:text-lg">
               {product.recommendation}
             </p>
             {submission ? (

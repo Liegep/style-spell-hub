@@ -520,7 +520,6 @@ function ProductEditor({
     }
   }
 
-  const handwrittenPreview = form.handwritten_note?.trim() || "your note";
   const descriptionPreview = form.long_description?.trim() || "Describe the fabric, mood, fit, and little details here.";
 
   return (
@@ -629,25 +628,14 @@ function ProductEditor({
                   </p>
                 </div>
               </Field>
-              <div className="grid gap-5 md:grid-cols-2">
-                <Field label="Handwritten note">
-                  <input
-                    value={form.handwritten_note ?? ""}
-                    onChange={(event) => update("handwritten_note", event.target.value)}
-                    onInput={(event) => update("handwritten_note", event.currentTarget.value)}
-                    className={inputClass}
-                    placeholder="So chic!"
-                  />
-                </Field>
-                <div>
-                  <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/45">
-                    Preview
-                  </div>
-                  <div className="mt-2 min-h-12 rounded-2xl bg-[var(--brand-pink)]/50 px-4 py-2 font-hand text-3xl text-[var(--brand-magenta)]">
-                    {handwrittenPreview}
-                  </div>
-                </div>
-              </div>
+              <Field label="Handwritten note">
+                <input
+                  value={form.handwritten_note ?? ""}
+                  onChange={(event) => update("handwritten_note", event.target.value)}
+                  className={inputClass}
+                  placeholder="So chic!"
+                />
+              </Field>
               <Field label="Blogging recommendations">
                 <textarea
                   rows={3}
