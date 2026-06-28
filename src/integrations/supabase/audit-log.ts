@@ -5,6 +5,7 @@ import type {
   NotificationQueue,
   NotificationStatus,
   Profile,
+  SecondLifeDropbox,
 } from "@/integrations/supabase/database.types";
 
 export type AuditEventInput = {
@@ -31,6 +32,12 @@ export type NotificationHealth = {
   latestProcessedAt: string | null;
   oldestDuePendingAt: string | null;
 };
+
+export async function listSecondLifeDropboxes() {
+  const { data, error } = await supabase.rpc("list_second_life_dropboxes");
+  if (error) throw error;
+  return (data ?? []) as SecondLifeDropbox[];
+}
 
 export async function listAuditLogs(limit = 80) {
   const { data, error } = await supabase

@@ -244,3 +244,16 @@ export type NotificationQueue = {
   created_at: string;
   updated_at: string;
 };
+
+export type SecondLifeDropbox = {
+  id: string;
+  object_name: string | null;
+  object_key: string | null;
+  region_name: string | null;
+  owner_key: string | null;
+  server_url: string;
+  active: boolean;
+  last_seen_at: string;
+  created_at: string;
+  updated_at: string;
+};

@@ -5,12 +5,14 @@ import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import {
   getNotificationHealth,
+  listSecondLifeDropboxes,
   listAuditLogs,
   processSecondLifeNotificationsNow,
   type NotificationHealth,
   type NotificationQueueWithRecipient,
 } from "@/integrations/supabase/audit-log";
-import type { AuditLog, NotificationStatus } from "@/integrations/supabase/database.types";
+import { getCurrentProfile, type AuthProfile } from "@/integrations/supabase/auth";
+import type { AuditLog, NotificationStatus, SecondLifeDropbox } from "@/integrations/supabase/database.types";
 
 export const Route = createFileRoute("/app/audit-log")({
   component: AuditLogPage,
@@ -24,6 +26,9 @@ function AuditLogPage() {
   const [automationError, setAutomationError] = useState("");
   const [automationNotice, setAutomationNotice] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentProfile, setCurrentProfile] = useState<AuthProfile | null>(null);
+  const [dropboxes, setDropboxes] = useState<SecondLifeDropbox[]>([]);
+  const [dropboxError, setDropboxError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -31,11 +36,28 @@ function AuditLogPage() {
     async function loadPage() {
       setIsLoading(true);
       setError("");
+      setDropboxError("");
       try {
-        const [rows, health] = await Promise.all([listAuditLogs(), getNotificationHealth()]);
+        const [profile, rows, health] = await Promise.all([getCurrentProfile(), listAuditLogs(), getNotificationHealth()]);
         if (!cancelled) {
+          setCurrentProfile(profile);
           setLogs(rows);
           setNotificationHealth(health);
+        }
+        if (profile?.role === "super_admin") {
+          try {
+            const nextDropboxes = await listSecondLifeDropboxes();
+            if (!cancelled) setDropboxes(nextDropboxes);
+          } catch (dropboxLoadError) {
+            console.error("[Audit Log] Failed to load Second Life dropboxes.", dropboxLoadError);
+            if (!cancelled) {
+              setDropboxError(
+                dropboxLoadError instanceof Error
+                  ? dropboxLoadError.message
+                  : "Could not load Second Life dropboxes.",
+              );
+            }
+          }
         }
       } catch (loadError) {
         console.error("[Audit Log] Failed to load logs.", loadError);
@@ -99,6 +121,10 @@ function AuditLogPage() {
         notice={automationNotice}
         onProcessNow={handleProcessNow}
       />
+
+      {currentProfile?.role === "super_admin" ? (
+        <SecondLifeDropboxesPanel dropboxes={dropboxes} error={dropboxError} isLoading={isLoading} />
+      ) : null}
 
       <GlassCard className="mt-10 p-0">
         {isLoading ? (
@@ -209,6 +235,87 @@ function AutomationHealthPanel({
         </div>
       </GlassCard>
     </section>
+  );
+}
+
+function SecondLifeDropboxesPanel({
+  dropboxes,
+  error,
+  isLoading,
+}: {
+  dropboxes: SecondLifeDropbox[];
+  error: string;
+  isLoading: boolean;
+}) {
+  return (
+    <GlassCard className="mt-10 p-6">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
+            SECOND LIFE · DROPBOXES
+          </div>
+          <h2 className="mt-2 font-display text-4xl leading-none text-[var(--ink)]">Delivery dropboxes.</h2>
+          <p className="mt-3 max-w-2xl text-sm text-foreground/60">
+            Registered in-world prims that can deliver products, textures, and Second Life notices for Love Potion.
+          </p>
+        </div>
+        <AuditPill>{dropboxes.length} registered</AuditPill>
+      </div>
+
+      {error ? (
+        <div className="mt-6 rounded-2xl border border-[var(--brand-magenta)]/40 bg-white/60 px-4 py-3 text-sm text-[var(--brand-magenta)]">
+          {error.includes("list_second_life_dropboxes")
+            ? "Run the latest Supabase migration to enable the dropbox list."
+            : error}
+        </div>
+      ) : null}
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        {isLoading ? (
+          <MiniEmpty>loading dropboxes</MiniEmpty>
+        ) : dropboxes.length === 0 ? (
+          <MiniEmpty>no dropboxes registered yet</MiniEmpty>
+        ) : (
+          dropboxes.map((dropbox) => <DropboxCard key={dropbox.id} dropbox={dropbox} />)
+        )}
+      </div>
+    </GlassCard>
+  );
+}
+
+function DropboxCard({ dropbox }: { dropbox: SecondLifeDropbox }) {
+  const connected = dropbox.active && Boolean(dropbox.server_url);
+  const label = connected ? "connected" : "disconnected";
+  const statusClass = connected ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600";
+
+  return (
+    <div className="rounded-3xl border border-white/70 bg-white/45 p-5 shadow-[0_18px_45px_rgba(219,24,97,0.08)] backdrop-blur-xl">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="font-display text-2xl leading-tight text-[var(--ink)]">
+            {dropbox.object_name || "Second Life Dropbox"}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/45">
+            <span>{dropbox.region_name || "Region unknown"}</span>
+            <span>{dropbox.id}</span>
+          </div>
+        </div>
+        <span className={`shrink-0 rounded-full px-3 py-1 font-mono text-[8px] uppercase tracking-[0.25em] ${statusClass}`}>
+          {label}
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-3 text-sm text-foreground/60 md:grid-cols-2">
+        <PulseLine label="Last registered" value={formatFullDate(dropbox.last_seen_at)} />
+        <PulseLine label="Updated" value={formatFullDate(dropbox.updated_at)} />
+        <PulseLine label="Object key" value={shortenKey(dropbox.object_key)} />
+        <PulseLine label="Owner key" value={shortenKey(dropbox.owner_key)} />
+      </div>
+
+      <div className="mt-4 rounded-2xl bg-white/60 px-4 py-3 font-mono text-[9px] uppercase tracking-[0.18em] text-foreground/45">
+        {shortenUrl(dropbox.server_url)}
+      </div>
+    </div>
   );
 }
 
@@ -443,4 +550,20 @@ function formatActionError(error: unknown) {
 
 function humanize(value: string) {
   return value.replace(/_/g, " ");
+}
+
+function shortenKey(value: string | null) {
+  if (!value) return "not provided";
+  if (value.length <= 18) return value;
+  return `${value.slice(0, 8)}...${value.slice(-6)}`;
+}
+
+function shortenUrl(value: string) {
+  try {
+    const url = new URL(value);
+    const pathname = url.pathname.length > 22 ? `${url.pathname.slice(0, 22)}...` : url.pathname;
+    return `${url.hostname}${pathname}`;
+  } catch {
+    return value.length > 44 ? `${value.slice(0, 44)}...` : value;
+  }
 }

@@ -202,6 +202,14 @@ function ProductsPanel({
                 {release.category ?? "General"}
               </div>
               <h3 className="mt-1 font-display text-2xl leading-tight">{release.name}</h3>
+              <div className="mt-3 flex flex-wrap gap-2 font-mono text-[9px] uppercase tracking-[0.22em] text-foreground/55">
+                <span className="rounded-full border border-foreground/10 bg-white/55 px-3 py-1">
+                  {release.claims_count ?? 0} {(release.claims_count ?? 0) === 1 ? "blogger" : "bloggers"}
+                </span>
+                <span className="rounded-full border border-foreground/10 bg-white/55 px-3 py-1">
+                  {release.submissions_count ?? 0} {(release.submissions_count ?? 0) === 1 ? "post" : "posts"}
+                </span>
+              </div>
               <div className="mt-4 flex items-center justify-between">
                 <span className="rounded-full bg-[var(--brand-magenta)] px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-white">
                   {release.status}
