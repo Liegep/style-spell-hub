@@ -42,7 +42,10 @@ export type ProductSummary = Pick<
   | "featured_on_landing"
   | "display_order"
   | "auto_archive_at"
->;
+> & {
+  claims_count?: number;
+  submissions_count?: number;
+};
 
 export type ReviewQueueItem = Pick<
   BlogSubmission,
@@ -181,6 +184,35 @@ export async function getBloggerPulse() {
 }
 
 export async function getProductSummaries() {
+  const withProductActivity = async (products: ProductSummary[]) => {
+    const productIds = products.map((product) => product.id);
+    if (productIds.length === 0) return products;
+
+    const [claimsResult, submissionsResult] = await Promise.all([
+      supabase.from("product_claims").select("product_id").in("product_id", productIds),
+      supabase.from("blog_submissions").select("product_id").in("product_id", productIds),
+    ]);
+
+    if (claimsResult.error) console.warn("[Product summaries] Could not load claim counts", claimsResult.error);
+    if (submissionsResult.error) console.warn("[Product summaries] Could not load submission counts", submissionsResult.error);
+
+    const claimCounts = new Map<string, number>();
+    const submissionCounts = new Map<string, number>();
+
+    (claimsResult.data ?? []).forEach((claim) => {
+      claimCounts.set(claim.product_id, (claimCounts.get(claim.product_id) ?? 0) + 1);
+    });
+    (submissionsResult.data ?? []).forEach((submission) => {
+      submissionCounts.set(submission.product_id, (submissionCounts.get(submission.product_id) ?? 0) + 1);
+    });
+
+    return products.map((product) => ({
+      ...product,
+      claims_count: claimCounts.get(product.id) ?? 0,
+      submissions_count: submissionCounts.get(product.id) ?? 0,
+    }));
+  };
+
   const { data, error } = await supabase
     .from("product_releases")
     .select(
@@ -201,14 +233,15 @@ export async function getProductSummaries() {
       .limit(50);
 
     if (fallback.error) throw fallback.error;
-    return ((fallback.data ?? []) as Omit<ProductSummary, "blogging_deadline_days">[]).map((product) => ({
+    const fallbackProducts = ((fallback.data ?? []) as Omit<ProductSummary, "blogging_deadline_days">[]).map((product) => ({
       ...product,
       blogging_deadline_days: null,
     })) as ProductSummary[];
+    return withProductActivity(fallbackProducts);
   }
 
   if (error) throw error;
-  return (data ?? []) as ProductSummary[];
+  return withProductActivity((data ?? []) as ProductSummary[]);
 }
 
 export async function getReviewQueue(status: SubmissionStatus | "all" = "all") {
