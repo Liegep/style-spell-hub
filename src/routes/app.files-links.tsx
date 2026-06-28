@@ -173,11 +173,11 @@ function FilesLinksPage() {
     window.setTimeout(() => setCopiedId((current) => (current === id ? null : current)), 1600);
   }
 
-  async function reorderResources(kind: SharedResource["kind"], targetId: string) {
-    if (!isSuper || !draggedId || draggedId === targetId || editingId) return;
+  async function reorderResources(kind: SharedResource["kind"], sourceId: string, targetId: string) {
+    if (!isSuper || !sourceId || sourceId === targetId || editingId) return;
 
     const currentGroup = resources.filter((item) => item.kind === kind);
-    const fromIndex = currentGroup.findIndex((item) => item.id === draggedId);
+    const fromIndex = currentGroup.findIndex((item) => item.id === sourceId);
     const toIndex = currentGroup.findIndex((item) => item.id === targetId);
     if (fromIndex < 0 || toIndex < 0) return;
 
@@ -354,12 +354,23 @@ function FilesLinksPage() {
               <div
                 key={item.id}
                 draggable={isSuper && editingId !== item.id}
-                onDragStart={() => setDraggedId(item.id)}
+                onDragStart={(event) => {
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("text/plain", item.id);
+                  setDraggedId(item.id);
+                }}
                 onDragEnd={() => setDraggedId(null)}
                 onDragOver={(event) => {
-                  if (isSuper && draggedId) event.preventDefault();
+                  if (isSuper && editingId !== item.id) {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                  }
                 }}
-                onDrop={() => void reorderResources("link", item.id)}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const sourceId = event.dataTransfer.getData("text/plain") || draggedId || "";
+                  void reorderResources("link", sourceId, item.id);
+                }}
                 className={cn(
                   "rounded-xl border border-foreground/15 p-3 transition",
                   isSuper && editingId !== item.id ? "cursor-grab active:cursor-grabbing" : "",
@@ -478,12 +489,23 @@ function FilesLinksPage() {
               <div
                 key={item.id}
                 draggable={isSuper && editingId !== item.id}
-                onDragStart={() => setDraggedId(item.id)}
+                onDragStart={(event) => {
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("text/plain", item.id);
+                  setDraggedId(item.id);
+                }}
                 onDragEnd={() => setDraggedId(null)}
                 onDragOver={(event) => {
-                  if (isSuper && draggedId) event.preventDefault();
+                  if (isSuper && editingId !== item.id) {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                  }
                 }}
-                onDrop={() => void reorderResources("image", item.id)}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const sourceId = event.dataTransfer.getData("text/plain") || draggedId || "";
+                  void reorderResources("image", sourceId, item.id);
+                }}
                 className={cn(
                   "rounded-xl border border-foreground/15 p-3 transition",
                   isSuper && editingId !== item.id ? "cursor-grab active:cursor-grabbing" : "",
