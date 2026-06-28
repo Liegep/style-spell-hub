@@ -252,6 +252,31 @@ function BloggerDash() {
   }, [language]);
 
   useEffect(() => {
+    if (!profileId) return;
+    let mounted = true;
+
+    async function loadMailUnreadCount() {
+      try {
+        const inboxMessages = await listInboxMessages(profileId);
+        if (!mounted) return;
+        setMailUnreadCount(countPersonalUnread(inboxMessages));
+      } catch (error) {
+        console.error("[Blogger] Failed to refresh mailbox count", error);
+      }
+    }
+
+    const handleMessagesUpdated = () => void loadMailUnreadCount();
+    const handleFocus = () => void loadMailUnreadCount();
+    window.addEventListener("messages-updated", handleMessagesUpdated);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      mounted = false;
+      window.removeEventListener("messages-updated", handleMessagesUpdated);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [profileId]);
+
+  useEffect(() => {
     if (!profile?.id || profile.role !== "blogger" || hasLeftProgram || tour === "blogger") return;
     const seenKey = `${BLOGGER_TOUR_SEEN_KEY_PREFIX}${profile.id}`;
     if (window.localStorage.getItem(seenKey) === "true") return;

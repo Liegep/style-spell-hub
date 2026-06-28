@@ -52,6 +52,33 @@ begin
       clean_body
     );
 
+    insert into public.notification_queue (
+      recipient_id,
+      recipient_sl_uuid,
+      channel,
+      type,
+      title,
+      body,
+      action_url,
+      metadata,
+      status,
+      scheduled_at,
+      sent_at
+    )
+    values (
+      recipient.id,
+      null,
+      'in_app',
+      'new_message',
+      clean_subject,
+      clean_body,
+      '/app/admin?section=inbox',
+      jsonb_build_object('source', 'blogger_staff_message'),
+      'sent',
+      now(),
+      now()
+    );
+
     recipient_ids := array_append(recipient_ids, recipient.id);
   end loop;
 

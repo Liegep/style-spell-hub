@@ -130,8 +130,14 @@ function AdminDash() {
     }
 
     void loadMailUnreadCount();
+    const handleMessagesUpdated = () => void loadMailUnreadCount();
+    const handleFocus = () => void loadMailUnreadCount();
+    window.addEventListener("messages-updated", handleMessagesUpdated);
+    window.addEventListener("focus", handleFocus);
     return () => {
       mounted = false;
+      window.removeEventListener("messages-updated", handleMessagesUpdated);
+      window.removeEventListener("focus", handleFocus);
     };
   }, []);
 
@@ -807,6 +813,7 @@ function Compose({ onUnreadChange }: { onUnreadChange: (count: number) => void }
         recipientId: thread.key,
         subject: subjectLine,
         body: replyBody,
+        actionUrl: "/app/blogger?section=inbox",
       });
 
       void notifySecondLifeQuietly(

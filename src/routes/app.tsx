@@ -35,6 +35,7 @@ import {
 import bloggerAvatar from "@/assets/blogger-avatar.jpg";
 import logoIcon from "@/assets/logo-icon.png";
 import { countMyUnreadNotifications } from "@/integrations/supabase/notifications";
+import { countPersonalUnread, listInboxMessages, listPersonalInboxMessages } from "@/integrations/supabase/messages";
 
 export const Route = createFileRoute("/app")({
   component: AppLayout,
@@ -83,6 +84,7 @@ function AppLayout() {
   const [authError, setAuthError] = useState("");
   const [pendingApplicationsCount, setPendingApplicationsCount] = useState(0);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
+  const [mailUnreadCount, setMailUnreadCount] = useState(0);
   const [storedLang, setStoredLang] = useState<"en" | "es" | null>(null);
   const isSigningOutRef = useRef(false);
   const searchLang = (loc.search as { uiLang?: string } | undefined)?.uiLang;
@@ -142,6 +144,9 @@ function AppLayout() {
           if (item.section === "notifications") {
             return { ...item, badge: notificationUnreadCount };
           }
+          if (item.section === "inbox") {
+            return { ...item, badge: mailUnreadCount };
+          }
           return item;
         });
       if (!profile) return addBadges(NAV_ITEMS.filter((item) => item.access === "all"));
@@ -149,7 +154,7 @@ function AppLayout() {
       if (profile.role === "super_admin") return addBadges(NAV_ITEMS);
       return addBadges(NAV_ITEMS.filter((item) => item.access !== "super"));
     },
-    [notificationUnreadCount, pendingApplicationsCount, profile],
+    [mailUnreadCount, notificationUnreadCount, pendingApplicationsCount, profile],
   );
 
   useEffect(() => {
@@ -260,6 +265,43 @@ function AppLayout() {
       mounted = false;
       if (intervalId) window.clearInterval(intervalId);
       window.removeEventListener("focus", loadPendingApplicationsCount);
+    };
+  }, [profile]);
+
+  useEffect(() => {
+    if (!profile) {
+      setMailUnreadCount(0);
+      return;
+    }
+
+    let mounted = true;
+    let intervalId: number | undefined;
+
+    async function loadMailCount() {
+      try {
+        const messages =
+          profile.role === "blogger"
+            ? await listInboxMessages(profile.id)
+            : await listPersonalInboxMessages(profile.id);
+        if (mounted) setMailUnreadCount(countPersonalUnread(messages));
+      } catch (error) {
+        console.error("[Sidebar] failed to load message count", error);
+        if (mounted) setMailUnreadCount(0);
+      }
+    }
+
+    const onMessagesUpdated = () => void loadMailCount();
+
+    void loadMailCount();
+    intervalId = window.setInterval(() => void loadMailCount(), 60_000);
+    window.addEventListener("focus", loadMailCount);
+    window.addEventListener("messages-updated", onMessagesUpdated);
+
+    return () => {
+      mounted = false;
+      if (intervalId) window.clearInterval(intervalId);
+      window.removeEventListener("focus", loadMailCount);
+      window.removeEventListener("messages-updated", onMessagesUpdated);
     };
   }, [profile]);
 

@@ -1,6 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import { logAuditEvent } from "@/integrations/supabase/audit-log";
-import { createBroadcastInAppNotification, createInAppNotification } from "@/integrations/supabase/notifications";
+import {
+  createBroadcastInAppNotification,
+  createInAppNotification,
+} from "@/integrations/supabase/notifications";
 import type { InternalMessage, MessageScope, Profile } from "@/integrations/supabase/database.types";
 
 export type InboxMessage = InternalMessage & {
@@ -12,6 +15,10 @@ export type SentMessage = InternalMessage & {
 };
 
 export type MessageRecipient = Pick<Profile, "id" | "display_name" | "full_name" | "email" | "sl_avatar_name">;
+
+export function countPersonalUnread(messages: Pick<InternalMessage, "scope" | "read_at">[]) {
+  return messages.filter((message) => message.scope === "personal" && !message.read_at).length;
+}
 
 export async function listInboxMessages(profileId: string) {
   const { data, error } = await supabase
@@ -89,6 +96,7 @@ export async function listPersonalInboxMessages(profileId: string) {
 export async function markPersonalInboxMessagesRead() {
   const { error } = await supabase.rpc("mark_my_internal_messages_read");
   if (error) throw error;
+  window.dispatchEvent(new Event("messages-updated"));
 }
 
 export async function markInternalMessageRead(messageId: string) {
@@ -98,6 +106,7 @@ export async function markInternalMessageRead(messageId: string) {
     .eq("id", messageId);
 
   if (error) throw error;
+  window.dispatchEvent(new Event("messages-updated"));
 }
 
 export async function listMessageRecipients() {
@@ -133,6 +142,7 @@ export async function sendInternalMessage(input: {
   const { error } = await supabase.from("internal_messages").insert(message);
 
   if (error) throw error;
+  window.dispatchEvent(new Event("messages-updated"));
 
   void logAuditEvent({
     action: input.scope === "broadcast" ? "Sent broadcast message" : "Sent personal message",
@@ -178,6 +188,7 @@ export async function sendInternalReply(input: {
   recipientId: string;
   subject: string;
   body: string;
+  actionUrl?: string;
 }) {
   const localId =
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -191,6 +202,7 @@ export async function sendInternalReply(input: {
   });
 
   if (error) throw error;
+  window.dispatchEvent(new Event("messages-updated"));
 
   void logAuditEvent({
     action: "Replied to message",
@@ -207,7 +219,7 @@ export async function sendInternalReply(input: {
     type: "new_message",
     title: input.subject.trim(),
     body: input.body.trim(),
-    actionUrl: "/app/admin?section=inbox",
+    actionUrl: input.actionUrl ?? "/app/admin?section=inbox",
     metadata: { source: "internal_reply" },
   }).catch((error) => console.warn("[Messages] could not create reply notification", error));
 
@@ -260,6 +272,8 @@ export async function sendMessageToStaff(input: {
     body: trimmedBody,
     actionUrl: "/app/admin?section=inbox",
   });
+
+  window.dispatchEvent(new Event("messages-updated"));
 
   return {
     id:
