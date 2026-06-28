@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Check, Copy, Download, ImagePlus, Link2, Pencil, Save, Trash2, X } from "lucide-react";
+import { Check, Copy, Download, GripVertical, ImagePlus, Link2, Pencil, Save, Trash2, X } from "lucide-react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import {
@@ -18,6 +18,7 @@ import {
   listSharedResources,
   updateSharedResource,
 } from "@/integrations/supabase/resources";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/files-links")({
   component: FilesLinksPage,
@@ -33,6 +34,8 @@ function FilesLinksPage() {
   const [editDraft, setEditDraft] = useState({ title: "", url: "", description: "", sort_order: 0 });
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [orderState, setOrderState] = useState<"idle" | "saving" | "error">("idle");
 
   const [linkTitle, setLinkTitle] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
@@ -62,6 +65,8 @@ function FilesLinksPage() {
 
   const links = useMemo(() => resources.filter((item) => item.kind === "link"), [resources]);
   const images = useMemo(() => resources.filter((item) => item.kind === "image"), [resources]);
+  const nextSortOrder = (kind: SharedResource["kind"]) =>
+    Math.max(-10, ...resources.filter((item) => item.kind === kind).map((item) => item.sort_order ?? 0)) + 10;
 
   async function onAddLink(event: React.FormEvent) {
     event.preventDefault();
@@ -72,6 +77,7 @@ function FilesLinksPage() {
         title: linkTitle,
         url: normalizeUrl(linkUrl),
         description: linkDesc || null,
+        sortOrder: nextSortOrder("link"),
       });
       setResources((current) => [row, ...current]);
       setLinkTitle("");
@@ -96,6 +102,7 @@ function FilesLinksPage() {
         title: imgTitle,
         file: imgFile,
         description: imgDesc || null,
+        sortOrder: nextSortOrder("image"),
       });
       setResources((current) => [row, ...current]);
       setImgTitle("");
@@ -166,6 +173,48 @@ function FilesLinksPage() {
     window.setTimeout(() => setCopiedId((current) => (current === id ? null : current)), 1600);
   }
 
+  async function reorderResources(kind: SharedResource["kind"], targetId: string) {
+    if (!isSuper || !draggedId || draggedId === targetId || editingId) return;
+
+    const currentGroup = resources.filter((item) => item.kind === kind);
+    const fromIndex = currentGroup.findIndex((item) => item.id === draggedId);
+    const toIndex = currentGroup.findIndex((item) => item.id === targetId);
+    if (fromIndex < 0 || toIndex < 0) return;
+
+    const nextGroup = [...currentGroup];
+    const [moved] = nextGroup.splice(fromIndex, 1);
+    nextGroup.splice(toIndex, 0, moved);
+
+    const orderedGroup = nextGroup.map((item, index) => ({
+      ...item,
+      sort_order: (index + 1) * 10,
+    }));
+    const orderMap = new Map(orderedGroup.map((item) => [item.id, item]));
+
+    setOrderState("saving");
+    setResources((current) => current.map((item) => orderMap.get(item.id) ?? item));
+    setDraggedId(null);
+
+    try {
+      await Promise.all(
+        orderedGroup.map((item) =>
+          updateSharedResource(item.id, {
+            title: item.title,
+            url: item.url,
+            description: item.description,
+            sort_order: item.sort_order,
+          }),
+        ),
+      );
+      setOrderState("idle");
+      setMessage("Order saved.");
+    } catch (error) {
+      setOrderState("error");
+      setMessage(error instanceof Error ? error.message : "Could not save the new order.");
+      void load();
+    }
+  }
+
   return (
     <div className="px-6 py-10 md:px-12">
       <header className="flex items-end justify-between">
@@ -197,23 +246,28 @@ function FilesLinksPage() {
       ) : null}
 
       {isSuper ? (
-        <div className="mt-8 flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => setLinkModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-white transition hover:bg-foreground"
-          >
-            <Link2 className="h-4 w-4" />
-            Add link
-          </button>
-          <button
-            type="button"
-            onClick={() => setImageModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-background transition hover:bg-[var(--brand-magenta)]"
-          >
-            <ImagePlus className="h-4 w-4" />
-            Upload image
-          </button>
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setLinkModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-white transition hover:bg-foreground"
+            >
+              <Link2 className="h-4 w-4" />
+              Add link
+            </button>
+            <button
+              type="button"
+              onClick={() => setImageModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-background transition hover:bg-[var(--brand-magenta)]"
+            >
+              <ImagePlus className="h-4 w-4" />
+              Upload image
+            </button>
+          </div>
+          <span className="text-sm text-foreground/55">
+            {orderState === "saving" ? "Saving order..." : "Drag the handle to rearrange what bloggers see first."}
+          </span>
         </div>
       ) : null}
 
@@ -297,8 +351,27 @@ function FilesLinksPage() {
           </div>
           <div className="mt-4 space-y-3">
             {links.map((item) => (
-              <div key={item.id} className="rounded-xl border border-foreground/15 p-3">
+              <div
+                key={item.id}
+                draggable={isSuper && editingId !== item.id}
+                onDragStart={() => setDraggedId(item.id)}
+                onDragEnd={() => setDraggedId(null)}
+                onDragOver={(event) => {
+                  if (isSuper && draggedId) event.preventDefault();
+                }}
+                onDrop={() => void reorderResources("link", item.id)}
+                className={cn(
+                  "rounded-xl border border-foreground/15 p-3 transition",
+                  isSuper && editingId !== item.id ? "cursor-grab active:cursor-grabbing" : "",
+                  draggedId === item.id ? "opacity-50" : "",
+                )}
+              >
                 <div className="flex items-start justify-between gap-3">
+                  {isSuper ? (
+                    <div className="pt-1 text-foreground/35" aria-hidden="true">
+                      <GripVertical className="h-5 w-5" />
+                    </div>
+                  ) : null}
                   <div className="min-w-0 flex-1">
                     {editingId === item.id ? (
                       <div className="grid gap-2">
@@ -402,7 +475,26 @@ function FilesLinksPage() {
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {images.map((item) => (
-              <div key={item.id} className="rounded-xl border border-foreground/15 p-3">
+              <div
+                key={item.id}
+                draggable={isSuper && editingId !== item.id}
+                onDragStart={() => setDraggedId(item.id)}
+                onDragEnd={() => setDraggedId(null)}
+                onDragOver={(event) => {
+                  if (isSuper && draggedId) event.preventDefault();
+                }}
+                onDrop={() => void reorderResources("image", item.id)}
+                className={cn(
+                  "rounded-xl border border-foreground/15 p-3 transition",
+                  isSuper && editingId !== item.id ? "cursor-grab active:cursor-grabbing" : "",
+                  draggedId === item.id ? "opacity-50" : "",
+                )}
+              >
+                {isSuper ? (
+                  <div className="mb-2 flex justify-end text-foreground/35" aria-hidden="true">
+                    <GripVertical className="h-5 w-5" />
+                  </div>
+                ) : null}
                 <img src={item.url} alt={item.title} className="aspect-[4/3] w-full rounded-lg object-cover" />
                 {editingId === item.id ? (
                   <div className="mt-2 grid gap-2">
