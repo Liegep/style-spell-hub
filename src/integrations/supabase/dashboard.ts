@@ -93,68 +93,28 @@ function inThirtyDaysIso() {
 }
 
 export async function getAtelierStats(): Promise<AtelierStats> {
-  const monthStart = startOfCurrentMonthIso();
-  const archiveWindowEnd = inThirtyDaysIso();
+  const { data, error } = await supabase.rpc("get_atelier_stats");
 
-  const [
-    activeBloggers,
-    inactiveBloggers,
-    postsThisMonth,
-    productsLive,
-    archiveSoon,
-    subscribers,
-  ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("role", "blogger")
-      .eq("account_status", "active"),
-    supabase
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("role", "blogger")
-      .neq("account_status", "active"),
-    supabase
-      .from("blog_submissions")
-      .select("id", { count: "exact", head: true })
-      .gte("submitted_at", monthStart),
-    supabase
-      .from("product_releases")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "available"),
-    supabase
-      .from("product_releases")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "available")
-      .not("auto_archive_at", "is", null)
-      .lte("auto_archive_at", archiveWindowEnd),
-    supabase
-      .from("newsletter_subscribers")
-      .select("id", { count: "exact", head: true })
-      .is("unsubscribed_at", null),
-  ]);
+  if (error) {
+    console.warn("[Atelier stats] Could not load stats via RPC", error);
+    return {
+      activeBloggers: 0,
+      inactiveBloggers: 0,
+      postsThisMonth: 0,
+      productsLive: 0,
+      archiveSoon: 0,
+      subscribers: 0,
+    };
+  }
 
-  const countOrZero = (
-    label: string,
-    result: {
-      count: number | null;
-      error: { message?: string } | null;
-    },
-  ) => {
-    if (result.error) {
-      console.warn(`[Atelier stats] Could not load ${label}`, result.error);
-      return 0;
-    }
-    return result.count ?? 0;
-  };
-
+  const stats = data as AtelierStats;
   return {
-    activeBloggers: countOrZero("active bloggers", activeBloggers),
-    inactiveBloggers: countOrZero("inactive bloggers", inactiveBloggers),
-    postsThisMonth: countOrZero("posts this month", postsThisMonth),
-    productsLive: countOrZero("products live", productsLive),
-    archiveSoon: countOrZero("archive soon", archiveSoon),
-    subscribers: countOrZero("subscribers", subscribers),
+    activeBloggers: stats.activeBloggers ?? 0,
+    inactiveBloggers: stats.inactiveBloggers ?? 0,
+    postsThisMonth: stats.postsThisMonth ?? 0,
+    productsLive: stats.productsLive ?? 0,
+    archiveSoon: stats.archiveSoon ?? 0,
+    subscribers: stats.subscribers ?? 0,
   };
 }
 
