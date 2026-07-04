@@ -247,15 +247,9 @@ function SecondLifeDropboxesPanel({
   error: string;
   isLoading: boolean;
 }) {
-  const dropboxSummary = isLoading
-    ? "syncing"
-    : dropboxes.length === 0
-      ? "no registered dropboxes"
-      : `${dropboxes.length} registered`;
-
   return (
     <GlassCard className="mt-10 p-6">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div>
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
             SECOND LIFE · DROPBOXES
@@ -265,7 +259,6 @@ function SecondLifeDropboxesPanel({
             Registered in-world prims that can deliver products, textures, and Second Life notices for Love Potion.
           </p>
         </div>
-        <AuditPill>{dropboxSummary}</AuditPill>
       </div>
 
       {error ? (

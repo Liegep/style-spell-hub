@@ -360,9 +360,6 @@ function AtelierPage() {
                     <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/55">
                       {claim.blogger_name} · claimed {prettyDate(claim.claimed_at)} · delivered {prettyDate(claim.delivered_at)}
                     </div>
-                    <div className="mt-1 font-mono text-[8px] uppercase tracking-[0.22em] text-foreground/40">
-                      SL avatar: {claim.blogger_avatar_name ?? "missing name"} · UUID: {claim.blogger_avatar_uuid ?? "missing uuid"}
-                    </div>
                     {claim.delivery_response ? (
                       <div className="mt-2 line-clamp-2 text-xs text-foreground/55">{claim.delivery_response}</div>
                     ) : null}
