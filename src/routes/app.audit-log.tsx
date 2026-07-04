@@ -262,7 +262,7 @@ function SecondLifeDropboxesPanel({
           </p>
         </div>
         <AuditPill>
-          {connectedCount} connected · {dropboxes.length} total
+          {dropboxes.length} registered · {connectedCount} connected
         </AuditPill>
       </div>
 
