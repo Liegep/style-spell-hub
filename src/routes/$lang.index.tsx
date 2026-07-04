@@ -5,6 +5,7 @@ import { useT } from "@/i18n/dict";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { EditionMark } from "@/components/brand/EditionMark";
+import { ScrollReveal } from "@/components/brand/ScrollReveal";
 import { releases } from "@/mocks/data";
 import { getProductSummaries, type ProductSummary } from "@/integrations/supabase/dashboard";
 import { useSiteAssetUrl } from "@/hooks/use-site-asset";
@@ -155,7 +156,7 @@ function Landing() {
   return (
     <main className="relative">
       {/* HERO */}
-      <section className="relative overflow-hidden px-3 pt-6 md:px-6">
+      <ScrollReveal as="section" variant="fade" className="relative overflow-hidden px-3 pt-6 md:px-6">
         <div className="relative mx-auto max-w-[1600px]">
           {/* huge headline behind image */}
           <div className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-center gap-[1.5vw] md:gap-[0.75vw]">
@@ -178,7 +179,11 @@ function Landing() {
           />
 
           {/* image */}
-          <div className="relative z-10 mx-auto flex max-w-3xl justify-center pt-[8vw]">
+          <ScrollReveal
+            variant="scale"
+            delay={140}
+            className="relative z-10 mx-auto flex max-w-3xl justify-center pt-[8vw]"
+          >
             {heroAssetUrl ? (
               <img
                 src={heroAssetUrl}
@@ -190,7 +195,7 @@ function Landing() {
             ) : (
               <div className="aspect-[4/5] w-[58vw] max-w-[680px]" />
             )}
-          </div>
+          </ScrollReveal>
 
           {/* magenta wash overlay */}
           <div
@@ -216,14 +221,18 @@ function Landing() {
           </div>
 
           {/* "the spell" handwritten */}
-          <div className="absolute right-6 top-[28%] z-30 hidden md:flex flex-col items-end">
+          <ScrollReveal
+            variant="slide-left"
+            delay={260}
+            className="absolute right-6 top-[28%] z-30 hidden flex-col items-end md:flex"
+          >
             <span className="font-mono text-[9px] uppercase tracking-[0.4em] text-[var(--brand-magenta)]">
               {landingText.sloganLabel}
             </span>
             <div className="mt-2">
               <HandwrittenNote withArrow>{content.hero_handwritten}</HandwrittenNote>
             </div>
-          </div>
+          </ScrollReveal>
 
           {/* magenta X */}
           <div className="absolute right-[10%] top-[18%] z-30 hidden md:block">
@@ -231,7 +240,11 @@ function Landing() {
           </div>
 
           {/* bottom CTA */}
-          <div className="relative z-30 mt-[4vw] flex flex-col items-start gap-6 px-2 md:flex-row md:items-end md:justify-between md:px-6">
+          <ScrollReveal
+            variant="fade-up"
+            delay={340}
+            className="relative z-30 mt-[4vw] flex flex-col items-start gap-6 px-2 md:flex-row md:items-end md:justify-between md:px-6"
+          >
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
                 {landingText.firstTime}
@@ -264,12 +277,12 @@ function Landing() {
                 <span>↓</span>
               </div>
             </div>
-          </div>
+          </ScrollReveal>
         </div>
-      </section>
+      </ScrollReveal>
 
       {/* NEWS WIDGET */}
-      <section className="mt-16 px-6 md:px-12">
+      <ScrollReveal as="section" className="mt-16 px-6 md:px-12">
         <div className="mx-auto max-w-[1200px]">
           <Link
             to="/$lang/releases"
@@ -335,10 +348,10 @@ function Landing() {
             </div>
           </Link>
         </div>
-      </section>
+      </ScrollReveal>
 
       {/* SOCIAL STRIP */}
-      <section className="mt-24 px-6 md:px-12">
+      <ScrollReveal as="section" variant="scale" className="mt-24 px-6 md:px-12">
         <GlassCard tone="pink" className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
@@ -365,10 +378,10 @@ function Landing() {
             ))}
           </div>
         </GlassCard>
-      </section>
+      </ScrollReveal>
 
       {/* LATEST RELEASES TEASER */}
-      <section className="mt-32 px-6 md:px-12">
+      <ScrollReveal as="section" className="mt-32 px-6 md:px-12">
         <div className="flex items-end justify-between">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
@@ -389,31 +402,32 @@ function Landing() {
 
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {featuredReleases.map((r, i) => (
-            <article
-              key={r.id}
-              className={`group relative ${i === 1 ? "md:translate-y-12" : ""}`}
-            >
-              <div className="relative overflow-hidden rounded-2xl">
-                <img
-                  src={r.img}
-                  alt={r.name}
-                  loading="lazy"
-                  className="aspect-[4/5] w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <div className="absolute left-3 top-3 rounded-full bg-foreground/80 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.3em] text-background">
-                  {t.releases.newTag}
-                </div>
-              </div>
-              <div className="mt-4 flex items-end justify-between">
-                <div>
-                  <h3 className="font-display text-xl">{r.name}</h3>
-                  <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-                    {r.category} · {r.date}
-                  </p>
-                </div>
-                <HandwrittenNote>{r.note}</HandwrittenNote>
-              </div>
-            </article>
+            <div key={r.id} className={i === 1 ? "md:translate-y-12" : ""}>
+              <ScrollReveal delay={i * 120}>
+                <article className="group relative">
+                  <div className="relative overflow-hidden rounded-2xl">
+                    <img
+                      src={r.img}
+                      alt={r.name}
+                      loading="lazy"
+                      className="aspect-[4/5] w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                    <div className="absolute left-3 top-3 rounded-full bg-foreground/80 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.3em] text-background">
+                      {t.releases.newTag}
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-end justify-between">
+                    <div>
+                      <h3 className="font-display text-xl">{r.name}</h3>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+                        {r.category} · {r.date}
+                      </p>
+                    </div>
+                    <HandwrittenNote>{r.note}</HandwrittenNote>
+                  </div>
+                </article>
+              </ScrollReveal>
+            </div>
           ))}
         </div>
         {!loaded ? (
@@ -421,7 +435,7 @@ function Landing() {
             {landingText.syncing}
           </div>
         ) : null}
-      </section>
+      </ScrollReveal>
     </main>
   );
 }
