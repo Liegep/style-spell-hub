@@ -247,7 +247,11 @@ function SecondLifeDropboxesPanel({
   error: string;
   isLoading: boolean;
 }) {
-  const connectedCount = dropboxes.filter((dropbox) => dropbox.active && Boolean(dropbox.server_url)).length;
+  const dropboxSummary = isLoading
+    ? "syncing"
+    : dropboxes.length === 0
+      ? "no registered dropboxes"
+      : `${dropboxes.length} registered`;
 
   return (
     <GlassCard className="mt-10 p-6">
@@ -261,9 +265,7 @@ function SecondLifeDropboxesPanel({
             Registered in-world prims that can deliver products, textures, and Second Life notices for Love Potion.
           </p>
         </div>
-        <AuditPill>
-          {dropboxes.length} registered · {connectedCount} connected
-        </AuditPill>
+        <AuditPill>{dropboxSummary}</AuditPill>
       </div>
 
       {error ? (
