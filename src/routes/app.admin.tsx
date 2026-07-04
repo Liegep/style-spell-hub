@@ -45,9 +45,24 @@ type Tab =
   | "overview" | "products" | "inbox" | "newsletter"
   | "locations" | "preferences" | "notifications" | "subscribers";
 
+const ADMIN_SECTIONS: Tab[] = [
+  "overview",
+  "products",
+  "inbox",
+  "newsletter",
+  "locations",
+  "preferences",
+  "notifications",
+  "subscribers",
+];
+
+function normalizeAdminSection(section: unknown): Tab | undefined {
+  return ADMIN_SECTIONS.includes(section as Tab) ? (section as Tab) : undefined;
+}
+
 export const Route = createFileRoute("/app/admin")({
   validateSearch: (s: Record<string, unknown>): { section?: Tab } => ({
-    section: (s.section as Tab) || undefined,
+    section: normalizeAdminSection(s.section),
   }),
   component: AdminDash,
 });
@@ -57,7 +72,7 @@ const TITLES: Partial<Record<Tab, { eyebrow: string; title: string; note: string
   locations:     { eyebrow: "LOVE POTION · MAP",       title: "On the grid.",        note: "where they pose" },
   products:      { eyebrow: "LOVE POTION · STOCK",     title: "The drops.",          note: "fresh on shelves" },
   preferences:   { eyebrow: "LOVE POTION · RULES",     title: "House rules.",        note: "set the tempo" },
-  notifications: { eyebrow: "LOVE POTION · INBOX",     title: "Whispers.",           note: "stay in touch" },
+  notifications: { eyebrow: "LOVE POTION · NOTIFICATIONS", title: "Signal center.",      note: "stay in touch" },
   inbox:         { eyebrow: "ADMIN · COMPOSE",        title: "Write a love note.",  note: "from you, to them" },
   subscribers:   { eyebrow: "LOVE POTION SUBSCRIBERS · LIST", title: "The list.",           note: "people who care" },
   newsletter:    { eyebrow: "LOVE POTION SUBSCRIBERS · SEND", title: "A new edition.",      note: "send to grid" },
@@ -1771,9 +1786,11 @@ function Notifications() {
             Notification center
           </div>
           <p className="mt-2 text-sm text-foreground/55">
-            {unreadCount > 0
-              ? `${unreadCount} unread signal${unreadCount === 1 ? "" : "s"} for the team.`
-              : "No unread signals right now."}
+            {state === "loading"
+              ? "Checking for signals."
+              : unreadCount > 0
+                ? `${unreadCount} unread signal${unreadCount === 1 ? "" : "s"} for the team.`
+                : "No unread signals right now."}
           </p>
         </div>
         {unreadCount > 0 ? (
@@ -1790,7 +1807,10 @@ function Notifications() {
 
       {state === "loading" ? (
         <div className="mt-5 rounded-2xl border border-dashed border-foreground/15 p-8 text-center">
-          <div className="font-hand text-3xl text-[var(--brand-magenta)]">loading signals</div>
+          <div className="font-hand text-3xl text-[var(--brand-magenta)]">checking signals</div>
+          <p className="mt-2 text-sm text-foreground/55">
+            Love Potion is looking for fresh notices.
+          </p>
         </div>
       ) : state === "error" ? (
         <div className="mt-5 rounded-2xl border border-[var(--brand-magenta)]/25 bg-[var(--brand-magenta)]/5 p-5 text-sm text-[var(--brand-magenta)]">
@@ -1798,9 +1818,9 @@ function Notifications() {
         </div>
       ) : notifications.length === 0 ? (
         <div className="mt-5 rounded-2xl border border-dashed border-foreground/15 p-8 text-center">
-          <div className="font-hand text-3xl text-[var(--brand-magenta)]">no signals yet</div>
+          <div className="font-hand text-3xl text-[var(--brand-magenta)]">all quiet</div>
           <p className="mt-2 text-sm text-foreground/55">
-            Replies, app notices, and system alerts will land here.
+            Replies, app notices, and system alerts will appear here when they arrive.
           </p>
         </div>
       ) : (
@@ -1840,6 +1860,9 @@ function Notifications() {
                       {notification.action_url ? (
                         <a
                           href={notification.action_url}
+                          onClick={() => {
+                            if (unread) void onMarkRead(notification.id);
+                          }}
                           className="rounded-full border border-foreground/15 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] transition hover:bg-foreground hover:text-background"
                         >
                           open
