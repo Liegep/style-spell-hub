@@ -123,3 +123,63 @@ export async function updateManagerDetails(input: {
 
   return data;
 }
+
+export async function removeManagerAccount(managerId: string) {
+  const currentUserId = (await supabase.auth.getUser()).data.user?.id;
+  if (!currentUserId) throw new Error("No authenticated user.");
+  if (managerId === currentUserId) {
+    throw new Error("You cannot remove your own manager access.");
+  }
+
+  const { data: manager, error: managerError } = await supabase
+    .from("profiles")
+    .select(MANAGER_SELECT)
+    .eq("id", managerId)
+    .in("role", ["admin", "super_admin"])
+    .maybeSingle<ManagerListItem>();
+
+  if (managerError) throw managerError;
+  if (!manager) throw new Error("Manager not found.");
+
+  if (manager.role === "super_admin") {
+    const { count, error: countError } = await supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "super_admin")
+      .eq("account_status", "active")
+      .neq("id", managerId);
+
+    if (countError) throw countError;
+    if ((count ?? 0) < 1) {
+      throw new Error("Keep at least one active super admin before removing this account.");
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({
+      account_status: "blocked",
+      availability_status: "offline",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", managerId)
+    .in("role", ["admin", "super_admin"])
+    .select(MANAGER_SELECT)
+    .single<ManagerListItem>();
+
+  if (error) throw error;
+
+  void logAuditEvent({
+    action: "Removed manager access",
+    targetType: "profile",
+    targetId: data.id,
+    targetName: data.display_name ?? data.full_name ?? data.email,
+    metadata: {
+      role: data.role,
+      account_status: data.account_status,
+      removal_source: "staff",
+    },
+  });
+
+  return data;
+}

@@ -75,6 +75,10 @@ function LoginPage() {
         throw new Error(t.login.leftAccount);
       }
 
+      if (profile.role !== "blogger" && profile.account_status !== "active") {
+        throw new Error("This staff account is not active. Please contact Love Potion HQ.");
+      }
+
       await enterAppWithProfileLanguage(profile);
     } catch (error) {
       setStatus("error");

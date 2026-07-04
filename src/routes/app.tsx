@@ -180,6 +180,9 @@ function AppLayout() {
 
         if (!currentProfile) {
           setAuthError("Authenticated user has no profile row.");
+        } else if (currentProfile.role !== "blogger" && currentProfile.account_status !== "active") {
+          await signOut();
+          await navigate({ to: "/$lang/login", params: { lang: routeLang } });
         } else {
           setProfile(currentProfile);
           const savedLang = window.localStorage.getItem("love-potion-ui-lang");

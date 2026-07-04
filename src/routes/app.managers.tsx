@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Save, UserPlus } from "lucide-react";
+import { Save, Trash2, UserPlus } from "lucide-react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
 import {
   createManagerAccount,
   listManagers,
+  removeManagerAccount,
   updateManagerDetails,
   type ManagerListItem,
   type ManagerRole,
@@ -26,6 +27,8 @@ function ManagersPage() {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState("");
   const [editor, setEditor] = useState<EditorMode | null>(null);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   async function loadManagers() {
     try {
@@ -44,6 +47,27 @@ function ManagersPage() {
   useEffect(() => {
     void loadManagers();
   }, []);
+
+  async function removeManager(manager: ManagerListItem) {
+    if (confirmRemoveId !== manager.id) {
+      setConfirmRemoveId(manager.id);
+      setMessage(`Click confirm to remove ${manager.display_name ?? manager.email}.`);
+      return;
+    }
+
+    try {
+      setRemovingId(manager.id);
+      const updated = await removeManagerAccount(manager.id);
+      setManagers((current) => current.map((row) => (row.id === updated.id ? updated : row)));
+      setConfirmRemoveId(null);
+      setMessage(`${updated.display_name ?? updated.email} was moved to inactive.`);
+    } catch (error) {
+      console.error("[Managers] Failed to remove manager", error);
+      setMessage(error instanceof Error ? error.message : "Could not remove manager.");
+    } finally {
+      setRemovingId(null);
+    }
+  }
 
   const filtered = useMemo(() => {
     return managers.filter((manager) => {
@@ -141,13 +165,27 @@ function ManagersPage() {
                     <td className="px-6 py-4 font-mono text-[10px] uppercase tracking-[0.25em] text-foreground/45">
                       {formatDate(manager.updated_at)}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => setEditor({ type: "edit", manager })}
-                        className="rounded-full border border-foreground/30 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] hover:bg-foreground hover:text-background"
-                      >
-                        Edit
-                      </button>
+                    <td className="px-6 py-4">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => setEditor({ type: "edit", manager })}
+                          className="rounded-full border border-foreground/30 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] hover:bg-foreground hover:text-background"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => void removeManager(manager)}
+                          disabled={removingId === manager.id || manager.account_status === "blocked" || manager.account_status === "left"}
+                          className="inline-flex items-center rounded-full border border-[var(--brand-magenta)]/40 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--brand-magenta)] hover:bg-[var(--brand-magenta)] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Trash2 className="mr-1 h-3 w-3" />
+                          {removingId === manager.id
+                            ? "Removing"
+                            : confirmRemoveId === manager.id
+                              ? "Confirm"
+                              : "Remove"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
