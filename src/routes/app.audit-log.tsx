@@ -247,6 +247,8 @@ function SecondLifeDropboxesPanel({
   error: string;
   isLoading: boolean;
 }) {
+  const connectedCount = dropboxes.filter((dropbox) => dropbox.active && Boolean(dropbox.server_url)).length;
+
   return (
     <GlassCard className="mt-10 p-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -259,7 +261,9 @@ function SecondLifeDropboxesPanel({
             Registered in-world prims that can deliver products, textures, and Second Life notices for Love Potion.
           </p>
         </div>
-        <AuditPill>{dropboxes.length} registered</AuditPill>
+        <AuditPill>
+          {connectedCount} connected · {dropboxes.length} total
+        </AuditPill>
       </div>
 
       {error ? (
