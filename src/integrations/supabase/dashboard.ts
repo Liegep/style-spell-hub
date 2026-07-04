@@ -92,29 +92,73 @@ function inThirtyDaysIso() {
   return date.toISOString();
 }
 
-export async function getAtelierStats(): Promise<AtelierStats> {
-  const { data, error } = await supabase.rpc("get_atelier_stats");
-
+async function safeCount(label: string, query: PromiseLike<{ count: number | null; error: unknown }>) {
+  const { count, error } = await query;
   if (error) {
-    console.warn("[Atelier stats] Could not load stats via RPC", error);
-    return {
-      activeBloggers: 0,
-      inactiveBloggers: 0,
-      postsThisMonth: 0,
-      productsLive: 0,
-      archiveSoon: 0,
-      subscribers: 0,
-    };
+    console.warn(`[Atelier stats] Could not count ${label}`, error);
+    return 0;
   }
+  return count ?? 0;
+}
 
-  const stats = data as AtelierStats;
+export async function getAtelierStats(): Promise<AtelierStats> {
+  const [activeBloggers, inactiveBloggers, postsThisMonth, productsLive, archiveSoon, subscribers] = await Promise.all([
+    safeCount(
+      "active bloggers",
+      supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("role", "blogger")
+        .eq("account_status", "active"),
+    ),
+    safeCount(
+      "inactive bloggers",
+      supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("role", "blogger")
+        .neq("account_status", "active"),
+    ),
+    safeCount(
+      "posts this month",
+      supabase
+        .from("blog_submissions")
+        .select("id", { count: "exact", head: true })
+        .gte("submitted_at", startOfCurrentMonthIso()),
+    ),
+    safeCount(
+      "live products",
+      supabase
+        .from("product_releases")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "available"),
+    ),
+    safeCount(
+      "archive soon products",
+      supabase
+        .from("product_releases")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "available")
+        .not("auto_archive_at", "is", null)
+        .lte("auto_archive_at", inThirtyDaysIso()),
+    ),
+    safeCount(
+      "active subscribers",
+      supabase
+        .from("newsletter_subscribers")
+        .select("id", { count: "exact", head: true })
+        .eq("is_active", true)
+        .is("unsubscribed_at", null),
+    ),
+  ]);
+
   return {
-    activeBloggers: stats.activeBloggers ?? 0,
-    inactiveBloggers: stats.inactiveBloggers ?? 0,
-    postsThisMonth: stats.postsThisMonth ?? 0,
-    productsLive: stats.productsLive ?? 0,
-    archiveSoon: stats.archiveSoon ?? 0,
-    subscribers: stats.subscribers ?? 0,
+    activeBloggers,
+    inactiveBloggers,
+    postsThisMonth,
+    productsLive,
+    archiveSoon,
+    subscribers,
   };
 }
 
