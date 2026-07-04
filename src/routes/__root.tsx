@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+import { SmoothScroll } from "@/components/SmoothScroll";  
   Outlet,
   Link,
   createRootRouteWithContext,
@@ -124,11 +125,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
+      const { queryClient } = Route.useRouteContext();
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <Outlet />
-    </QueryClientProvider>
-  );
-}
+      return (
+        <QueryClientProvider client={queryClient}>
+          <SmoothScroll>
+            <Outlet />
+          </SmoothScroll>
+        </QueryClientProvider>
+      );
+    }
