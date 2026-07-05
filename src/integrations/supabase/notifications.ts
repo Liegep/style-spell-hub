@@ -46,8 +46,7 @@ export async function listMyNotifications(profileId: string, limit = 50) {
     .limit(limit);
 
   if (error) {
-    const message = error.message ?? "";
-    if (/read_at|schema cache|column/i.test(message)) {
+    if (isMissingReadAtError(error)) {
       const fallback = await supabase
         .from("notification_queue")
         .select("id,channel,type,title,body,action_url,metadata,status,created_at,sent_at")
