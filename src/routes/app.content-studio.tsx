@@ -377,6 +377,15 @@ function ProductEditor({
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [onClose, state]);
 
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   function update<K extends keyof ProductReleaseInput>(key: K, value: ProductReleaseInput[K]) {
     setForm((current) => ({ ...current, [key]: value }));
   }
@@ -534,10 +543,10 @@ function ProductEditor({
   const descriptionPreview = form.long_description?.trim() || "Describe the fabric, mood, fit, and little details here.";
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-foreground/55 px-4 py-8 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex h-dvh overflow-hidden bg-foreground/55 px-4 py-6 backdrop-blur-sm md:py-8">
       <form
         onSubmit={saveProduct}
-        className="mx-auto max-h-[calc(100vh-4rem)] max-w-6xl overflow-y-auto rounded-[2rem] border border-[var(--brand-pink)] bg-background p-6 shadow-2xl [scrollbar-color:var(--brand-magenta)_rgba(255,214,224,0.35)] [scrollbar-width:thin] md:p-10"
+        className="mx-auto h-full max-h-[calc(100dvh-3rem)] w-full max-w-6xl overflow-y-auto overscroll-contain rounded-[2rem] border border-[var(--brand-pink)] bg-background p-6 shadow-2xl [scrollbar-color:var(--brand-magenta)_rgba(255,214,224,0.35)] [scrollbar-width:thin] md:max-h-[calc(100dvh-4rem)] md:p-10"
       >
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
