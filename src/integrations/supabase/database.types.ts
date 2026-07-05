@@ -72,6 +72,7 @@ export type ProductRelease = {
   featured_on_landing: boolean;
   display_order: number;
   delivery_item_key: string | null;
+  demo_item_key: string | null;
   auto_archive_at: string | null;
   created_by: string | null;
   created_at: string;

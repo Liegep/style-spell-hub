@@ -23,6 +23,7 @@ export type ProductReleaseInput = {
   featured_on_landing: boolean;
   display_order: number;
   delivery_item_key: string | null;
+  demo_item_key: string | null;
   auto_archive_at: string | null;
 };
 
@@ -37,6 +38,7 @@ export type ProductEditorSeed = ProductSummary &
       | "deadline_at"
       | "blogging_deadline_days"
       | "delivery_item_key"
+      | "demo_item_key"
     >
   >;
 
@@ -145,15 +147,19 @@ export async function upsertProductRelease(input: ProductReleaseInput) {
     .select("*")
     .single<ProductRelease>();
 
-  if (error && /blogging_deadline_days|schema cache|column/i.test(error.message ?? "")) {
-    const { blogging_deadline_days: _bloggingDeadlineDays, ...fallbackPayload } = payload;
+  if (error && /blogging_deadline_days|demo_item_key|schema cache|column/i.test(error.message ?? "")) {
+    const {
+      blogging_deadline_days: _bloggingDeadlineDays,
+      demo_item_key: _demoItemKey,
+      ...fallbackPayload
+    } = payload;
     const fallback = await supabase
       .from("product_releases")
       .upsert(fallbackPayload, { onConflict: "id" })
       .select("*")
-      .single<Omit<ProductRelease, "blogging_deadline_days">>();
+      .single<Omit<ProductRelease, "blogging_deadline_days" | "demo_item_key">>();
 
-    data = fallback.data ? { ...fallback.data, blogging_deadline_days: null } : null;
+    data = fallback.data ? { ...fallback.data, blogging_deadline_days: null, demo_item_key: null } : null;
     error = fallback.error;
   }
 
@@ -169,6 +175,7 @@ export async function upsertProductRelease(input: ProductReleaseInput) {
       status: data.status,
       featured_on_landing: data.featured_on_landing,
       delivery_item_key: Boolean(data.delivery_item_key),
+      demo_item_key: Boolean(data.demo_item_key),
     },
   });
 

@@ -16,6 +16,7 @@ import {
   listAvailableProductsForBlogger,
   listProductClaimsForBlogger,
   listSubmissionSummariesForBlogger,
+  requestProductDemo,
   statusLabel,
   submitLinksForProduct,
   type BloggerProductClaimSummary,
@@ -56,6 +57,7 @@ type Product = {
   recommendation: string;
   vendorPoster: string | null;
   shortDescription: string | null;
+  hasDemo: boolean;
 };
 type PortfolioLink = {
   id: number;
@@ -504,6 +506,7 @@ function mapProductForUi(product: BloggerProduct, language: Lang = "en"): Produc
     recommendation: product.blogging_recommendations ?? (language === "es" ? "Aún no hay recomendaciones." : "No recommendations yet."),
     vendorPoster: product.vendor_poster_url,
     shortDescription: product.short_description,
+    hasDemo: Boolean(product.demo_item_key),
   };
 }
 
@@ -521,6 +524,7 @@ function mapMockProductForUi(product: (typeof products)[number], language: Lang 
     recommendation: product.recommendation,
     vendorPoster: product.vendorPoster,
     shortDescription: null,
+    hasDemo: false,
   };
 }
 
@@ -1785,6 +1789,7 @@ function ProductSubmissionModal({
   const [message, setMessage] = useState("");
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [claimState, setClaimState] = useState<ProductClaimState>(getProductClaimState(claim, submission));
+  const [demoState, setDemoState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [latestReviewerNote, setLatestReviewerNote] = useState<string | null>(
     submissionHistory.find((row) => Boolean(row.review_comment?.trim()))?.review_comment ?? null,
   );
@@ -2018,6 +2023,55 @@ function ProductSubmissionModal({
     }
   };
 
+  const requestDemo = async () => {
+    if (!profileId || demoState === "sending" || !product.hasDemo) return;
+    if (accountLocked) {
+      setDemoState("error");
+      setStatus("error");
+      setMessage(accountLockMessage || "Your account cannot request demos right now.");
+      return;
+    }
+    if (!isUuid(product.id)) {
+      setDemoState("error");
+      setStatus("error");
+      setMessage("This product is in mock mode right now. Refresh and try again in live mode.");
+      return;
+    }
+
+    setDemoState("sending");
+    setStatus("idle");
+    setMessage("");
+
+    try {
+      const demo = await requestProductDemo(product.id);
+      if (!demo.delivered) {
+        setDemoState("error");
+        setStatus("error");
+        setMessage(demo.notice);
+        return;
+      }
+
+      setDemoState("sent");
+      setStatus("success");
+      setMessage(
+        demo.notice ||
+          (language === "es"
+            ? "Demo enviado en Second Life. No cuenta como reclamo."
+            : "Demo delivered in Second Life. This does not count as a claim."),
+      );
+    } catch (error) {
+      setDemoState("error");
+      setStatus("error");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : language === "es"
+            ? "No se pudo entregar el demo."
+            : "Could not deliver the demo.",
+      );
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-foreground/45 p-4 backdrop-blur-md md:p-8">
       <div className="mx-auto grid max-w-6xl overflow-hidden rounded-[2rem] border border-white/40 bg-background/95 shadow-2xl md:grid-cols-[0.9fr_1.1fr]">
@@ -2077,6 +2131,26 @@ function ProductSubmissionModal({
             <Download className="h-4 w-4" />
             {product.vendorPoster ? "Download vendor poster" : "Vendor poster unavailable"}
           </button>
+
+          {product.hasDemo ? (
+            <button
+              onClick={requestDemo}
+              disabled={!profileId || accountLocked || demoState === "sending"}
+              title={accountLocked ? accountLockMessage : undefined}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-white shadow-lg shadow-[var(--brand-pink)]/50 transition hover:-translate-y-0.5 hover:bg-foreground disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              <Send className="h-4 w-4" />
+              {demoState === "sending"
+                ? language === "es"
+                  ? "Enviando demo"
+                  : "Sending demo"
+                : demoState === "sent"
+                  ? language === "es"
+                    ? "Demo enviado"
+                    : "Demo sent"
+                  : "DEMO"}
+            </button>
+          ) : null}
         </div>
 
         <div className="relative p-5 md:p-8">

@@ -23,6 +23,7 @@ export type BloggerProduct = Pick<
   | "blogging_deadline_days"
   | "second_life_link"
   | "status"
+  | "demo_item_key"
 >;
 
 export type BloggerSubmissionSummary = Pick<
@@ -53,13 +54,13 @@ export async function listAvailableProductsForBlogger() {
   const { data, error } = await supabase
     .from("product_releases")
     .select(
-      "id,name,category,short_description,blogging_recommendations,editorial_image_url,image_url,vendor_poster_url,release_date,deadline_at,blogging_deadline_days,second_life_link,status",
+      "id,name,category,short_description,blogging_recommendations,editorial_image_url,image_url,vendor_poster_url,release_date,deadline_at,blogging_deadline_days,second_life_link,status,demo_item_key",
     )
     .eq("status", "available")
     .order("display_order", { ascending: true })
     .order("release_date", { ascending: false });
 
-  if (error && /blogging_deadline_days|schema cache|column/i.test(error.message ?? "")) {
+  if (error && /blogging_deadline_days|demo_item_key|schema cache|column/i.test(error.message ?? "")) {
     const fallback = await supabase
       .from("product_releases")
       .select(
@@ -70,9 +71,10 @@ export async function listAvailableProductsForBlogger() {
       .order("release_date", { ascending: false });
 
     if (fallback.error) throw fallback.error;
-    return ((fallback.data ?? []) as Omit<BloggerProduct, "blogging_deadline_days">[]).map((product) => ({
+    return ((fallback.data ?? []) as Omit<BloggerProduct, "blogging_deadline_days" | "demo_item_key">[]).map((product) => ({
       ...product,
       blogging_deadline_days: null,
+      demo_item_key: null,
     })) as BloggerProduct[];
   }
 
@@ -243,6 +245,35 @@ async function requestSecondLifeDelivery(productId: string, claimId: string) {
     return {
       delivered: false,
       notice: `Claim saved, but Second Life delivery could not be reached. ${
+        error instanceof Error ? error.message : "Try again after the delivery bridge is configured."
+      }`,
+    };
+  }
+}
+
+export async function requestProductDemo(productId: string) {
+  try {
+    const { data, error } = await supabase.functions.invoke("deliver-product", {
+      body: { productId, demo: true },
+    });
+
+    if (error) {
+      const details = await getFunctionErrorMessage(error);
+      return {
+        delivered: false,
+        notice: `Demo delivery failed. ${details}`,
+      };
+    }
+
+    const payload = (data ?? {}) as { delivered?: boolean; message?: string };
+    return {
+      delivered: payload.delivered === true,
+      notice: payload.message ?? (payload.delivered ? "Demo delivered in Second Life." : "Demo request saved."),
+    };
+  } catch (error) {
+    return {
+      delivered: false,
+      notice: `Demo delivery could not be reached. ${
         error instanceof Error ? error.message : "Try again after the delivery bridge is configured."
       }`,
     };

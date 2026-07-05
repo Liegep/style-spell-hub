@@ -251,6 +251,7 @@ const emptyProduct = (): ProductReleaseInput => ({
   featured_on_landing: false,
   display_order: 0,
   delivery_item_key: "",
+  demo_item_key: "",
   auto_archive_at: "",
 });
 
@@ -275,6 +276,7 @@ function productToInput(product: ProductRelease): ProductReleaseInput {
     featured_on_landing: product.featured_on_landing,
     display_order: product.display_order,
     delivery_item_key: product.delivery_item_key ?? "",
+    demo_item_key: product.demo_item_key ?? "",
     auto_archive_at: toDateInput(product.auto_archive_at),
   };
 }
@@ -466,6 +468,7 @@ function ProductEditor({
         second_life_link: emptyToNull(form.second_life_link),
         marketplace_link: emptyToNull(form.marketplace_link),
         delivery_item_key: emptyToNull(form.delivery_item_key),
+        demo_item_key: emptyToNull(form.demo_item_key),
       });
 
       await replaceProductReleaseImages(
@@ -688,6 +691,17 @@ function ProductEditor({
                     onChange={(event) => update("delivery_item_key", event.target.value)}
                     className={inputClass}
                     placeholder="e.g. Holiday Magic Gown - Blogger Pack"
+                  />
+                </Field>
+                <Field
+                  label="Second Life demo ID"
+                  helper="Exact inventory item or folder name inside the demo dropbox. Demos do not count toward blogger quota."
+                >
+                  <input
+                    value={form.demo_item_key ?? ""}
+                    onChange={(event) => update("demo_item_key", event.target.value)}
+                    className={inputClass}
+                    placeholder="e.g. Holiday Magic Gown - DEMO"
                   />
                 </Field>
                 <Field label="Release date">

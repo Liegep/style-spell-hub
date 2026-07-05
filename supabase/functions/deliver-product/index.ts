@@ -9,12 +9,31 @@ const corsHeaders = {
 type DeliveryRequest = {
   productId?: string;
   claimId?: string;
+  demo?: boolean;
 };
+
+type DeliveryPurpose = "product" | "demo";
 
 async function getActiveDeliveryUrl(
   supabase: ReturnType<typeof createClient>,
   fallbackUrl: string | undefined,
+  purpose: DeliveryPurpose = "product",
 ) {
+  if (purpose === "demo") {
+    const { data, error } = await supabase
+      .from("second_life_delivery_servers")
+      .select("server_url")
+      .eq("active", true)
+      .ilike("object_name", "%demo%")
+      .order("last_seen_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!error && data?.server_url) {
+      return data.server_url as string;
+    }
+  }
+
   const { data, error } = await supabase
     .from("second_life_delivery_servers")
     .select("server_url")
@@ -57,11 +76,6 @@ Deno.serve(async (request) => {
 
   const authHeader = request.headers.get("authorization") ?? "";
   const supabase = createClient(supabaseUrl, serviceRoleKey);
-  const deliveryUrl = await getActiveDeliveryUrl(supabase, fallbackDeliveryUrl ?? undefined);
-
-  if (!deliveryUrl) {
-    return json({ delivered: false, message: "Second Life delivery URL is not configured." }, 500);
-  }
 
   const {
     data: { user },
@@ -79,8 +93,20 @@ Deno.serve(async (request) => {
     return json({ delivered: false, message: "Invalid delivery request." }, 400);
   }
 
-  if (!payload.productId || !payload.claimId) {
+  const demoRequest = payload.demo === true;
+
+  if (!payload.productId || (!demoRequest && !payload.claimId)) {
     return json({ delivered: false, message: "Missing product or claim id." }, 400);
+  }
+
+  const deliveryUrl = await getActiveDeliveryUrl(
+    supabase,
+    fallbackDeliveryUrl ?? undefined,
+    demoRequest ? "demo" : "product",
+  );
+
+  if (!deliveryUrl) {
+    return json({ delivered: false, message: "Second Life delivery URL is not configured." }, 500);
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -103,7 +129,7 @@ Deno.serve(async (request) => {
 
   const { data: product, error: productError } = await supabase
     .from("product_releases")
-    .select("id,name,delivery_item_key,status")
+    .select("id,name,delivery_item_key,demo_item_key,status")
     .eq("id", payload.productId)
     .single();
 
@@ -115,14 +141,98 @@ Deno.serve(async (request) => {
     return json({ delivered: false, message: "This product is not available for delivery." }, 400);
   }
 
-  if (!product.delivery_item_key) {
-    return json({ delivered: false, message: "This product has no Second Life delivery item key." }, 400);
+  const itemKey = demoRequest ? product.demo_item_key : product.delivery_item_key;
+
+  if (!itemKey) {
+    return json(
+      {
+        delivered: false,
+        message: demoRequest
+          ? "This product has no Second Life demo item key."
+          : "This product has no Second Life delivery item key.",
+      },
+      400,
+    );
+  }
+
+  if (demoRequest) {
+    const slPayload = {
+      secret: deliverySecret ?? null,
+      claim_id: null,
+      product_id: product.id,
+      product_name: product.name,
+      item_key: itemKey,
+      avatar_uuid: profile.sl_avatar_uuid,
+      avatar_name: profile.sl_avatar_name,
+      display_name: profile.display_name,
+      demo: true,
+    };
+
+    try {
+      const slResponse = await fetch(deliveryUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(slPayload),
+      });
+
+      const responseText = await slResponse.text();
+
+      if (!slResponse.ok) {
+        return json(
+          {
+            delivered: false,
+            message: `Second Life demo delivery failed: ${responseText || slResponse.statusText}`,
+          },
+          502,
+        );
+      }
+
+      const bloggerName = profile.display_name ?? profile.sl_avatar_name ?? "A blogger";
+      const { data: staffProfiles } = await supabase
+        .from("profiles")
+        .select("id")
+        .in("role", ["admin", "super_admin"])
+        .neq("account_status", "left");
+
+      const now = new Date().toISOString();
+
+      if (staffProfiles?.length) {
+        await supabase.from("notification_queue").insert(
+          staffProfiles.map((staff) => ({
+            recipient_id: staff.id,
+            channel: "in_app",
+            type: "manual",
+            title: "Demo picked up",
+            body: `${bloggerName} picked up a demo for ${product.name}.`,
+            action_url: "/app/atelier",
+            metadata: {
+              demo: true,
+              product_id: product.id,
+              product_name: product.name,
+              blogger_id: profile.id,
+              blogger_name: bloggerName,
+            },
+            status: "sent",
+            scheduled_at: now,
+            sent_at: now,
+          })),
+        );
+      }
+
+      return json({
+        delivered: true,
+        message: `Demo delivered to ${profile.sl_avatar_name ?? profile.display_name ?? "your avatar"}. This does not count as a claim.`,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown Second Life delivery error.";
+      return json({ delivered: false, message: `Second Life demo delivery failed: ${message}` }, 502);
+    }
   }
 
   const { data: claim, error: claimError } = await supabase
     .from("product_claims")
     .select("id,product_id,blogger_id,status")
-    .eq("id", payload.claimId)
+    .eq("id", payload.claimId!)
     .eq("product_id", payload.productId)
     .eq("blogger_id", user.id)
     .single();
@@ -136,7 +246,7 @@ Deno.serve(async (request) => {
     claim_id: claim.id,
     product_id: product.id,
     product_name: product.name,
-    item_key: product.delivery_item_key,
+    item_key: itemKey,
     avatar_uuid: profile.sl_avatar_uuid,
     avatar_name: profile.sl_avatar_name,
     display_name: profile.display_name,

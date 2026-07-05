@@ -45,6 +45,7 @@ create table if not exists public.product_releases (
   featured_on_landing boolean not null default false,
   display_order int not null default 0,
   delivery_item_key text,
+  demo_item_key text,
   auto_archive_at timestamptz,
   created_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now(),
