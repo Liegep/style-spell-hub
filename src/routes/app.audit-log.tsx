@@ -215,11 +215,8 @@ function AutomationHealthPanel({
       </GlassCard>
 
       <GlassCard className="p-6">
-        <div className="flex items-center justify-between gap-4">
-          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/45">
-            LATEST SL QUEUE
-          </div>
-          <AuditPill>{health?.latest.length ?? 0} rows</AuditPill>
+        <div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/45">LATEST SL QUEUE</div>
         </div>
 
         <div className="mt-5 space-y-3">
