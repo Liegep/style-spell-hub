@@ -1,3 +1,9 @@
+alter table public.notification_queue
+  add column if not exists read_at timestamptz;
+
+create index if not exists notification_queue_recipient_read_created_idx
+  on public.notification_queue (recipient_id, read_at, created_at desc);
+
 drop function if exists public.get_my_unread_notification_count();
 
 create function public.get_my_unread_notification_count()
