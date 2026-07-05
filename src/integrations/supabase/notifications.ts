@@ -70,8 +70,13 @@ export async function listMyNotifications(profileId: string, limit = 50) {
 export async function countMyUnreadNotifications(profileId: string) {
   if (!profileId) return 0;
 
-  const rows = await listMyNotifications(profileId);
-  return rows.filter((notification) => !notification.read_at).length;
+  const { data, error } = await supabase.rpc("get_my_unread_notification_count");
+  if (error) {
+    console.warn("[Notifications] unread count unavailable.", error);
+    return 0;
+  }
+
+  return typeof data === "number" ? data : Number(data ?? 0);
 }
 
 export async function markNotificationRead(notificationId: string) {
