@@ -101,7 +101,29 @@ async function safeCount(label: string, query: PromiseLike<{ count: number | nul
   return count ?? 0;
 }
 
-export async function getAtelierStats(): Promise<AtelierStats> {
+type RawAtelierStats = Partial<AtelierStats> & {
+  active_bloggers?: number;
+  inactive_bloggers?: number;
+  posts_this_month?: number;
+  products_live?: number;
+  archive_soon?: number;
+};
+
+function normalizeAtelierStats(raw: RawAtelierStats | RawAtelierStats[] | null | undefined): AtelierStats | null {
+  const stats = Array.isArray(raw) ? raw[0] : raw;
+  if (!stats) return null;
+
+  return {
+    activeBloggers: stats.activeBloggers ?? stats.active_bloggers ?? 0,
+    inactiveBloggers: stats.inactiveBloggers ?? stats.inactive_bloggers ?? 0,
+    postsThisMonth: stats.postsThisMonth ?? stats.posts_this_month ?? 0,
+    productsLive: stats.productsLive ?? stats.products_live ?? 0,
+    archiveSoon: stats.archiveSoon ?? stats.archive_soon ?? 0,
+    subscribers: stats.subscribers ?? 0,
+  };
+}
+
+async function countAtelierStatsDirectly(): Promise<AtelierStats> {
   const [activeBloggers, inactiveBloggers, postsThisMonth, productsLive, archiveSoon, subscribers] = await Promise.all([
     safeCount(
       "active bloggers",
@@ -160,6 +182,19 @@ export async function getAtelierStats(): Promise<AtelierStats> {
     archiveSoon,
     subscribers,
   };
+}
+
+export async function getAtelierStats(): Promise<AtelierStats> {
+  const { data, error } = await supabase.rpc("get_atelier_stats");
+
+  if (!error) {
+    const stats = normalizeAtelierStats(data as RawAtelierStats | RawAtelierStats[] | null);
+    if (stats) return stats;
+  } else {
+    console.warn("[Atelier stats] RPC unavailable, using direct counts", error);
+  }
+
+  return countAtelierStatsDirectly();
 }
 
 export async function getUpcomingArchives() {

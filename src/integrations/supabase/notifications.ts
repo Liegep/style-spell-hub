@@ -71,22 +71,8 @@ export async function listMyNotifications(profileId: string, limit = 50) {
 export async function countMyUnreadNotifications(profileId: string) {
   if (!profileId) return 0;
 
-  const { count, error } = await supabase
-    .from("notification_queue")
-    .select("id", { count: "exact", head: true })
-    .eq("recipient_id", profileId)
-    .eq("channel", "in_app")
-    .is("read_at", null);
-
-  if (error) {
-    if (isMissingReadAtError(error)) {
-      const rows = await listMyNotifications(profileId);
-      return rows.filter((notification) => !notification.read_at).length;
-    }
-    throw error;
-  }
-
-  return count ?? 0;
+  const rows = await listMyNotifications(profileId);
+  return rows.filter((notification) => !notification.read_at).length;
 }
 
 export async function markNotificationRead(notificationId: string) {
