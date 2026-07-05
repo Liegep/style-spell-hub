@@ -212,7 +212,7 @@ function AdminDash() {
 
   return (
     <div className="px-6 py-10 md:px-12">
-      <div className="flex items-end justify-between">
+      <div key={tab} className="flex items-end justify-between">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
             {meta.eyebrow}
