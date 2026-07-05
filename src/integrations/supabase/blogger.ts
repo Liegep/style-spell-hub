@@ -252,9 +252,18 @@ async function requestSecondLifeDelivery(productId: string, claimId: string) {
 }
 
 export async function requestProductDemo(productId: string) {
+  const cleanProductId = productId.trim();
+
+  if (!cleanProductId) {
+    return {
+      delivered: false,
+      notice: "Demo delivery failed. This product is missing its ID.",
+    };
+  }
+
   try {
     const { data, error } = await supabase.functions.invoke("deliver-product", {
-      body: { productId, demo: true },
+      body: { productId: cleanProductId, product_id: cleanProductId, demo: true, mode: "demo" },
     });
 
     if (error) {

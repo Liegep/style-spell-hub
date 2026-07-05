@@ -8,8 +8,12 @@ const corsHeaders = {
 
 type DeliveryRequest = {
   productId?: string;
+  product_id?: string;
   claimId?: string;
+  claim_id?: string;
   demo?: boolean;
+  mode?: string;
+  type?: string;
 };
 
 type DeliveryPurpose = "product" | "demo";
@@ -93,10 +97,16 @@ Deno.serve(async (request) => {
     return json({ delivered: false, message: "Invalid delivery request." }, 400);
   }
 
-  const demoRequest = payload.demo === true;
+  const productId = payload.productId ?? payload.product_id;
+  const claimId = payload.claimId ?? payload.claim_id;
+  const demoRequest = payload.demo === true || payload.mode === "demo" || payload.type === "demo";
 
-  if (!payload.productId || (!demoRequest && !payload.claimId)) {
-    return json({ delivered: false, message: "Missing product or claim id." }, 400);
+  if (!productId) {
+    return json({ delivered: false, message: "Missing product id." }, 400);
+  }
+
+  if (!demoRequest && !claimId) {
+    return json({ delivered: false, message: "Missing claim id." }, 400);
   }
 
   const deliveryUrl = await getActiveDeliveryUrl(
@@ -130,7 +140,7 @@ Deno.serve(async (request) => {
   const { data: product, error: productError } = await supabase
     .from("product_releases")
     .select("id,name,delivery_item_key,demo_item_key,status")
-    .eq("id", payload.productId)
+    .eq("id", productId)
     .single();
 
   if (productError || !product) {
@@ -232,8 +242,8 @@ Deno.serve(async (request) => {
   const { data: claim, error: claimError } = await supabase
     .from("product_claims")
     .select("id,product_id,blogger_id,status")
-    .eq("id", payload.claimId!)
-    .eq("product_id", payload.productId)
+    .eq("id", claimId!)
+    .eq("product_id", productId)
     .eq("blogger_id", user.id)
     .single();
 
