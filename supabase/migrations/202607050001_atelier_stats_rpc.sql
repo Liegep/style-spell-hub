@@ -1,4 +1,6 @@
-create or replace function public.get_atelier_stats()
+drop function if exists public.get_atelier_stats();
+
+create function public.get_atelier_stats()
 returns table (
   active_bloggers integer,
   inactive_bloggers integer,
@@ -50,7 +52,7 @@ begin
     (
       select count(*)::integer
       from public.newsletter_subscribers
-      where is_active = true
+      where coalesce(is_active, true) = true
         and unsubscribed_at is null
     ) as subscribers;
 end;

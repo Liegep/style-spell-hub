@@ -123,6 +123,10 @@ function normalizeAtelierStats(raw: RawAtelierStats | RawAtelierStats[] | null |
   };
 }
 
+function hasAnyAtelierStat(stats: AtelierStats) {
+  return Object.values(stats).some((value) => value > 0);
+}
+
 async function countAtelierStatsDirectly(): Promise<AtelierStats> {
   const [activeBloggers, inactiveBloggers, postsThisMonth, productsLive, archiveSoon, subscribers] = await Promise.all([
     safeCount(
@@ -189,7 +193,7 @@ export async function getAtelierStats(): Promise<AtelierStats> {
 
   if (!error) {
     const stats = normalizeAtelierStats(data as RawAtelierStats | RawAtelierStats[] | null);
-    if (stats) return stats;
+    if (stats && hasAnyAtelierStat(stats)) return stats;
   } else {
     console.warn("[Atelier stats] RPC unavailable, using direct counts", error);
   }
