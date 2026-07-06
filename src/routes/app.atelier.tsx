@@ -7,6 +7,7 @@ import {
   getAtelierStats,
   getBloggerPulse,
   getDeliveryDeskClaims,
+  getProductSummaries,
   getReviewQueue,
   getUpcomingArchives,
   reviewSubmission,
@@ -14,6 +15,7 @@ import {
   type AtelierStats,
   type BloggerPulse,
   type DeliveryDeskItem,
+  type ProductSummary,
   type ReviewQueueItem,
 } from "@/integrations/supabase/dashboard";
 import { cn } from "@/lib/utils";
@@ -35,6 +37,24 @@ const emptyAtelierStats: AtelierStats = {
   archiveSoon: 0,
   subscribers: 0,
 };
+
+function mergeProductCounts(stats: AtelierStats, products: ProductSummary[]) {
+  const now = new Date();
+  const inThirtyDays = new Date(now);
+  inThirtyDays.setDate(inThirtyDays.getDate() + 30);
+  const liveProducts = products.filter((product) => product.status === "available");
+  const archiveSoon = liveProducts.filter((product) => {
+    if (!product.auto_archive_at) return false;
+    const archiveDate = new Date(product.auto_archive_at);
+    return archiveDate >= now && archiveDate <= inThirtyDays;
+  });
+
+  return {
+    ...stats,
+    productsLive: Math.max(stats.productsLive, liveProducts.length),
+    archiveSoon: Math.max(stats.archiveSoon, archiveSoon.length),
+  };
+}
 
 function AtelierPage() {
   const language = useLang();
@@ -58,11 +78,13 @@ function AtelierPage() {
 
   useEffect(() => {
     let isMounted = true;
+    let refreshTimer: number | undefined;
 
     async function loadDashboard() {
-      const [profile, nextStats, nextBloggers, nextArchives, nextQueue, nextDeliveryDesk] = await Promise.allSettled([
+      const [profile, nextStats, nextProducts, nextBloggers, nextArchives, nextQueue, nextDeliveryDesk] = await Promise.allSettled([
         getCurrentProfile(),
         getAtelierStats(),
+        getProductSummaries(),
         getBloggerPulse(),
         getUpcomingArchives(),
         getReviewQueue(reviewFilter),
@@ -74,8 +96,13 @@ function AtelierPage() {
       if (profile.status === "fulfilled") setCurrentProfile(profile.value);
       else console.error("[Atelier] Failed to load current profile", profile.reason);
 
-      if (nextStats.status === "fulfilled") setLiveStats(nextStats.value);
+      if (nextStats.status === "fulfilled") {
+        const products = nextProducts.status === "fulfilled" ? nextProducts.value : [];
+        setLiveStats(mergeProductCounts(nextStats.value, products));
+      }
       else console.error("[Atelier] Failed to load stats", nextStats.reason);
+
+      if (nextProducts.status === "rejected") console.error("[Atelier] Failed to load product summaries", nextProducts.reason);
 
       if (nextBloggers.status === "fulfilled") setLiveBloggers(nextBloggers.value);
       else console.error("[Atelier] Failed to load blogger pulse", nextBloggers.reason);
@@ -89,13 +116,32 @@ function AtelierPage() {
       if (nextDeliveryDesk.status === "fulfilled") setDeliveryDesk(nextDeliveryDesk.value);
       else console.error("[Atelier] Failed to load delivery desk", nextDeliveryDesk.reason);
 
-      setDataState([profile, nextStats, nextBloggers, nextArchives, nextQueue, nextDeliveryDesk].some((result) => result.status === "fulfilled") ? "live" : "fallback");
+      setDataState(
+        [profile, nextStats, nextProducts, nextBloggers, nextArchives, nextQueue, nextDeliveryDesk].some(
+          (result) => result.status === "fulfilled",
+        )
+          ? "live"
+          : "fallback",
+      );
     }
 
     void loadDashboard();
+    refreshTimer = window.setInterval(() => {
+      void loadDashboard();
+    }, 30_000);
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void loadDashboard();
+    };
+
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
 
     return () => {
       isMounted = false;
+      if (refreshTimer) window.clearInterval(refreshTimer);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [reviewFilter]);
 
@@ -105,9 +151,14 @@ function AtelierPage() {
 
     try {
       const result = await retryDeliveryClaim(claimId);
-      const refreshed = await getDeliveryDeskClaims();
+      const [refreshed, refreshedStats, refreshedProducts] = await Promise.all([
+        getDeliveryDeskClaims(),
+        getAtelierStats(),
+        getProductSummaries(),
+      ]);
 
       setDeliveryDesk(refreshed);
+      setLiveStats(mergeProductCounts(refreshedStats, refreshedProducts));
       setDeliveryNotice(result.message ?? "Delivery retried.");
     } catch (error) {
       setDeliveryNotice(error instanceof Error ? error.message : "Could not retry delivery.");
