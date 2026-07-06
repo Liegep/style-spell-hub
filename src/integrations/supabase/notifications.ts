@@ -93,14 +93,15 @@ export async function countMyUnreadNotifications(profileId: string) {
 
 export async function markNotificationRead(notificationId: string, recipientId?: string) {
   if (recipientId) {
-    const { error: updateError } = await supabase
+    const { data: updatedRows, error: updateError } = await supabase
       .from("notification_queue")
       .update({ read_at: new Date().toISOString() })
       .eq("id", notificationId)
       .eq("recipient_id", recipientId)
-      .is("read_at", null);
+      .is("read_at", null)
+      .select("id");
 
-    if (!updateError) return;
+    if (!updateError && (updatedRows?.length ?? 0) > 0) return;
     if (!isMissingReadAtError(updateError)) {
       console.warn("[Notifications] direct mark read unavailable, trying RPC.", updateError);
     }
@@ -118,14 +119,15 @@ export async function markNotificationRead(notificationId: string, recipientId?:
 
 export async function markAllNotificationsRead(recipientId?: string) {
   if (recipientId) {
-    const { error: updateError } = await supabase
+    const { data: updatedRows, error: updateError } = await supabase
       .from("notification_queue")
       .update({ read_at: new Date().toISOString() })
       .eq("recipient_id", recipientId)
       .eq("channel", "in_app")
-      .is("read_at", null);
+      .is("read_at", null)
+      .select("id");
 
-    if (!updateError) return;
+    if (!updateError && (updatedRows?.length ?? 0) > 0) return;
     if (!isMissingReadAtError(updateError)) {
       console.warn("[Notifications] direct mark all read unavailable, trying RPC.", updateError);
     }
