@@ -92,39 +92,13 @@ function inThirtyDaysIso() {
   return date.toISOString();
 }
 
-async function safeCount(label: string, query: PromiseLike<{ count: number | null; error: unknown }>) {
-  const { count, error } = await query;
+async function safeCount(label: string, query: PromiseLike<{ data: unknown[] | null; error: unknown }>) {
+  const { data, error } = await query;
   if (error) {
     console.warn(`[Atelier stats] Could not count ${label}`, error);
     return 0;
   }
-  return count ?? 0;
-}
-
-type RawAtelierStats = Partial<AtelierStats> & {
-  active_bloggers?: number;
-  inactive_bloggers?: number;
-  posts_this_month?: number;
-  products_live?: number;
-  archive_soon?: number;
-};
-
-function normalizeAtelierStats(raw: RawAtelierStats | RawAtelierStats[] | null | undefined): AtelierStats | null {
-  const stats = Array.isArray(raw) ? raw[0] : raw;
-  if (!stats) return null;
-
-  return {
-    activeBloggers: stats.activeBloggers ?? stats.active_bloggers ?? 0,
-    inactiveBloggers: stats.inactiveBloggers ?? stats.inactive_bloggers ?? 0,
-    postsThisMonth: stats.postsThisMonth ?? stats.posts_this_month ?? 0,
-    productsLive: stats.productsLive ?? stats.products_live ?? 0,
-    archiveSoon: stats.archiveSoon ?? stats.archive_soon ?? 0,
-    subscribers: stats.subscribers ?? 0,
-  };
-}
-
-function hasAnyAtelierStat(stats: AtelierStats) {
-  return Object.values(stats).some((value) => value > 0);
+  return data?.length ?? 0;
 }
 
 async function countAtelierStatsDirectly(): Promise<AtelierStats> {
@@ -133,48 +107,54 @@ async function countAtelierStatsDirectly(): Promise<AtelierStats> {
       "active bloggers",
       supabase
         .from("profiles")
-        .select("id", { count: "exact", head: true })
+        .select("id")
         .eq("role", "blogger")
-        .eq("account_status", "active"),
+        .eq("account_status", "active")
+        .range(0, 999),
     ),
     safeCount(
       "inactive bloggers",
       supabase
         .from("profiles")
-        .select("id", { count: "exact", head: true })
+        .select("id")
         .eq("role", "blogger")
-        .neq("account_status", "active"),
+        .neq("account_status", "active")
+        .range(0, 999),
     ),
     safeCount(
       "posts this month",
       supabase
         .from("blog_submissions")
-        .select("id", { count: "exact", head: true })
-        .gte("submitted_at", startOfCurrentMonthIso()),
+        .select("id")
+        .gte("submitted_at", startOfCurrentMonthIso())
+        .range(0, 999),
     ),
     safeCount(
       "live products",
       supabase
         .from("product_releases")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "available"),
+        .select("id")
+        .eq("status", "available")
+        .range(0, 999),
     ),
     safeCount(
       "archive soon products",
       supabase
         .from("product_releases")
-        .select("id", { count: "exact", head: true })
+        .select("id")
         .eq("status", "available")
         .not("auto_archive_at", "is", null)
-        .lte("auto_archive_at", inThirtyDaysIso()),
+        .lte("auto_archive_at", inThirtyDaysIso())
+        .range(0, 999),
     ),
     safeCount(
       "active subscribers",
       supabase
         .from("newsletter_subscribers")
-        .select("id", { count: "exact", head: true })
+        .select("id")
         .eq("is_active", true)
-        .is("unsubscribed_at", null),
+        .is("unsubscribed_at", null)
+        .range(0, 999),
     ),
   ]);
 
@@ -189,15 +169,6 @@ async function countAtelierStatsDirectly(): Promise<AtelierStats> {
 }
 
 export async function getAtelierStats(): Promise<AtelierStats> {
-  const { data, error } = await supabase.rpc("get_atelier_stats");
-
-  if (!error) {
-    const stats = normalizeAtelierStats(data as RawAtelierStats | RawAtelierStats[] | null);
-    if (stats && hasAnyAtelierStat(stats)) return stats;
-  } else {
-    console.warn("[Atelier stats] RPC unavailable, using direct counts", error);
-  }
-
   return countAtelierStatsDirectly();
 }
 
