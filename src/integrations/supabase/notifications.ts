@@ -70,6 +70,18 @@ export async function listMyNotifications(profileId: string, limit = 50) {
 export async function countMyUnreadNotifications(profileId: string) {
   if (!profileId) return 0;
 
+  const { count, error: countError } = await supabase
+    .from("notification_queue")
+    .select("id", { count: "exact", head: true })
+    .eq("recipient_id", profileId)
+    .eq("channel", "in_app")
+    .is("read_at", null);
+
+  if (!countError) return count ?? 0;
+  if (!isMissingReadAtError(countError)) {
+    console.warn("[Notifications] direct unread count unavailable.", countError);
+  }
+
   const { data, error } = await supabase.rpc("get_my_unread_notification_count");
   if (error) {
     console.warn("[Notifications] unread count unavailable.", error);
@@ -79,7 +91,21 @@ export async function countMyUnreadNotifications(profileId: string) {
   return typeof data === "number" ? data : Number(data ?? 0);
 }
 
-export async function markNotificationRead(notificationId: string) {
+export async function markNotificationRead(notificationId: string, recipientId?: string) {
+  if (recipientId) {
+    const { error: updateError } = await supabase
+      .from("notification_queue")
+      .update({ read_at: new Date().toISOString() })
+      .eq("id", notificationId)
+      .eq("recipient_id", recipientId)
+      .is("read_at", null);
+
+    if (!updateError) return;
+    if (!isMissingReadAtError(updateError)) {
+      console.warn("[Notifications] direct mark read unavailable, trying RPC.", updateError);
+    }
+  }
+
   const { error } = await supabase.rpc("mark_my_notification_read", {
     target_notification_id: notificationId,
   });
@@ -90,7 +116,21 @@ export async function markNotificationRead(notificationId: string) {
   if (error) throw error;
 }
 
-export async function markAllNotificationsRead() {
+export async function markAllNotificationsRead(recipientId?: string) {
+  if (recipientId) {
+    const { error: updateError } = await supabase
+      .from("notification_queue")
+      .update({ read_at: new Date().toISOString() })
+      .eq("recipient_id", recipientId)
+      .eq("channel", "in_app")
+      .is("read_at", null);
+
+    if (!updateError) return;
+    if (!isMissingReadAtError(updateError)) {
+      console.warn("[Notifications] direct mark all read unavailable, trying RPC.", updateError);
+    }
+  }
+
   const { error } = await supabase.rpc("mark_my_notifications_read");
   if (isMissingReadAtError(error)) {
     console.warn("[Notifications] mark all read skipped because read_at is not available yet.", error);

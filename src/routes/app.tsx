@@ -327,7 +327,15 @@ function AppLayout() {
       }
     }
 
-    const onNotificationsUpdated = () => void loadNotificationCount();
+    const onNotificationsUpdated = (event: Event) => {
+      const detail = event instanceof CustomEvent ? event.detail : null;
+      if (typeof detail?.unreadCount === "number") {
+        setNotificationUnreadCount(Math.max(0, detail.unreadCount));
+        window.setTimeout(() => void loadNotificationCount(), 500);
+        return;
+      }
+      void loadNotificationCount();
+    };
 
     void loadNotificationCount();
     intervalId = window.setInterval(() => void loadNotificationCount(), 60_000);

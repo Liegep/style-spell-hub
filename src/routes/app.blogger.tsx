@@ -312,15 +312,16 @@ function BloggerDash() {
     const previous = notifications;
     const target = previous.find((row) => row.id === notificationId);
     const readAt = new Date().toISOString();
+    const nextUnreadCount = target?.read_at ? notificationUnreadCount : Math.max(0, notificationUnreadCount - 1);
     setNotificationState("saving");
     setNotifications((rows) =>
       rows.map((row) => (row.id === notificationId ? { ...row, read_at: row.read_at ?? readAt } : row)),
     );
-    if (!target?.read_at) setNotificationUnreadCount((count) => Math.max(0, count - 1));
+    if (!target?.read_at) setNotificationUnreadCount(nextUnreadCount);
 
     try {
-      await markNotificationRead(notificationId);
-      window.dispatchEvent(new Event("notifications-updated"));
+      await markNotificationRead(notificationId, profile.id);
+      window.dispatchEvent(new CustomEvent("notifications-updated", { detail: { unreadCount: nextUnreadCount } }));
       setNotificationState("idle");
     } catch (error) {
       console.error("[Blogger] failed to mark notification read", error);
@@ -339,8 +340,8 @@ function BloggerDash() {
     setNotificationUnreadCount(0);
 
     try {
-      await markAllNotificationsRead();
-      window.dispatchEvent(new Event("notifications-updated"));
+      await markAllNotificationsRead(profile.id);
+      window.dispatchEvent(new CustomEvent("notifications-updated", { detail: { unreadCount: 0 } }));
       setNotificationState("idle");
     } catch (error) {
       console.error("[Blogger] failed to mark all notifications read", error);
