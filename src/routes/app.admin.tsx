@@ -1705,6 +1705,7 @@ function formatPrettyDate(value: string | null) {
 
 function Notifications() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [profileId, setProfileId] = useState("");
   const [state, setState] = useState<"loading" | "ready" | "saving" | "error">("loading");
   const [error, setError] = useState("");
 
@@ -1714,6 +1715,7 @@ function Notifications() {
     try {
       const profile = await getCurrentProfile();
       if (!profile?.id) throw new Error("Profile not found.");
+      setProfileId(profile.id);
       const rows = await listMyNotifications(profile.id);
       setNotifications(rows);
       setState("ready");
@@ -1740,7 +1742,9 @@ function Notifications() {
 
   async function onMarkRead(notificationId: string) {
     const previous = notifications;
+    const target = previous.find((row) => row.id === notificationId);
     const readAt = new Date().toISOString();
+    const nextUnreadCount = target?.read_at ? unreadCount : Math.max(0, unreadCount - 1);
 
     setState("saving");
     setNotifications((rows) =>
@@ -1748,8 +1752,8 @@ function Notifications() {
     );
 
     try {
-      await markNotificationRead(notificationId);
-      window.dispatchEvent(new Event("notifications-updated"));
+      await markNotificationRead(notificationId, profileId);
+      window.dispatchEvent(new CustomEvent("notifications-updated", { detail: { unreadCount: nextUnreadCount } }));
       setState("ready");
     } catch (markError) {
       console.error("[Admin] failed to mark notification read", markError);
@@ -1767,8 +1771,8 @@ function Notifications() {
     setNotifications((rows) => rows.map((row) => (row.read_at ? row : { ...row, read_at: readAt })));
 
     try {
-      await markAllNotificationsRead();
-      window.dispatchEvent(new Event("notifications-updated"));
+      await markAllNotificationsRead(profileId);
+      window.dispatchEvent(new CustomEvent("notifications-updated", { detail: { unreadCount: 0 } }));
       setState("ready");
     } catch (markError) {
       console.error("[Admin] failed to mark notifications read", markError);
