@@ -385,7 +385,10 @@ function BloggerDossierModal({
   const name = blogger.display_name || blogger.full_name || blogger.sl_avatar_name || blogger.email;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-foreground/50 px-4 py-8 backdrop-blur-sm">
+    <div
+      data-lenis-prevent
+      className="fixed inset-0 z-50 overflow-y-auto bg-foreground/50 px-4 py-8 backdrop-blur-sm"
+    >
       <form
         onSubmit={saveDossier}
         className="mx-auto max-w-6xl rounded-[2rem] border border-[var(--brand-pink)] bg-background p-6 shadow-2xl md:p-8"
@@ -699,7 +702,10 @@ function CreateBloggerModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-foreground/50 px-4 py-8 backdrop-blur-sm">
+    <div
+      data-lenis-prevent
+      className="fixed inset-0 z-50 overflow-y-auto bg-foreground/50 px-4 py-8 backdrop-blur-sm"
+    >
       <form
         onSubmit={createAccount}
         className="mx-auto max-w-2xl rounded-[2rem] border border-[var(--brand-pink)] bg-background p-6 shadow-2xl md:p-8"

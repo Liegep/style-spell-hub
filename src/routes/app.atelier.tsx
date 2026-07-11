@@ -604,6 +604,7 @@ function AtelierPage() {
           onMouseDown={() => setSelectedReviewId(null)}
         >
           <div
+            data-lenis-prevent
             className="max-h-[88vh] w-full max-w-5xl overflow-y-auto rounded-[2rem] border border-white/70 bg-background p-6 shadow-2xl"
             onMouseDown={(event) => event.stopPropagation()}
           >

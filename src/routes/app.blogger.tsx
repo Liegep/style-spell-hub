@@ -1848,7 +1848,10 @@ function ProductSubmissionModal({
   };
 
   return (
-    <div className="modal-scrollbar fixed inset-0 z-50 overflow-y-scroll overscroll-y-contain bg-foreground/45 p-4 backdrop-blur-md md:p-8">
+    <div
+      data-lenis-prevent
+      className="modal-scrollbar fixed inset-0 z-50 overflow-y-scroll overscroll-y-contain bg-foreground/45 p-4 backdrop-blur-md md:p-8"
+    >
       <div className="mx-auto grid max-w-6xl overflow-hidden rounded-[2rem] border border-white/40 bg-background/95 shadow-2xl md:grid-cols-[0.9fr_1.1fr]">
         <div className="border-b border-foreground/10 p-5 md:border-b-0 md:border-r">
           <img

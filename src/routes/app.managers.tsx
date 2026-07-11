@@ -264,7 +264,10 @@ function ManagerEditor({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-foreground/55 px-4 py-8 backdrop-blur-sm">
+    <div
+      data-lenis-prevent
+      className="fixed inset-0 z-50 overflow-y-auto bg-foreground/55 px-4 py-8 backdrop-blur-sm"
+    >
       <form
         onSubmit={saveManager}
         className="mx-auto max-w-2xl rounded-[2rem] border border-[var(--brand-pink)] bg-background p-6 shadow-2xl md:p-8"
