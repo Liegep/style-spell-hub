@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import bloggerAvatar from "@/assets/blogger-avatar.jpg";
@@ -74,6 +74,8 @@ function mergeProductCounts(stats: AtelierStats, products: ProductSummary[]) {
 }
 
 function AtelierPage() {
+  const renderCount = useRef(0);
+  renderCount.current += 1;
   const language = useLang();
   const tr = (value: string) => translateAppPhrase(value, language);
   const [liveStats, setLiveStats] = useState<AtelierStats>(emptyAtelierStats);
@@ -448,6 +450,13 @@ function AtelierPage() {
       <pre className="mt-6 max-h-[70vh] overflow-auto rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs leading-relaxed text-amber-950">
         {JSON.stringify(debugPanelData ?? { loading: true }, null, 2)}
       </pre>
+
+      <pre className="mt-4 overflow-auto rounded-xl bg-yellow-100 p-2 text-xs text-foreground">
+        LIVE (render): {JSON.stringify(liveStats)}
+      </pre>
+      <div className="mt-2 rounded-xl bg-yellow-100 p-2 text-xs text-foreground">
+        Render count: {renderCount.current}
+      </div>
 
       <section className="mt-10 grid gap-4 md:grid-cols-6">
         {metrics.map((it) => (
