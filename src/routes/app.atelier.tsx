@@ -36,6 +36,7 @@ const emptyAtelierStats: AtelierStats = {
   productsLive: 0,
   archiveSoon: 0,
   subscribers: 0,
+  statsErrors: [],
 };
 
 function mergeProductCounts(stats: AtelierStats, products: ProductSummary[]) {
@@ -246,6 +247,7 @@ function AtelierPage() {
     { n: liveStats.archiveSoon, l: tr("Archive soon"), tone: "pink" as const },
     { n: liveStats.subscribers, l: tr("Subscribers"), tone: "light" as const },
   ];
+  const statsErrors = liveStats.statsErrors ?? [];
   const archiveRows = upcomingArchives;
   const bloggerRows = liveBloggers;
   const selectedReview = selectedReviewId
@@ -342,6 +344,13 @@ function AtelierPage() {
           </GlassCard>
         ))}
       </section>
+
+      {statsErrors.length > 0 ? (
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+          Could not load {statsErrors.length} atelier stat{statsErrors.length === 1 ? "" : "s"}:{" "}
+          {statsErrors.map((error) => error.label).join(", ")}. See the console for the full Supabase error.
+        </div>
+      ) : null}
 
       {isSuperAdmin ? (
         <GlassCard className="mt-10">

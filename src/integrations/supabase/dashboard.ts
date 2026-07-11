@@ -17,6 +17,15 @@ export type AtelierStats = {
   productsLive: number;
   archiveSoon: number;
   subscribers: number;
+  statsErrors?: AtelierStatsError[];
+};
+
+export type AtelierStatsError = {
+  label: string;
+  message: string;
+  code?: string;
+  details?: string;
+  hint?: string;
 };
 
 export type BloggerPulse = Pick<
@@ -92,13 +101,36 @@ function inThirtyDaysIso() {
   return date.toISOString();
 }
 
-async function safeCount(label: string, query: PromiseLike<{ data: unknown[] | null; error: unknown }>) {
+type CountResult = {
+  count: number;
+  error?: AtelierStatsError;
+};
+
+function normalizeStatsError(label: string, error: unknown): AtelierStatsError {
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    return {
+      label,
+      message: typeof record.message === "string" ? record.message : "Unknown Supabase error.",
+      code: typeof record.code === "string" ? record.code : undefined,
+      details: typeof record.details === "string" ? record.details : undefined,
+      hint: typeof record.hint === "string" ? record.hint : undefined,
+    };
+  }
+
+  return {
+    label,
+    message: error instanceof Error ? error.message : String(error || "Unknown Supabase error."),
+  };
+}
+
+async function safeCount(label: string, query: PromiseLike<{ data: unknown[] | null; error: unknown }>): Promise<CountResult> {
   const { data, error } = await query;
   if (error) {
-    console.warn(`[Atelier stats] Could not count ${label}`, error);
-    return 0;
+    console.error(`[Atelier stats] Could not count ${label}`, error);
+    return { count: 0, error: normalizeStatsError(label, error) };
   }
-  return data?.length ?? 0;
+  return { count: data?.length ?? 0 };
 }
 
 async function countAtelierStatsDirectly(): Promise<AtelierStats> {
@@ -157,14 +189,18 @@ async function countAtelierStatsDirectly(): Promise<AtelierStats> {
         .range(0, 999),
     ),
   ]);
+  const statsErrors = [activeBloggers, inactiveBloggers, postsThisMonth, productsLive, archiveSoon, subscribers]
+    .map((result) => result.error)
+    .filter((error): error is AtelierStatsError => Boolean(error));
 
   return {
-    activeBloggers,
-    inactiveBloggers,
-    postsThisMonth,
-    productsLive,
-    archiveSoon,
-    subscribers,
+    activeBloggers: activeBloggers.count,
+    inactiveBloggers: inactiveBloggers.count,
+    postsThisMonth: postsThisMonth.count,
+    productsLive: productsLive.count,
+    archiveSoon: archiveSoon.count,
+    subscribers: subscribers.count,
+    statsErrors,
   };
 }
 
