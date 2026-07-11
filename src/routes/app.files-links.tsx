@@ -50,6 +50,7 @@ function FilesLinksPage() {
     setMessage("");
     try {
       const [profile, rows] = await Promise.all([getCurrentProfile(), listSharedResources()]);
+      console.log("[files-links] raw resources from Supabase:", rows);
       setIsSuper(profile?.role === "super_admin");
       setResources(rows);
       setState("ready");
