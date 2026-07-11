@@ -556,7 +556,7 @@ function ProductEditor({
     <div className="fixed inset-0 z-50 flex h-dvh overflow-hidden overscroll-none bg-foreground/55 px-4 py-6 backdrop-blur-sm md:py-8">
       <form
         onSubmit={saveProduct}
-        className="mx-auto h-full max-h-[calc(100dvh-3rem)] w-full max-w-6xl overflow-y-scroll overscroll-contain rounded-[2rem] border border-[var(--brand-pink)] bg-background p-6 shadow-2xl [scrollbar-color:var(--brand-magenta)_rgba(255,214,224,0.35)] [scrollbar-width:thin] md:max-h-[calc(100dvh-4rem)] md:p-10"
+        className="modal-scrollbar mx-auto h-full max-h-[calc(100dvh-3rem)] w-full max-w-6xl overflow-y-scroll overscroll-contain rounded-[2rem] border border-[var(--brand-pink)] bg-background p-6 pr-4 shadow-2xl md:max-h-[calc(100dvh-4rem)] md:p-10 md:pr-6"
       >
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
