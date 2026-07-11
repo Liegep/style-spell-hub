@@ -120,6 +120,7 @@ function AtelierPage() {
         timed("getDeliveryDeskClaims", getDeliveryDeskClaims),
       ]);
       console.log("[Atelier] loadDashboard: allSettled finished");
+      console.log("[Atelier] nextStats raw result:", JSON.stringify(nextStats));
 
       if (!isMounted) return;
 
@@ -128,7 +129,9 @@ function AtelierPage() {
 
       if (nextStats.status === "fulfilled") {
         const products = nextProducts.status === "fulfilled" ? nextProducts.value : [];
-        setLiveStats(mergeProductCounts(nextStats.value, products));
+        const nextLiveStats = mergeProductCounts(nextStats.value, products);
+        console.log("[Atelier] calling setLiveStats with:", JSON.stringify(nextLiveStats));
+        setLiveStats(nextLiveStats);
       }
       else console.error("[Atelier] Failed to load stats", nextStats.reason);
 
@@ -174,6 +177,10 @@ function AtelierPage() {
       document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [reviewFilter]);
+
+  useEffect(() => {
+    console.log("[Atelier] liveStats state updated:", JSON.stringify(liveStats));
+  }, [liveStats]);
 
   useEffect(() => {
     let isMounted = true;
@@ -261,7 +268,9 @@ function AtelierPage() {
       ]);
 
       setDeliveryDesk(refreshed);
-      setLiveStats(mergeProductCounts(refreshedStats, refreshedProducts));
+      const nextLiveStats = mergeProductCounts(refreshedStats, refreshedProducts);
+      console.log("[Atelier] calling setLiveStats with:", JSON.stringify(nextLiveStats));
+      setLiveStats(nextLiveStats);
       setDeliveryNotice(result.message ?? "Delivery retried.");
     } catch (error) {
       setDeliveryNotice(error instanceof Error ? error.message : "Could not retry delivery.");
