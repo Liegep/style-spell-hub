@@ -16,7 +16,6 @@ import {
   Download,
   LogOut,
   Circle,
-  Bell,
   CircleHelp,
 } from "lucide-react";
 import { LangSwitch } from "@/components/brand/LangSwitch";
@@ -34,7 +33,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import bloggerAvatar from "@/assets/blogger-avatar.jpg";
 import logoIcon from "@/assets/logo-icon.png";
-import { countMyUnreadNotifications } from "@/integrations/supabase/notifications";
 import { countPersonalUnread, listInboxMessages, listPersonalInboxMessages } from "@/integrations/supabase/messages";
 
 export const Route = createFileRoute("/app")({
@@ -56,7 +54,6 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/app/bloggers", label: "Bloggers", icon: UsersRound, access: "staff" },
   { to: "/app/applications", label: "Applications", icon: ClipboardCheck, access: "staff" },
   { to: "/app/admin", label: "Compose", icon: Mail, access: "staff", section: "inbox" },
-  { to: "/app/admin", label: "Notifications", icon: Bell, access: "staff", section: "notifications" },
   { to: "/app/admin", label: "Newsletter", icon: Send, access: "staff", section: "newsletter" },
   { to: "/app/files-links", label: "Files & Links", icon: Link2, access: "staff" },
   { to: "/app/content-studio", label: "Content Studio", icon: SlidersHorizontal, access: "super" },
@@ -70,7 +67,6 @@ const BLOGGER_NAV_ITEMS: NavItem[] = [
   { to: "/app/blogger", label: "Products", icon: Package, access: "all", section: "products" },
   { to: "/app/blogger", label: "Posts", icon: FileText, access: "all", section: "posts" },
   { to: "/app/blogger", label: "Bag of goodies", icon: Download, access: "all", section: "goodies" },
-  { to: "/app/blogger", label: "Notifications", icon: Bell, access: "all", section: "notifications" },
   { to: "/app/blogger", label: "Mailbox", icon: Mail, access: "all", section: "inbox" },
   { to: "/app/blogger", label: "Profile", icon: UserCircle2, access: "all", section: "profile" },
   { to: "/app/blogger", label: "Help!", icon: CircleHelp, access: "all", tour: "blogger" },
@@ -83,7 +79,6 @@ function AppLayout() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [authError, setAuthError] = useState("");
   const [pendingApplicationsCount, setPendingApplicationsCount] = useState(0);
-  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
   const [mailUnreadCount, setMailUnreadCount] = useState(0);
   const [storedLang, setStoredLang] = useState<"en" | "es" | null>(null);
   const isSigningOutRef = useRef(false);
@@ -141,9 +136,6 @@ function AppLayout() {
           if (item.to === "/app/applications") {
             return { ...item, badge: pendingApplicationsCount };
           }
-          if (item.section === "notifications") {
-            return { ...item, badge: notificationUnreadCount };
-          }
           if (item.section === "inbox") {
             return { ...item, badge: mailUnreadCount };
           }
@@ -154,7 +146,7 @@ function AppLayout() {
       if (profile.role === "super_admin") return addBadges(NAV_ITEMS);
       return addBadges(NAV_ITEMS.filter((item) => item.access !== "super"));
     },
-    [mailUnreadCount, notificationUnreadCount, pendingApplicationsCount, profile],
+    [mailUnreadCount, pendingApplicationsCount, profile],
   );
 
   useEffect(() => {
@@ -305,48 +297,6 @@ function AppLayout() {
       if (intervalId) window.clearInterval(intervalId);
       window.removeEventListener("focus", loadMailCount);
       window.removeEventListener("messages-updated", onMessagesUpdated);
-    };
-  }, [profile]);
-
-  useEffect(() => {
-    if (!profile) {
-      setNotificationUnreadCount(0);
-      return;
-    }
-
-    let mounted = true;
-    let intervalId: number | undefined;
-
-    async function loadNotificationCount() {
-      try {
-        const count = await countMyUnreadNotifications(profile.id);
-        if (mounted) setNotificationUnreadCount(count);
-      } catch (error) {
-        console.error("[Sidebar] failed to load notification count", error);
-        if (mounted) setNotificationUnreadCount(0);
-      }
-    }
-
-    const onNotificationsUpdated = (event: Event) => {
-      const detail = event instanceof CustomEvent ? event.detail : null;
-      if (typeof detail?.unreadCount === "number") {
-        setNotificationUnreadCount(Math.max(0, detail.unreadCount));
-        window.setTimeout(() => void loadNotificationCount(), 500);
-        return;
-      }
-      void loadNotificationCount();
-    };
-
-    void loadNotificationCount();
-    intervalId = window.setInterval(() => void loadNotificationCount(), 60_000);
-    window.addEventListener("focus", loadNotificationCount);
-    window.addEventListener("notifications-updated", onNotificationsUpdated);
-
-    return () => {
-      mounted = false;
-      if (intervalId) window.clearInterval(intervalId);
-      window.removeEventListener("focus", loadNotificationCount);
-      window.removeEventListener("notifications-updated", onNotificationsUpdated);
     };
   }, [profile]);
 

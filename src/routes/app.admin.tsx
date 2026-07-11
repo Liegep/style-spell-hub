@@ -21,12 +21,6 @@ import {
   type SentMessage,
 } from "@/integrations/supabase/messages";
 import {
-  listMyNotifications,
-  markAllNotificationsRead,
-  markNotificationRead,
-  type AppNotification,
-} from "@/integrations/supabase/notifications";
-import {
   addNewsletterSubscriber,
   importNewsletterSubscribersFromCsv,
   listNewsletterCampaignsWithStats,
@@ -43,7 +37,7 @@ import type {
 
 type Tab =
   | "overview" | "products" | "inbox" | "newsletter"
-  | "locations" | "preferences" | "notifications" | "subscribers";
+  | "locations" | "preferences" | "subscribers";
 
 const ADMIN_SECTIONS: Tab[] = [
   "overview",
@@ -52,7 +46,6 @@ const ADMIN_SECTIONS: Tab[] = [
   "newsletter",
   "locations",
   "preferences",
-  "notifications",
   "subscribers",
 ];
 
@@ -72,7 +65,6 @@ const TITLES: Partial<Record<Tab, { eyebrow: string; title: string; note: string
   locations:     { eyebrow: "LOVE POTION · MAP",       title: "On the grid.",        note: "where they pose" },
   products:      { eyebrow: "LOVE POTION · STOCK",     title: "The drops.",          note: "fresh on shelves" },
   preferences:   { eyebrow: "LOVE POTION · RULES",     title: "House rules.",        note: "set the tempo" },
-  notifications: { eyebrow: "LOVE POTION · NOTIFICATIONS", title: "Signal center.",      note: "stay in touch" },
   inbox:         { eyebrow: "ADMIN · COMPOSE",        title: "Write a love note.",  note: "from you, to them" },
   subscribers:   { eyebrow: "LOVE POTION SUBSCRIBERS · LIST", title: "The list.",           note: "people who care" },
   newsletter:    { eyebrow: "LOVE POTION SUBSCRIBERS · SEND", title: "A new edition.",      note: "send to grid" },
@@ -256,7 +248,6 @@ function AdminDash() {
         )}
         {tab === "locations" && <Locations />}
         {tab === "preferences" && <Preferences />}
-        {tab === "notifications" && <Notifications />}
         {tab === "subscribers" && <Subscribers />}
       </div>
     </div>
@@ -1673,22 +1664,6 @@ function Preferences() {
   );
 }
 
-function notificationTypeLabel(type: string | null) {
-  const labels: Record<string, string> = {
-    account_blocked: "Account update",
-    account_reactivated: "Account reactivated",
-    deadline_soon: "Deadline soon",
-    manual: "HQ note",
-    needs_revision: "Needs revision",
-    new_message: "New message",
-    new_product: "New product",
-    post_approved: "Post approved",
-    post_rejected: "Post rejected",
-  };
-
-  return labels[type ?? "manual"] ?? String(type ?? "manual").replace(/_/g, " ");
-}
-
 function formatPrettyDate(value: string | null) {
   if (!value) return "recently";
 
@@ -1701,201 +1676,6 @@ function formatPrettyDate(value: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
-}
-
-function Notifications() {
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [profileId, setProfileId] = useState("");
-  const [state, setState] = useState<"loading" | "ready" | "saving" | "error">("loading");
-  const [error, setError] = useState("");
-
-  const unreadCount = notifications.filter((notification) => !notification.read_at).length;
-
-  async function loadNotifications() {
-    try {
-      const profile = await getCurrentProfile();
-      if (!profile?.id) throw new Error("Profile not found.");
-      setProfileId(profile.id);
-      const rows = await listMyNotifications(profile.id);
-      setNotifications(rows);
-      setState("ready");
-      setError("");
-    } catch (loadError) {
-      console.error("[Admin] failed to load notifications", loadError);
-      setState("error");
-      setError(loadError instanceof Error ? loadError.message : "Could not load notifications.");
-    }
-  }
-
-  useEffect(() => {
-    void loadNotifications();
-
-    const onNotificationsUpdated = () => void loadNotifications();
-    window.addEventListener("notifications-updated", onNotificationsUpdated);
-    window.addEventListener("focus", onNotificationsUpdated);
-
-    return () => {
-      window.removeEventListener("notifications-updated", onNotificationsUpdated);
-      window.removeEventListener("focus", onNotificationsUpdated);
-    };
-  }, []);
-
-  async function onMarkRead(notificationId: string) {
-    const previous = notifications;
-    const target = previous.find((row) => row.id === notificationId);
-    const readAt = new Date().toISOString();
-    const nextUnreadCount = target?.read_at ? unreadCount : Math.max(0, unreadCount - 1);
-
-    setState("saving");
-    setNotifications((rows) =>
-      rows.map((row) => (row.id === notificationId ? { ...row, read_at: row.read_at ?? readAt } : row)),
-    );
-
-    try {
-      await markNotificationRead(notificationId, profileId);
-      window.dispatchEvent(new CustomEvent("notifications-updated", { detail: { unreadCount: nextUnreadCount } }));
-      setState("ready");
-    } catch (markError) {
-      console.error("[Admin] failed to mark notification read", markError);
-      setNotifications(previous);
-      setState("error");
-      setError(markError instanceof Error ? markError.message : "Could not update notification.");
-    }
-  }
-
-  async function onMarkAllRead() {
-    const previous = notifications;
-    const readAt = new Date().toISOString();
-
-    setState("saving");
-    setNotifications((rows) => rows.map((row) => (row.read_at ? row : { ...row, read_at: readAt })));
-
-    try {
-      await markAllNotificationsRead(profileId);
-      window.dispatchEvent(new CustomEvent("notifications-updated", { detail: { unreadCount: 0 } }));
-      setState("ready");
-    } catch (markError) {
-      console.error("[Admin] failed to mark notifications read", markError);
-      setNotifications(previous);
-      setState("error");
-      setError(markError instanceof Error ? markError.message : "Could not update notifications.");
-    }
-  }
-
-  return (
-    <GlassCard className="p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            Notification center
-          </div>
-          <p className="mt-2 text-sm text-foreground/55">
-            {state === "loading"
-              ? "Checking for signals."
-              : unreadCount > 0
-                ? `${unreadCount} unread signal${unreadCount === 1 ? "" : "s"} for the team.`
-                : "No unread signals right now."}
-          </p>
-        </div>
-        {unreadCount > 0 ? (
-          <button
-            type="button"
-            disabled={state === "saving"}
-            onClick={() => void onMarkAllRead()}
-            className="rounded-full bg-foreground px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] text-background transition hover:bg-[var(--brand-magenta)] disabled:opacity-60"
-          >
-            {state === "saving" ? "saving" : "mark all read"}
-          </button>
-        ) : null}
-      </div>
-
-      {state === "loading" ? (
-        <div className="mt-5 rounded-2xl border border-dashed border-foreground/15 p-8 text-center">
-          <div className="font-hand text-3xl text-[var(--brand-magenta)]">checking signals</div>
-          <p className="mt-2 text-sm text-foreground/55">
-            Love Potion is looking for fresh notices.
-          </p>
-        </div>
-      ) : state === "error" ? (
-        <div className="mt-5 rounded-2xl border border-[var(--brand-magenta)]/25 bg-[var(--brand-magenta)]/5 p-5 text-sm text-[var(--brand-magenta)]">
-          {error || "Could not load notifications."}
-        </div>
-      ) : notifications.length === 0 ? (
-        <div className="mt-5 rounded-2xl border border-dashed border-foreground/15 p-8 text-center">
-          <div className="font-hand text-3xl text-[var(--brand-magenta)]">all quiet</div>
-          <p className="mt-2 text-sm text-foreground/55">
-            Replies, app notices, and system alerts will appear here when they arrive.
-          </p>
-        </div>
-      ) : (
-        <div className="mt-5 space-y-3">
-          {notifications.map((notification) => {
-            const unread = !notification.read_at;
-            const date = notification.created_at ?? notification.sent_at ?? null;
-
-            return (
-              <div
-                key={notification.id}
-                className={cn(
-                  "rounded-2xl border p-5 transition",
-                  unread
-                    ? "border-[var(--brand-magenta)]/40 bg-[var(--brand-magenta)]/10 shadow-[0_20px_45px_rgba(219,24,97,0.12)]"
-                    : "border-foreground/10 bg-white/30 opacity-75",
-                )}
-              >
-                <div className="flex flex-col gap-4 md:flex-row md:items-start">
-                  <div
-                    className={cn(
-                      "mt-1 h-3 w-3 shrink-0 rounded-full",
-                      unread ? "bg-[var(--brand-magenta)]" : "bg-foreground/20",
-                    )}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-foreground/45">
-                      {notificationTypeLabel(notification.type)} · {formatPrettyDate(date)}
-                    </div>
-                    <h3 className="mt-2 font-display text-2xl">{notification.title}</h3>
-                    {notification.body ? (
-                      <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground/65">
-                        {notification.body}
-                      </p>
-                    ) : null}
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {notification.action_url ? (
-                        <a
-                          href={notification.action_url}
-                          onClick={() => {
-                            if (unread) void onMarkRead(notification.id);
-                          }}
-                          className="rounded-full border border-foreground/15 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] transition hover:bg-foreground hover:text-background"
-                        >
-                          open
-                        </a>
-                      ) : null}
-                      {unread ? (
-                        <button
-                          type="button"
-                          disabled={state === "saving"}
-                          onClick={() => void onMarkRead(notification.id)}
-                          className="rounded-full bg-[var(--brand-magenta)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] text-white transition hover:bg-foreground disabled:opacity-60"
-                        >
-                          mark read
-                        </button>
-                      ) : (
-                        <span className="rounded-full bg-foreground/5 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] text-foreground/45">
-                          read
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </GlassCard>
-  );
 }
 
 function Subscribers() {

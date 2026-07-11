@@ -198,35 +198,27 @@ Deno.serve(async (request) => {
       }
 
       const bloggerName = profile.display_name ?? profile.sl_avatar_name ?? "A blogger";
-      const { data: staffProfiles } = await supabase
-        .from("profiles")
-        .select("id")
-        .in("role", ["admin", "super_admin"])
-        .neq("account_status", "left");
 
-      const now = new Date().toISOString();
+      const { error: auditError } = await supabase.from("audit_logs").insert({
+        actor_id: profile.id,
+        actor_name: bloggerName,
+        actor_role: "blogger",
+        action: "Demo picked up",
+        target_type: "product",
+        target_id: product.id,
+        target_name: product.name,
+        metadata: {
+          demo: true,
+          product_id: product.id,
+          product_name: product.name,
+          blogger_id: profile.id,
+          blogger_name: bloggerName,
+          delivery_item_name: itemKey,
+        },
+      });
 
-      if (staffProfiles?.length) {
-        await supabase.from("notification_queue").insert(
-          staffProfiles.map((staff) => ({
-            recipient_id: staff.id,
-            channel: "in_app",
-            type: "manual",
-            title: "Demo picked up",
-            body: `${bloggerName} picked up a demo for ${product.name}.`,
-            action_url: "/app/atelier",
-            metadata: {
-              demo: true,
-              product_id: product.id,
-              product_name: product.name,
-              blogger_id: profile.id,
-              blogger_name: bloggerName,
-            },
-            status: "sent",
-            scheduled_at: now,
-            sent_at: now,
-          })),
-        );
+      if (auditError) {
+        console.warn("Could not log demo pickup audit event.", auditError);
       }
 
       return json({

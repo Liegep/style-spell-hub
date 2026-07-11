@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowRight, Bell, Check, Copy, Download, Plus, Send, Trash2, X } from "lucide-react";
+import { ArrowRight, Check, Copy, Download, Plus, Send, Trash2, X } from "lucide-react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
@@ -33,16 +33,10 @@ import {
   sendMessageToStaff,
   type InboxMessage,
 } from "@/integrations/supabase/messages";
-import {
-  listMyNotifications,
-  markAllNotificationsRead,
-  markNotificationRead,
-  type AppNotification,
-} from "@/integrations/supabase/notifications";
 import type { SharedResource, SubmissionStatus } from "@/integrations/supabase/database.types";
 import type { AuthProfile } from "@/integrations/supabase/auth";
 
-type Tab = "home" | "products" | "posts" | "goodies" | "notifications" | "inbox" | "profile";
+type Tab = "home" | "products" | "posts" | "goodies" | "inbox" | "profile";
 type Status = "active" | "vacation" | "busy" | "offline";
 type Product = {
   id: string;
@@ -77,7 +71,7 @@ function getProductClaimState(claim?: BloggerProductClaimSummary, submission?: B
 export const Route = createFileRoute("/app/blogger")({
   validateSearch: (s: Record<string, unknown>): { section?: Tab; tour?: "blogger" } => {
     const rawSection = typeof s.section === "string" ? s.section : undefined;
-    const validSections: Tab[] = ["home", "products", "posts", "goodies", "notifications", "inbox", "profile"];
+    const validSections: Tab[] = ["home", "products", "posts", "goodies", "inbox", "profile"];
     return {
       section: validSections.includes(rawSection as Tab) ? (rawSection as Tab) : undefined,
       tour: s.tour === "blogger" || rawSection === "help" ? "blogger" : undefined,
@@ -91,7 +85,6 @@ const TITLES: Record<Tab, { eyebrow: string; title: string; note: string }> = {
   products: { eyebrow: "STUDIO · PRODUCTS", title: "The wardrobe.", note: "pick a spell" },
   posts: { eyebrow: "STUDIO · POSTS", title: "Your gallery.", note: "share the magic" },
   goodies: { eyebrow: "STUDIO · GOODIES", title: "Bag of goodies.", note: "take what you need" },
-  notifications: { eyebrow: "STUDIO · NOTICES", title: "Signal spells.", note: "fresh sparks" },
   inbox: { eyebrow: "STUDIO · MAILBOX", title: "Messages.", note: "open with care" },
   profile: { eyebrow: "STUDIO · PROFILE", title: "About you.", note: "set the scene" },
 };
@@ -150,9 +143,6 @@ function BloggerDash() {
   const [quickNoteState, setQuickNoteState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [goodies, setGoodies] = useState<SharedResource[]>([]);
   const [mailUnreadCount, setMailUnreadCount] = useState(0);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
-  const [notificationState, setNotificationState] = useState<"idle" | "saving" | "error">("idle");
   const [hasLeftProgram, setHasLeftProgram] = useState(false);
 
   const displayName = profile?.display_name || profile?.full_name || profile?.email || "Blogger";
@@ -215,7 +205,7 @@ function BloggerDash() {
         setOverlayNote(profile.status_message || "");
         setStatus(mapAvailabilityToStatus(profile.availability_status));
 
-        const [liveProducts, liveSubmissions, liveClaims, sharedGoodies, inboxMessages, notificationRows] = await Promise.all([
+        const [liveProducts, liveSubmissions, liveClaims, sharedGoodies, inboxMessages] = await Promise.all([
           listAvailableProductsForBlogger(),
           listSubmissionSummariesForBlogger(profile.id),
           listProductClaimsForBlogger(profile.id).catch((error) => {
@@ -223,11 +213,7 @@ function BloggerDash() {
             return [] as BloggerProductClaimSummary[];
           }),
           listSharedResources(),
-          listInboxMessages(profile.id),
-          listMyNotifications(profile.id).catch((error) => {
-            console.error("[Blogger] Failed to load notifications", error);
-            return [] as AppNotification[];
-          }),
+          listInboxMessages(profile.id)
         ]);
 
         if (!mounted) return;
@@ -236,8 +222,6 @@ function BloggerDash() {
         setClaims(liveClaims);
         setGoodies(sharedGoodies);
         setMailUnreadCount(countPersonalUnread(inboxMessages));
-        setNotifications(notificationRows);
-        setNotificationUnreadCount(notificationRows.filter((row) => !row.read_at).length);
         setLoadState("ready");
       } catch (error) {
         console.error("[Blogger] Failed to load live products", error);
@@ -308,50 +292,6 @@ function BloggerDash() {
     }
   }
 
-  async function handleMarkNotificationRead(notificationId: string) {
-    const previous = notifications;
-    const target = previous.find((row) => row.id === notificationId);
-    const readAt = new Date().toISOString();
-    const nextUnreadCount = target?.read_at ? notificationUnreadCount : Math.max(0, notificationUnreadCount - 1);
-    setNotificationState("saving");
-    setNotifications((rows) =>
-      rows.map((row) => (row.id === notificationId ? { ...row, read_at: row.read_at ?? readAt } : row)),
-    );
-    if (!target?.read_at) setNotificationUnreadCount(nextUnreadCount);
-
-    try {
-      await markNotificationRead(notificationId, profile.id);
-      window.dispatchEvent(new CustomEvent("notifications-updated", { detail: { unreadCount: nextUnreadCount } }));
-      setNotificationState("idle");
-    } catch (error) {
-      console.error("[Blogger] failed to mark notification read", error);
-      setNotifications(previous);
-      setNotificationUnreadCount(previous.filter((row) => !row.read_at).length);
-      setNotificationState("error");
-      window.setTimeout(() => setNotificationState("idle"), 2200);
-    }
-  }
-
-  async function handleMarkAllNotificationsRead() {
-    const previous = notifications;
-    const readAt = new Date().toISOString();
-    setNotificationState("saving");
-    setNotifications((rows) => rows.map((row) => (row.read_at ? row : { ...row, read_at: readAt })));
-    setNotificationUnreadCount(0);
-
-    try {
-      await markAllNotificationsRead(profile.id);
-      window.dispatchEvent(new CustomEvent("notifications-updated", { detail: { unreadCount: 0 } }));
-      setNotificationState("idle");
-    } catch (error) {
-      console.error("[Blogger] failed to mark all notifications read", error);
-      setNotifications(previous);
-      setNotificationUnreadCount(previous.filter((row) => !row.read_at).length);
-      setNotificationState("error");
-      window.setTimeout(() => setNotificationState("idle"), 2200);
-    }
-  }
-
   if (hasLeftProgram) {
     return <LeftProgramSuccess language={profile?.language_preference ?? "en"} />;
   }
@@ -377,9 +317,8 @@ function BloggerDash() {
             { id: "products", label: "Products", sub: "02" },
             { id: "posts", label: "Posts", sub: "03" },
             { id: "goodies", label: "Bag of goodies", sub: "04" },
-            { id: "notifications", label: "Notifications", sub: "05", badge: notificationUnreadCount },
-            { id: "inbox", label: "Mailbox", sub: "06", badge: mailUnreadCount },
-            { id: "profile", label: "Profile", sub: "07" },
+            { id: "inbox", label: "Mailbox", sub: "05", badge: mailUnreadCount },
+            { id: "profile", label: "Profile", sub: "06" },
           ]}
         />
       </div>
@@ -426,16 +365,6 @@ function BloggerDash() {
           />
         )}
         {tab === "goodies" && <GoodiesTab resources={goodies} />}
-        {tab === "notifications" && (
-          <NotificationsTab
-            notifications={notifications}
-            unreadCount={notificationUnreadCount}
-            busy={notificationState === "saving"}
-            state={notificationState}
-            onMarkRead={handleMarkNotificationRead}
-            onMarkAllRead={handleMarkAllNotificationsRead}
-          />
-        )}
         {tab === "inbox" && <InboxTab profileId={profileId} onUnreadChange={setMailUnreadCount} />}
         {tab === "profile" && (
           <ProfileTab
@@ -1173,180 +1102,6 @@ function getDownloadUrl(url: string, filename: string) {
   } catch {
     return url;
   }
-}
-
-type NotificationsTabProps = {
-  notifications: AppNotification[];
-  unreadCount: number;
-  busy: boolean;
-  state: "idle" | "saving" | "error";
-  onMarkRead: (notificationId: string) => Promise<void>;
-  onMarkAllRead: () => Promise<void>;
-};
-
-function notificationTypeLabel(type: string | null, language: Lang) {
-  const labels: Record<string, { en: string; es: string }> = {
-    account_blocked: { en: "Account update", es: "Actualización de cuenta" },
-    account_reactivated: { en: "Account reactivated", es: "Cuenta reactivada" },
-    deadline_soon: { en: "Deadline soon", es: "Plazo próximo" },
-    manual: { en: "HQ note", es: "Nota de HQ" },
-    needs_revision: { en: "Needs revision", es: "Necesita revisión" },
-    new_message: { en: "New message", es: "Nuevo mensaje" },
-    new_product: { en: "New product", es: "Nuevo producto" },
-    post_approved: { en: "Post approved", es: "Post aprobado" },
-    post_rejected: { en: "Post rejected", es: "Post rechazado" },
-  };
-
-  return labels[type ?? "manual"]?.[language] ?? String(type ?? "manual").replace(/_/g, " ");
-}
-
-function notificationDisplayTitle(notification: AppNotification, language: Lang) {
-  if (language !== "es") return notification.title;
-  const title = notification.title.trim();
-
-  if (title === "Love Potion access reactivated") return "Acceso a Love Potion reactivado";
-  if (title.startsWith("Post approved:")) return title.replace("Post approved:", "Post aprobado:");
-  if (title.startsWith("Post rejected:")) return title.replace("Post rejected:", "Post rechazado:");
-  if (title.startsWith("Post needs revision:")) return title.replace("Post needs revision:", "Post necesita revisión:");
-  if (title.startsWith("New product:")) return title.replace("New product:", "Nuevo producto:");
-  return notification.title;
-}
-
-function notificationDisplayBody(notification: AppNotification, language: Lang) {
-  if (language !== "es" || !notification.body) return notification.body;
-  const body = notification.body.trim();
-
-  if (
-    body ===
-    "Your blogger account is active again. You can claim products and submit links in the Love Potion dashboard."
-  ) {
-    return "Tu cuenta de blogger está activa otra vez. Ya puedes reclamar productos y enviar links en el dashboard de Love Potion.";
-  }
-
-  return notification.body;
-}
-
-function NotificationsTab({
-  notifications,
-  unreadCount,
-  busy,
-  state,
-  onMarkRead,
-  onMarkAllRead,
-}: NotificationsTabProps) {
-  const language = useLang();
-  return (
-    <GlassCard className="p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            Notification spells
-          </div>
-          <p className="mt-2 text-sm text-foreground/55">
-            {unreadCount > 0
-              ? language === "es"
-                ? `${unreadCount} señal${unreadCount === 1 ? "" : "es"} sin leer esperando.`
-                : `${unreadCount} unread signal${unreadCount === 1 ? "" : "s"} waiting.`
-              : "Everything is read and tidy."}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {state === "error" ? (
-            <span className="rounded-full bg-rose-100 px-3 py-1 text-xs text-rose-700">
-              could not update
-            </span>
-          ) : null}
-          {unreadCount > 0 ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void onMarkAllRead()}
-              className="rounded-full bg-foreground px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] text-background transition hover:bg-[var(--brand-magenta)] disabled:opacity-60"
-            >
-              {busy ? "saving" : "mark all read"}
-            </button>
-          ) : null}
-        </div>
-      </div>
-
-      {notifications.length === 0 ? (
-        <div className="mt-5 rounded-2xl border border-dashed border-foreground/15 p-8 text-center">
-          <div className="font-hand text-3xl text-[var(--brand-magenta)]">no signals yet</div>
-          <p className="mt-2 text-sm text-foreground/55">
-            Love Potion HQ has not sent any app notifications.
-          </p>
-        </div>
-      ) : (
-        <div className="mt-5 space-y-3">
-          {notifications.map((notification) => {
-            const unread = !notification.read_at;
-            const date = notification.created_at ?? notification.sent_at ?? new Date().toISOString();
-
-            return (
-              <div
-                key={notification.id}
-                className={cn(
-                  "rounded-2xl border p-5 transition",
-                  unread
-                    ? "border-[var(--brand-magenta)]/40 bg-[var(--brand-magenta)]/10 shadow-[0_20px_45px_rgba(219,24,97,0.12)]"
-                    : "border-foreground/10 bg-white/30 opacity-75",
-                )}
-              >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                  <div
-                    className={cn(
-                      "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
-                      unread ? "bg-[var(--brand-magenta)] text-white" : "bg-foreground/5 text-foreground/45",
-                    )}
-                  >
-                    <Bell className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-foreground/45">
-                      {notificationTypeLabel(notification.type, language)} · {formatPrettyDate(date, language)}
-                    </div>
-                    <h3 className="mt-2 font-display text-2xl">{notificationDisplayTitle(notification, language)}</h3>
-                    {notificationDisplayBody(notification, language) ? (
-                      <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground/65">
-                        {notificationDisplayBody(notification, language)}
-                      </p>
-                    ) : null}
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {notification.action_url ? (
-                        <a
-                          href={notification.action_url}
-                          onClick={() => {
-                            if (unread) void onMarkRead(notification.id);
-                          }}
-                          className="rounded-full border border-foreground/15 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] transition hover:bg-foreground hover:text-background"
-                        >
-                          open
-                        </a>
-                      ) : null}
-                      {unread ? (
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => void onMarkRead(notification.id)}
-                          className="rounded-full bg-[var(--brand-magenta)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] text-white transition hover:bg-foreground disabled:opacity-60"
-                        >
-                          mark read
-                        </button>
-                      ) : (
-                        <span className="rounded-full bg-foreground/5 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] text-foreground/45">
-                          read
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </GlassCard>
-  );
 }
 
 function InboxTab({
@@ -2406,17 +2161,6 @@ function BloggerVirtualTour({ onDone }: { onDone: () => void }) {
     },
     {
       number: "04",
-      key: "notifications",
-      target: language === "es" ? "Notificaciones" : "Notifications",
-      direction: language === "es" ? "Mira las señales" : "Watch the signals",
-      title: language === "es" ? "Lee avisos oficiales." : "Read official updates.",
-      body:
-        language === "es"
-          ? "Avisos importantes de cuenta, alertas de productos, recordatorios y mensajes de entrega aparecen aquí."
-          : "Important account notices, product alerts, reminders, and delivery messages appear here.",
-    },
-    {
-      number: "05",
       key: "inbox",
       target: language === "es" ? "Buzón" : "Mailbox",
       direction: language === "es" ? "Habla con HQ" : "Talk to HQ",
@@ -2427,7 +2171,7 @@ function BloggerVirtualTour({ onDone }: { onDone: () => void }) {
           : "Use this for direct conversations with the Love Potion team without mixing them with general notices.",
     },
     {
-      number: "06",
+      number: "05",
       key: "profile",
       target: language === "es" ? "Perfil" : "Profile",
       direction: language === "es" ? "Mantén todo al día" : "Keep it current",
