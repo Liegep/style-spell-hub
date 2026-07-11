@@ -63,8 +63,8 @@ function FilesLinksPage() {
     void load();
   }, []);
 
-  const links = useMemo(() => resources.filter((item) => item.kind === "link"), [resources]);
-  const images = useMemo(() => resources.filter((item) => item.kind === "image"), [resources]);
+  const links = useMemo(() => resources.filter(isSharedLink), [resources]);
+  const images = useMemo(() => resources.filter(isSharedImage), [resources]);
   const nextSortOrder = (kind: SharedResource["kind"]) =>
     Math.max(-10, ...resources.filter((item) => item.kind === kind).map((item) => item.sort_order ?? 0)) + 10;
 
@@ -619,6 +619,19 @@ function normalizeUrl(value: string) {
   if (!trimmed) return trimmed;
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
+}
+
+function isSharedImage(item: SharedResource) {
+  const url = item.url.trim().toLowerCase();
+  return (
+    item.kind === "image" ||
+    /\/storage\/v1\/object\/public\/goodies\//.test(url) ||
+    /\.(avif|gif|jpe?g|png|svg|webp)(\?|#|$)/.test(url)
+  );
+}
+
+function isSharedLink(item: SharedResource) {
+  return item.kind === "link" || (!isSharedImage(item) && Boolean(item.url.trim()));
 }
 
 const inputClass =
