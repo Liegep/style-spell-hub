@@ -20,6 +20,7 @@ import {
 } from "@/integrations/supabase/dashboard";
 import { cn } from "@/lib/utils";
 import { getCurrentProfile, type AuthProfile } from "@/integrations/supabase/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { notifySecondLifeQuietly } from "@/integrations/supabase/messages";
 import type { ClaimStatus, SubmissionStatus } from "@/integrations/supabase/database.types";
 import { useLang } from "@/i18n/dict";
@@ -37,6 +38,21 @@ const emptyAtelierStats: AtelierStats = {
   archiveSoon: 0,
   subscribers: 0,
   statsErrors: [],
+};
+
+type AtelierDebugPanelData = {
+  userId: string | null;
+  userError: unknown;
+  myProfile: unknown;
+  myProfileError: unknown;
+  rawCounts: Record<
+    string,
+    {
+      dataLength: number | null;
+      data: unknown;
+      error: unknown;
+    }
+  >;
 };
 
 function mergeProductCounts(stats: AtelierStats, products: ProductSummary[]) {
@@ -76,6 +92,7 @@ function AtelierPage() {
   const [retryingClaimId, setRetryingClaimId] = useState<string | null>(null);
   const [deliveryNotice, setDeliveryNotice] = useState("");
   const [dataState, setDataState] = useState<"loading" | "live" | "fallback">("loading");
+  const [debugPanelData, setDebugPanelData] = useState<AtelierDebugPanelData | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -145,6 +162,79 @@ function AtelierPage() {
       document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [reviewFilter]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadDebugPanel() {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      const userId = userData.user?.id ?? null;
+      const profileResult = userId
+        ? await supabase.from("profiles").select("id, role, account_status, email").eq("id", userId).single()
+        : { data: null, error: null };
+
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const inThirtyDays = new Date(now);
+      inThirtyDays.setDate(inThirtyDays.getDate() + 30);
+
+      const [
+        activeBloggers,
+        inactiveBloggers,
+        postsThisMonth,
+        liveProducts,
+        archiveSoonProducts,
+        activeSubscribers,
+      ] = await Promise.all([
+        supabase.from("profiles").select("id").eq("role", "blogger").eq("account_status", "active").range(0, 999),
+        supabase.from("profiles").select("id").eq("role", "blogger").neq("account_status", "active").range(0, 999),
+        supabase.from("blog_submissions").select("id").gte("submitted_at", startOfMonth).range(0, 999),
+        supabase.from("product_releases").select("id").eq("status", "available").range(0, 999),
+        supabase
+          .from("product_releases")
+          .select("id")
+          .eq("status", "available")
+          .not("auto_archive_at", "is", null)
+          .lte("auto_archive_at", inThirtyDays.toISOString())
+          .range(0, 999),
+        supabase
+          .from("newsletter_subscribers")
+          .select("id")
+          .eq("is_active", true)
+          .is("unsubscribed_at", null)
+          .range(0, 999),
+      ]);
+
+      if (!isMounted) return;
+
+      const toDebugResult = (result: { data: unknown[] | null; error: unknown }) => ({
+        dataLength: result.data?.length ?? null,
+        data: result.data,
+        error: result.error,
+      });
+
+      setDebugPanelData({
+        userId,
+        userError,
+        myProfile: profileResult.data,
+        myProfileError: profileResult.error,
+        rawCounts: {
+          activeBloggers: toDebugResult(activeBloggers),
+          inactiveBloggers: toDebugResult(inactiveBloggers),
+          postsThisMonth: toDebugResult(postsThisMonth),
+          liveProducts: toDebugResult(liveProducts),
+          archiveSoonProducts: toDebugResult(archiveSoonProducts),
+          activeSubscribers: toDebugResult(activeSubscribers),
+        },
+      });
+    }
+
+    void loadDebugPanel();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   async function handleRetryDelivery(claimId: string) {
     setDeliveryNotice("");
@@ -333,6 +423,10 @@ function AtelierPage() {
         </div>
         <HandwrittenNote>run the house</HandwrittenNote>
       </header>
+
+      <pre className="mt-6 max-h-[70vh] overflow-auto rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs leading-relaxed text-amber-950">
+        {JSON.stringify(debugPanelData ?? { loading: true }, null, 2)}
+      </pre>
 
       <section className="mt-10 grid gap-4 md:grid-cols-6">
         {metrics.map((it) => (
