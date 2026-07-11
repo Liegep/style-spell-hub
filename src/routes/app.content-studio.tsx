@@ -378,11 +378,26 @@ function ProductEditor({
   }, [onClose, state]);
 
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
+    const scrollY = window.scrollY;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyPosition = document.body.style.position;
+    const previousBodyTop = document.body.style.top;
+    const previousBodyWidth = document.body.style.width;
+
+    document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.position = previousBodyPosition;
+      document.body.style.top = previousBodyTop;
+      document.body.style.width = previousBodyWidth;
+      window.scrollTo(0, scrollY);
     };
   }, []);
 
@@ -543,7 +558,7 @@ function ProductEditor({
   const descriptionPreview = form.long_description?.trim() || "Describe the fabric, mood, fit, and little details here.";
 
   return (
-    <div className="fixed inset-0 z-50 flex h-dvh overflow-hidden bg-foreground/55 px-4 py-6 backdrop-blur-sm md:py-8">
+    <div className="fixed inset-0 z-50 flex h-dvh overflow-hidden overscroll-none bg-foreground/55 px-4 py-6 backdrop-blur-sm md:py-8">
       <form
         onSubmit={saveProduct}
         className="mx-auto h-full max-h-[calc(100dvh-3rem)] w-full max-w-6xl overflow-y-auto overscroll-contain rounded-[2rem] border border-[var(--brand-pink)] bg-background p-6 shadow-2xl [scrollbar-color:var(--brand-magenta)_rgba(255,214,224,0.35)] [scrollbar-width:thin] md:max-h-[calc(100dvh-4rem)] md:p-10"

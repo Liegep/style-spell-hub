@@ -1626,6 +1626,30 @@ function ProductSubmissionModal({
     };
   }, [onClose]);
 
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyPosition = document.body.style.position;
+    const previousBodyTop = document.body.style.top;
+    const previousBodyWidth = document.body.style.width;
+
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.position = previousBodyPosition;
+      document.body.style.top = previousBodyTop;
+      document.body.style.width = previousBodyWidth;
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
   const normalizeUrl = (value: string) => {
     const raw = value.trim();
     if (!raw) return "";
@@ -1829,7 +1853,7 @@ function ProductSubmissionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-foreground/45 p-4 backdrop-blur-md md:p-8">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain bg-foreground/45 p-4 backdrop-blur-md md:p-8">
       <div className="mx-auto grid max-w-6xl overflow-hidden rounded-[2rem] border border-white/40 bg-background/95 shadow-2xl md:grid-cols-[0.9fr_1.1fr]">
         <div className="border-b border-foreground/10 p-5 md:border-b-0 md:border-r">
           <img
