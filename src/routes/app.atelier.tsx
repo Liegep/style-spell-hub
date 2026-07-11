@@ -99,15 +99,27 @@ function AtelierPage() {
     let refreshTimer: number | undefined;
 
     async function loadDashboard() {
+      function timed<T>(label: string, task: () => Promise<T>) {
+        const t0 = performance.now();
+        console.log(`[Atelier] ${label} started`);
+        return Promise.resolve()
+          .then(task)
+          .finally(() => {
+            console.log(`[Atelier] ${label} finished in`, performance.now() - t0, "ms");
+          });
+      }
+
+      console.log("[Atelier] loadDashboard: allSettled started");
       const [profile, nextStats, nextProducts, nextBloggers, nextArchives, nextQueue, nextDeliveryDesk] = await Promise.allSettled([
-        getCurrentProfile(),
-        getAtelierStats(),
-        getProductSummaries(),
-        getBloggerPulse(),
-        getUpcomingArchives(),
-        getReviewQueue(reviewFilter),
-        getDeliveryDeskClaims(),
+        timed("getCurrentProfile", getCurrentProfile),
+        timed("getAtelierStats", getAtelierStats),
+        timed("getProductSummaries", getProductSummaries),
+        timed("getBloggerPulse", getBloggerPulse),
+        timed("getUpcomingArchives", getUpcomingArchives),
+        timed("getReviewQueue", () => getReviewQueue(reviewFilter)),
+        timed("getDeliveryDeskClaims", getDeliveryDeskClaims),
       ]);
+      console.log("[Atelier] loadDashboard: allSettled finished");
 
       if (!isMounted) return;
 
