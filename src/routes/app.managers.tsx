@@ -66,7 +66,7 @@ function ManagersPage() {
   async function removeManager(manager: ManagerListItem) {
     if (confirmRemoveId !== manager.id) {
       setConfirmRemoveId(manager.id);
-      setMessage(`Click confirm to remove ${manager.display_name ?? manager.email}.`);
+      setMessage(`${tr("Click confirm to remove")} ${manager.display_name ?? manager.email}.`);
       return;
     }
 
@@ -75,7 +75,7 @@ function ManagersPage() {
       const updated = await removeManagerAccount(manager.id);
       setManagers((current) => current.map((row) => (row.id === updated.id ? updated : row)));
       setConfirmRemoveId(null);
-      setMessage(`${updated.display_name ?? updated.email} was moved to inactive.`);
+      setMessage(`${updated.display_name ?? updated.email} ${tr("was moved to inactive.")}`);
     } catch (error) {
       console.error("[Managers] Failed to remove manager", error);
       setMessage(error instanceof Error ? error.message : "Could not remove manager.");
@@ -170,7 +170,7 @@ function ManagersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex whitespace-nowrap rounded-full bg-foreground px-4 py-1 font-mono text-[9px] uppercase tracking-[0.2em] text-background">
-                        {humanRole(manager.role)}
+                        {tr(humanRole(manager.role))}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-foreground/70">{manager.email}</td>
@@ -178,7 +178,7 @@ function ManagersPage() {
                       <StatusPill status={manager.account_status} />
                     </td>
                     <td className="px-6 py-4 font-mono text-[10px] uppercase tracking-[0.25em] text-foreground/45">
-                      {formatDate(manager.updated_at)}
+                      {manager.updated_at ? formatDate(manager.updated_at, language) : tr("Never")}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex justify-end gap-2">
@@ -239,6 +239,8 @@ function ManagerEditor({
   onClose: () => void;
   onSaved: (manager: ManagerListItem) => void;
 }) {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const isCreate = mode.type === "create";
   const manager = mode.type === "edit" ? mode.manager : null;
   const [displayName, setDisplayName] = useState(manager?.display_name ?? manager?.full_name ?? "");
@@ -290,10 +292,10 @@ function ManagerEditor({
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-              {isCreate ? "New manager" : "Manager dossier"}
+              {isCreate ? tr("New manager") : tr("Manager dossier")}
             </div>
             <h2 className="mt-2 font-display text-5xl leading-none">
-              {isCreate ? "Invite a keeper." : "Tune access."}
+              {isCreate ? tr("Invite a keeper.") : tr("Tune access.")}
             </h2>
           </div>
           <button
@@ -301,12 +303,12 @@ function ManagerEditor({
             onClick={onClose}
             className="rounded-full border border-foreground/20 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em]"
           >
-            Close
+            {tr("Close")}
           </button>
         </div>
 
         <div className="mt-8 grid gap-5">
-          <Field label="Display name">
+          <Field label={tr("Display name")}>
             <input
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
@@ -315,7 +317,7 @@ function ManagerEditor({
               placeholder="Mireille Velour"
             />
           </Field>
-          <Field label="Email">
+          <Field label={tr("Email")}>
             <input
               type="email"
               value={email}
@@ -327,7 +329,7 @@ function ManagerEditor({
             />
           </Field>
           {isCreate ? (
-            <Field label="Initial password">
+            <Field label={tr("Initial password")}>
               <input
                 type="password"
                 value={password}
@@ -335,34 +337,34 @@ function ManagerEditor({
                 className={inputClass}
                 required
                 minLength={8}
-                placeholder="At least 8 characters"
+                placeholder={tr("At least 8 characters")}
               />
             </Field>
           ) : null}
           <div className="grid gap-5 md:grid-cols-2">
-            <Field label="Role">
+            <Field label={tr("Role")}>
               <select value={role} onChange={(event) => setRole(event.target.value as ManagerRole)} className={inputClass}>
-                <option value="admin">Admin</option>
-                <option value="super_admin">Super Admin</option>
+                <option value="admin">{tr("Admin")}</option>
+                <option value="super_admin">{tr("Super Admin")}</option>
               </select>
             </Field>
-            <Field label="Status">
+            <Field label={tr("Status")}>
               <select
                 value={accountStatus}
                 onChange={(event) => setAccountStatus(event.target.value as AccountStatus)}
                 className={inputClass}
               >
-                <option value="active">Active</option>
-                <option value="pending">Pending</option>
-                <option value="blocked">Blocked</option>
-                <option value="left">Left</option>
+                <option value="active">{tr("Active")}</option>
+                <option value="pending">{tr("Pending")}</option>
+                <option value="blocked">{tr("Blocked")}</option>
+                <option value="left">{tr("Left")}</option>
               </select>
             </Field>
           </div>
 
           {error ? (
             <div className="rounded-2xl border border-[var(--brand-magenta)]/30 bg-[var(--brand-pink)] p-4 text-sm text-[var(--brand-magenta)]">
-              {error}
+              {tr(error)}
             </div>
           ) : null}
         </div>
@@ -373,7 +375,7 @@ function ManagerEditor({
             onClick={onClose}
             className="rounded-full border border-foreground/20 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em]"
           >
-            Cancel
+            {tr("Cancel")}
           </button>
           <button
             type="submit"
@@ -381,7 +383,7 @@ function ManagerEditor({
             className="rounded-full bg-foreground px-6 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)] disabled:cursor-wait disabled:opacity-60"
           >
             <Save className="mr-2 inline h-4 w-4" />
-            {state === "saving" ? "Saving..." : isCreate ? "Create manager" : "Save manager"}
+            {state === "saving" ? tr("Saving...") : isCreate ? tr("Create manager") : tr("Save manager")}
           </button>
         </div>
       </form>
@@ -390,6 +392,8 @@ function ManagerEditor({
 }
 
 function StatusPill({ status }: { status: AccountStatus }) {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const isActive = status === "active";
   return (
     <span
@@ -397,7 +401,7 @@ function StatusPill({ status }: { status: AccountStatus }) {
         isActive ? "bg-emerald-500 text-white" : "bg-[var(--brand-pink)] text-[var(--brand-magenta)]"
       }`}
     >
-      {status}
+      {tr(status === "active" ? "Active" : status === "pending" ? "Pending" : status === "blocked" ? "Blocked" : "Left")}
     </span>
   );
 }
@@ -417,9 +421,13 @@ function humanRole(role: string) {
   return role === "super_admin" ? "Super Admin" : "Admin";
 }
 
-function formatDate(value: string | null | undefined) {
+function formatDate(value: string | null | undefined, language: "en" | "es" = "en") {
   if (!value) return "Never";
-  return new Date(value).toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" });
+  return new Date(value).toLocaleDateString(language === "es" ? "es" : undefined, {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
 }
 
 const inputClass =

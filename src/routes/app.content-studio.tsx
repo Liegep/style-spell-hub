@@ -10,7 +10,7 @@ import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
 import { translateAppPhrase } from "@/i18n/app-text";
-import { dict, type Lang } from "@/i18n/dict";
+import { dict, type Lang, useLang } from "@/i18n/dict";
 import { getProductSummaries, type ProductSummary } from "@/integrations/supabase/dashboard";
 import {
   archiveProductRelease,
@@ -331,6 +331,8 @@ function ProductEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const uiLang = useLang();
+  const tr = (value: string) => translateAppPhrase(value, uiLang);
   const [form, setForm] = useState<ProductReleaseInput>(emptyProduct);
   const [photos, setPhotos] = useState<ProductPhotoDraft[]>([]);
   const [coverKey, setCoverKey] = useState<string | null>(null);
@@ -384,7 +386,7 @@ function ProductEditor({
       } catch (error) {
         console.error("[Content Studio] Failed to load product", error);
         if (isMounted) {
-          setMessage(error instanceof Error ? error.message : "Could not load product.");
+          setMessage(error instanceof Error ? error.message : tr("Could not load product."));
           setState("ready");
         }
       }
@@ -542,7 +544,7 @@ function ProductEditor({
       onSaved();
     } catch (error) {
       console.error("[Content Studio] Save failed", error);
-      setMessage(error instanceof Error ? error.message : "Could not save product.");
+      setMessage(error instanceof Error ? error.message : tr("Could not save product."));
       setState("ready");
     }
   }
@@ -555,7 +557,7 @@ function ProductEditor({
       await archiveProductRelease(form.id);
       onSaved();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not archive product.");
+      setMessage(error instanceof Error ? error.message : tr("Could not archive product."));
       setState("ready");
     }
   }
@@ -563,7 +565,7 @@ function ProductEditor({
   async function deleteProduct() {
     if (!form.id) return;
     const confirmed = window.confirm(
-      "Delete this product forever? This also removes its test claims, submitted links, and review history.",
+      tr("Delete this product forever? This also removes its test claims, submitted links, and review history."),
     );
     if (!confirmed) return;
     setState("deleting");
@@ -574,14 +576,14 @@ function ProductEditor({
     } catch (error) {
       setMessage(
         error instanceof Error
-          ? `${error.message}. If this is a live public product, use Archive instead.`
-          : "Could not delete product.",
+          ? `${error.message}. ${tr("If this is a live public product, use Archive instead.")}`
+          : tr("Could not delete product."),
       );
       setState("ready");
     }
   }
 
-  const descriptionPreview = form.long_description?.trim() || "Describe the fabric, mood, fit, and little details here.";
+  const descriptionPreview = form.long_description?.trim() || tr("Describe the fabric, mood, fit, and little details here.");
 
   return (
     <div className="fixed inset-0 z-50 flex h-dvh overflow-hidden overscroll-none bg-foreground/55 px-4 py-6 backdrop-blur-sm md:py-8">
@@ -593,10 +595,10 @@ function ProductEditor({
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-              Release · {mode.type === "create" ? "creator" : "editor"}
+              {tr("Release")} · {mode.type === "create" ? tr("creator") : tr("editor")}
             </div>
             <h2 className="mt-2 font-display text-5xl leading-none">
-              {mode.type === "create" ? "Design a new drop." : "Refine the piece."}
+              {mode.type === "create" ? tr("Design a new drop.") : tr("Refine the piece.")}
             </h2>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -609,7 +611,7 @@ function ProductEditor({
                   className="rounded-full border border-foreground/20 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.25em] hover:bg-[var(--brand-pink)]"
                 >
                   <Archive className="mr-2 inline h-4 w-4" />
-                  Archive
+                  {tr("Archive")}
                 </button>
                 <button
                   type="button"
@@ -618,7 +620,7 @@ function ProductEditor({
                   className="rounded-full border border-red-200 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-red-500 hover:bg-red-50"
                 >
                   <Trash2 className="mr-2 inline h-4 w-4" />
-                  Delete
+                  {tr("Delete")}
                 </button>
               </>
             ) : null}
@@ -627,14 +629,14 @@ function ProductEditor({
               onClick={onClose}
               className="rounded-full border border-foreground/20 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.25em]"
             >
-              Close
+              {tr("Close")}
             </button>
           </div>
         </div>
 
         {state === "loading" ? (
           <div className="mt-12 rounded-3xl border border-dashed border-foreground/15 p-12 text-center font-hand text-3xl text-[var(--brand-magenta)]">
-            loading the spell...
+            {tr("loading the spell...")}
           </div>
         ) : (
           <div className="mt-10 grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
@@ -647,8 +649,8 @@ function ProductEditor({
                 onRemove={removePhoto}
               />
               <ImagePicker
-                label="Vendor poster"
-                helper="Official Second Life vendor. Converted to WebP and available for bloggers to download."
+                label={tr("Vendor poster")}
+                helper={tr("Official Second Life vendor. Converted to WebP and available for bloggers to download.")}
                 imageUrl={form.vendor_poster_url}
                 file={vendorFile}
                 onChange={setVendorFile}
@@ -656,24 +658,24 @@ function ProductEditor({
             </div>
 
             <div className="grid gap-5">
-              <Field label="Product name">
+              <Field label={tr("Product name")}>
                 <input
                   value={form.name}
                   onChange={(event) => update("name", event.target.value)}
                   required
                   className={inputClass}
-                  placeholder="Zenith Top"
+                  placeholder={tr("Zenith Top")}
                 />
               </Field>
-              <Field label="Short description">
+              <Field label={tr("Short description")}>
                 <input
                   value={form.short_description ?? ""}
                   onChange={(event) => update("short_description", event.target.value)}
                   className={inputClass}
-                  placeholder="Shown on cards and landing."
+                  placeholder={tr("Shown on cards and landing.")}
                 />
               </Field>
-              <Field label="Full dossier description">
+              <Field label={tr("Full dossier description")}>
                 <textarea
                   rows={7}
                   value={form.long_description ?? ""}
@@ -683,33 +685,33 @@ function ProductEditor({
                 />
                 <div className="mt-3 rounded-3xl border border-foreground/10 bg-[var(--brand-pink)]/25 p-5">
                   <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/45">
-                    Description preview
+                    {tr("Description preview")}
                   </div>
                   <p className="mt-3 whitespace-pre-line text-base leading-8 text-foreground/70">
                     {descriptionPreview}
                   </p>
                 </div>
               </Field>
-              <Field label="Handwritten note">
+              <Field label={tr("Handwritten note")}>
                 <input
                   value={form.handwritten_note ?? ""}
                   onChange={(event) => update("handwritten_note", event.target.value)}
                   className={inputClass}
-                  placeholder="So chic!"
+                  placeholder={tr("So chic!")}
                 />
               </Field>
-              <Field label="Blogging recommendations">
+              <Field label={tr("Blogging recommendations")}>
                 <textarea
                   rows={3}
                   value={form.blogging_recommendations ?? ""}
                   onChange={(event) => update("blogging_recommendations", event.target.value)}
                   className={textareaClass}
-                  placeholder="Instructions bloggers see inside the modal."
+                  placeholder={tr("Instructions bloggers see inside the modal.")}
                 />
               </Field>
 
               <div className="grid gap-5 md:grid-cols-2">
-                <Field label="SL / Location URL">
+                <Field label={tr("SL / Location URL")}>
                   <input
                     value={form.second_life_link ?? ""}
                     onChange={(event) => update("second_life_link", event.target.value)}
@@ -717,7 +719,7 @@ function ProductEditor({
                     placeholder="secondlife://..."
                   />
                 </Field>
-                <Field label="Marketplace URL">
+                <Field label={tr("Marketplace URL")}>
                   <input
                     value={form.marketplace_link ?? ""}
                     onChange={(event) => update("marketplace_link", event.target.value)}
@@ -725,37 +727,37 @@ function ProductEditor({
                     placeholder="https://marketplace..."
                   />
                 </Field>
-                <Field label="Category">
+                <Field label={tr("Category")}>
                   <input
                     value={form.category ?? ""}
                     onChange={(event) => update("category", event.target.value)}
                     className={inputClass}
-                    placeholder="Couture"
+                    placeholder={tr("Couture")}
                   />
                 </Field>
                 <Field
-                  label="Second Life product ID"
-                  helper="Use the exact inventory item or folder name inside the Love Potion delivery object. This is what the Claim button sends to Second Life."
+                  label={tr("Second Life product ID")}
+                  helper={tr("Use the exact inventory item or folder name inside the Love Potion delivery object. This is what the Claim button sends to Second Life.")}
                 >
                   <input
                     value={form.delivery_item_key ?? ""}
                     onChange={(event) => update("delivery_item_key", event.target.value)}
                     className={inputClass}
-                    placeholder="e.g. Holiday Magic Gown - Blogger Pack"
+                    placeholder={tr("e.g. Holiday Magic Gown - Blogger Pack")}
                   />
                 </Field>
                 <Field
-                  label="Second Life demo ID"
-                  helper="Exact inventory item or folder name inside the demo dropbox. Demos do not count toward blogger quota."
+                  label={tr("Second Life demo ID")}
+                  helper={tr("Exact inventory item or folder name inside the demo dropbox. Demos do not count toward blogger quota.")}
                 >
                   <input
                     value={form.demo_item_key ?? ""}
                     onChange={(event) => update("demo_item_key", event.target.value)}
                     className={inputClass}
-                    placeholder="e.g. Holiday Magic Gown - DEMO"
+                    placeholder={tr("e.g. Holiday Magic Gown - DEMO")}
                   />
                 </Field>
-                <Field label="Release date">
+                <Field label={tr("Release date")}>
                   <input
                     type="date"
                     value={form.release_date ?? ""}
@@ -764,8 +766,8 @@ function ProductEditor({
                   />
                 </Field>
                 <Field
-                  label="Blogger deadline"
-                  helper="Starts counting when a blogger claims this product. Product auto-archive still follows the 90-day rule."
+                  label={tr("Blogger deadline")}
+                  helper={tr("Starts counting when a blogger claims this product. Product auto-archive still follows the 90-day rule.")}
                 >
                   <select
                     value={form.blogging_deadline_days ?? ""}
@@ -778,12 +780,12 @@ function ProductEditor({
                     className={inputClass}
                   >
                     <option value="">No deadline</option>
-                    <option value="10">10 days after claim</option>
-                    <option value="15">15 days after claim</option>
-                    <option value="30">30 days after claim</option>
+                    <option value="10">{tr("10 days after claim")}</option>
+                    <option value="15">{tr("15 days after claim")}</option>
+                    <option value="30">{tr("30 days after claim")}</option>
                   </select>
                 </Field>
-                <Field label="Release status">
+                <Field label={tr("Release status")}>
                   <select
                     value={form.status}
                     onChange={(event) => update("status", event.target.value as ProductStatus)}
@@ -794,7 +796,7 @@ function ProductEditor({
                     <option value="archived">Archived</option>
                   </select>
                 </Field>
-                <Field label="Display order">
+                <Field label={tr("Display order")}>
                   <input
                     type="number"
                     value={form.display_order}
@@ -812,7 +814,7 @@ function ProductEditor({
                   className="h-5 w-5 accent-[var(--brand-magenta)]"
                 />
                 <span className="font-mono text-[10px] uppercase tracking-[0.3em]">
-                  Feature on landing page
+                  {tr("Feature on landing page")}
                 </span>
               </label>
 
@@ -831,7 +833,7 @@ function ProductEditor({
             onClick={onClose}
             className="rounded-full border border-foreground/20 px-6 py-3 font-mono text-[10px] uppercase tracking-[0.3em]"
           >
-            Discard
+            {tr("Discard")}
           </button>
           <button
             type="submit"
@@ -839,7 +841,7 @@ function ProductEditor({
             className="rounded-full bg-foreground px-7 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-background shadow-lg hover:bg-[var(--brand-magenta)] disabled:cursor-wait disabled:opacity-60"
           >
             <Save className="mr-2 inline h-4 w-4" />
-            {state === "saving" ? "Saving..." : mode.type === "create" ? "Publish release" : "Update release"}
+            {state === "saving" ? tr("Saving...") : mode.type === "create" ? tr("Publish release") : tr("Update release")}
           </button>
         </div>
       </form>
@@ -860,20 +862,22 @@ function ProductPhotosPicker({
   onCoverChange: (key: string) => void;
   onRemove: (key: string) => void;
 }) {
+  const uiLang = useLang();
+  const tr = (value: string) => translateAppPhrase(value, uiLang);
   return (
     <div className="block">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/45">
-            Product photos
+            {tr("Product photos")}
           </div>
           <p className="mt-2 text-sm text-foreground/55">
-            Add multiple images and choose one cover. The cover appears on the landing page, product cards, and blogger dashboard.
+            {tr("Add multiple images and choose one cover. The cover appears on the landing page, product cards, and blogger dashboard.")}
           </p>
         </div>
         <label className="shrink-0 cursor-pointer rounded-full bg-[var(--brand-magenta)] px-4 py-3 font-mono text-[9px] uppercase tracking-[0.25em] text-white shadow-lg shadow-[var(--brand-magenta)]/15 hover:opacity-90">
           <ImagePlus className="mr-2 inline h-4 w-4" />
-          Add photos
+          {tr("Add photos")}
           <input
             type="file"
             accept="image/*"
@@ -891,7 +895,7 @@ function ProductPhotosPicker({
         <label className="mt-4 block cursor-pointer overflow-hidden rounded-3xl border border-dashed border-foreground/20 bg-foreground/[0.03]">
           <div className="flex aspect-[3/4] flex-col items-center justify-center gap-3 text-foreground/45">
             <ImagePlus className="h-9 w-9" />
-            <span className="font-mono text-[10px] uppercase tracking-[0.3em]">Select product photos</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.3em]">{tr("Select product photos")}</span>
           </div>
           <input
             type="file"
@@ -929,12 +933,12 @@ function ProductPhotosPicker({
                     {isCover ? (
                       <>
                         <Check className="mr-1 inline h-3 w-3" />
-                        Cover
+                        {tr("Cover")}
                       </>
                     ) : (
                       <>
                         <Star className="mr-1 inline h-3 w-3" />
-                        Make cover
+                        {tr("Make cover")}
                       </>
                     )}
                   </button>
@@ -942,13 +946,13 @@ function ProductPhotosPicker({
                     type="button"
                     onClick={() => onRemove(photo.key)}
                     className="rounded-full bg-background/85 p-2 text-foreground shadow hover:bg-red-50 hover:text-red-500"
-                    aria-label="Remove photo"
+                    aria-label={tr("Remove photo")}
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
                 <div className="absolute inset-x-2 bottom-2 rounded-full bg-background/85 px-3 py-2 font-mono text-[8px] uppercase tracking-[0.2em] text-foreground/55 shadow">
-                  Photo {index + 1}
+                  {tr("Photo")} {index + 1}
                 </div>
               </div>
             );
@@ -957,7 +961,7 @@ function ProductPhotosPicker({
       )}
 
       <div className="mt-3 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/40">
-        Converted to WebP, 1200x1600, 3:4 vertical.
+        {tr("Converted to WebP, 1200x1600, 3:4 vertical.")}
       </div>
     </div>
   );
@@ -976,6 +980,8 @@ function ImagePicker({
   file: File | null;
   onChange: (file: File | null) => void;
 }) {
+  const uiLang = useLang();
+  const tr = (value: string) => translateAppPhrase(value, uiLang);
   const previewUrl = file ? URL.createObjectURL(file) : imageUrl;
 
   return (
@@ -989,7 +995,7 @@ function ImagePicker({
         ) : (
           <div className="flex aspect-[3/4] flex-col items-center justify-center gap-3 text-foreground/45">
             <ImagePlus className="h-9 w-9" />
-            <span className="font-mono text-[10px] uppercase tracking-[0.3em]">Select image</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.3em]">{tr("Select image")}</span>
           </div>
         )}
       </div>

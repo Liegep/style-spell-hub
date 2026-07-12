@@ -646,6 +646,8 @@ function Compose({
   initialRecipients: MessageRecipient[];
   onUnreadChange: (count: number) => void;
 }) {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const [scope, setScope] = useState<MessageScope>("personal");
   const [recipients, setRecipients] = useState<MessageRecipient[]>(initialRecipients);
   const [recipientId, setRecipientId] = useState(initialRecipients[0]?.id ?? "");
@@ -756,7 +758,7 @@ function Compose({
       });
     } catch (error) {
       console.error("[Compose] failed to mark message read", error);
-      setError(error instanceof Error ? error.message : "Could not mark message as read.");
+      setError(error instanceof Error ? error.message : tr("Could not mark message as read."));
     } finally {
       setMarkingReadId(null);
     }
@@ -765,11 +767,11 @@ function Compose({
   async function onSend() {
     setError("");
     if (!subject.trim()) {
-      setError("Subject is required.");
+      setError(tr("Subject is required."));
       return;
     }
     if (scope === "personal" && !recipientId) {
-      setError("Choose a blogger recipient.");
+      setError(tr("Choose a blogger recipient."));
       return;
     }
 
@@ -791,7 +793,7 @@ function Compose({
             recipientId,
             type: "new_message",
             title: subject.trim(),
-            body: body.trim() || "You have a new message from Love Potion HQ.",
+            body: body.trim() || tr("You have a new message from Love Potion HQ."),
           },
           "Personal message notification",
         );
@@ -802,7 +804,7 @@ function Compose({
               recipientId: recipient.id,
               type: "new_message",
               title: subject.trim(),
-              body: body.trim() || "Love Potion HQ sent a new announcement.",
+              body: body.trim() || tr("Love Potion HQ sent a new announcement."),
             },
             "Broadcast message notification",
           );
@@ -824,7 +826,7 @@ function Compose({
       window.setTimeout(() => setState("idle"), 2500);
     } catch (error) {
       console.error("[Compose] failed to send", error);
-      setError(error instanceof Error ? error.message : "Could not send message.");
+      setError(error instanceof Error ? error.message : tr("Could not send message."));
       setState("error");
     }
   }
@@ -834,15 +836,15 @@ function Compose({
     setSlFeedback("");
 
     if (scope !== "personal" || !recipientId) {
-      setSlFeedback("Choose one blogger first.");
+      setSlFeedback(tr("Choose one blogger first."));
       setSlState("error");
       return;
     }
 
     const recipient = recipients.find((item) => item.id === recipientId);
-    const recipientName = recipient?.display_name || recipient?.full_name || recipient?.sl_avatar_name || "there";
+    const recipientName = recipient?.display_name || recipient?.full_name || recipient?.sl_avatar_name || tr("there");
     const testTitle = subject.trim() || "Love Potion HQ";
-    const testBody = body.trim() || `Hi ${recipientName}, this is a Second Life IM test from Love Potion HQ.`;
+    const testBody = body.trim() || `Hi ${recipientName}, ${tr("this is a Second Life IM test from Love Potion HQ.")}`;
 
     setSlState("sending");
     try {
@@ -852,7 +854,7 @@ function Compose({
         body: testBody,
         type: "manual",
       });
-      setSlFeedback("Second Life IM sent.");
+      setSlFeedback(tr("Second Life IM sent."));
       setSlState("sent");
       window.setTimeout(() => {
         setSlState("idle");
@@ -860,7 +862,7 @@ function Compose({
       }, 3500);
     } catch (error) {
       console.error("[Compose] failed to send Second Life notification", error);
-      setSlFeedback(error instanceof Error ? error.message : "Could not send the Second Life IM.");
+      setSlFeedback(error instanceof Error ? error.message : tr("Could not send the Second Life IM."));
       setSlState("error");
     }
   }
@@ -870,11 +872,11 @@ function Compose({
     setThreadFeedback((current) => ({ ...current, [thread.key]: "" }));
 
     if (!replyBody) {
-      setThreadFeedback((current) => ({ ...current, [thread.key]: "Write a reply first." }));
+      setThreadFeedback((current) => ({ ...current, [thread.key]: tr("Write a reply first.") }));
       return;
     }
 
-    const latestSubject = thread.messages[0]?.subject || "Message";
+    const latestSubject = thread.messages[0]?.subject || tr("Message");
     const subjectLine = latestSubject.toLowerCase().startsWith("re:") ? latestSubject : `Re: ${latestSubject}`;
 
     setThreadSendingKey(thread.key);
@@ -902,13 +904,13 @@ function Compose({
 
       setRecent((current) => [{ ...sent, recipient_name: thread.name }, ...current].slice(0, 30));
       setThreadReplyBody((current) => ({ ...current, [thread.key]: "" }));
-      setThreadFeedback((current) => ({ ...current, [thread.key]: "Reply sent." }));
+      setThreadFeedback((current) => ({ ...current, [thread.key]: tr("Reply sent.") }));
       setReplyModalThreadKey(null);
     } catch (error) {
       console.error("[Compose] failed to reply in thread", error);
       setThreadFeedback((current) => ({
         ...current,
-        [thread.key]: error instanceof Error ? error.message : "Could not send this reply.",
+        [thread.key]: error instanceof Error ? error.message : tr("Could not send this reply."),
       }));
     } finally {
       setThreadSendingKey(null);
@@ -930,7 +932,7 @@ function Compose({
                   : "border border-foreground/30 hover:border-[var(--brand-magenta)]",
               )}
             >
-              {item === "personal" ? "Personal" : "Broadcast (all)"}
+              {item === "personal" ? tr("Personal") : tr("Broadcast (all)")}
             </button>
           ))}
         </div>
@@ -949,20 +951,20 @@ function Compose({
             </select>
           ) : (
             <div className="rounded-full border border-foreground/20 bg-background/50 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-foreground/60">
-              Sending to all bloggers
+              {tr("Sending to all bloggers")}
             </div>
           )}
           <input
             value={subject}
             onChange={(event) => setSubject(event.target.value)}
-            placeholder="Subject"
+            placeholder={tr("Subject")}
             className="w-full rounded-full border border-foreground/30 bg-background/70 px-5 py-3 text-sm"
           />
           <textarea
             value={body}
             onChange={(event) => setBody(event.target.value)}
             rows={5}
-            placeholder="Write something with style..."
+            placeholder={tr("Write something with style...")}
             className="w-full rounded-2xl border border-foreground/30 bg-background/70 px-5 py-3 text-sm"
           />
           <div className="flex flex-wrap items-center justify-end gap-3">
@@ -973,7 +975,7 @@ function Compose({
                   state === "sent" ? "bg-green-100 text-green-700" : "bg-rose-100 text-rose-700",
                 )}
               >
-                {state === "sent" ? "Message sent." : error}
+                {state === "sent" ? tr("Message sent.") : error}
               </span>
             ) : null}
             {scope === "personal" ? (
@@ -993,7 +995,7 @@ function Compose({
                   disabled={slState === "sending" || !recipientId}
                   className="rounded-full border border-[var(--brand-magenta)]/40 bg-background/70 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)] hover:bg-[var(--brand-magenta)] hover:text-white disabled:opacity-50"
                 >
-                  {slState === "sending" ? "Sending SL..." : "Test SL IM"}
+                  {slState === "sending" ? tr("Sending SL...") : tr("Test SL IM")}
                 </button>
               </>
             ) : null}
@@ -1002,14 +1004,14 @@ function Compose({
               disabled={state === "sending"}
               className="rounded-full bg-foreground px-6 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)] disabled:opacity-60"
             >
-              {state === "sending" ? "Sending..." : "Send →"}
+              {state === "sending" ? tr("Sending...") : tr("Send →")}
             </button>
           </div>
         </div>
       </GlassCard>
       <GlassCard>
         <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-          RECEIVED · RECENT
+          {tr("RECEIVED · RECENT")}
         </div>
         <ul className="mt-4 space-y-3">
           {visibleReceivedThreads.map((thread) => {
@@ -1034,8 +1036,8 @@ function Compose({
                     className="flex-1 text-left"
                   >
                     <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/50">
-                      {thread.name} · {new Date(thread.latestAt).toLocaleDateString()}
-                      {unreadCount ? ` · ${unreadCount} NEW` : ""}
+                      {thread.name} · {new Date(thread.latestAt).toLocaleDateString(language === "es" ? "es" : undefined)}
+                      {unreadCount ? ` · ${unreadCount} ${tr("NEW")}` : ""}
                     </div>
                     <div className="mt-1 font-display text-base">{latestIncoming.subject}</div>
                     {latestIncoming.body ? (
@@ -1049,7 +1051,7 @@ function Compose({
                       onClick={() => setReplyModalThreadKey(thread.key)}
                       className="rounded-full bg-[var(--brand-magenta)] px-3 py-2 font-mono text-[9px] uppercase tracking-[0.24em] text-white hover:bg-foreground"
                     >
-                      reply
+                      {tr("reply")}
                     </button>
                     <span
                       className={cn(
@@ -1057,7 +1059,7 @@ function Compose({
                         unreadCount ? "bg-[var(--brand-magenta)] text-white" : "bg-foreground/10 text-foreground/55",
                       )}
                     >
-                      {open ? "close" : "open"}
+                      {open ? tr("close") : tr("open")}
                     </span>
                   </div>
                 </div>
@@ -1075,9 +1077,9 @@ function Compose({
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="font-mono text-[8px] uppercase tracking-[0.24em] text-foreground/45">
-                            {message.direction === "in" ? "blogger" : "you"} ·{" "}
-                            {new Date(message.created_at).toLocaleDateString()}
-                            {message.unread ? " · new" : ""}
+                            {message.direction === "in" ? tr("blogger") : tr("you")} ·{" "}
+                            {new Date(message.created_at).toLocaleDateString(language === "es" ? "es" : undefined)}
+                            {message.unread ? ` · ${tr("new")}` : ""}
                           </div>
                           {message.direction === "in" && message.unread ? (
                             <button
@@ -1085,7 +1087,7 @@ function Compose({
                               disabled={markingReadId === message.id}
                               className="rounded-full bg-foreground px-3 py-1 font-mono text-[8px] uppercase tracking-[0.2em] text-background disabled:opacity-60"
                             >
-                              {markingReadId === message.id ? "marking..." : "mark read"}
+                              {markingReadId === message.id ? tr("marking...") : tr("mark read")}
                             </button>
                           ) : null}
                         </div>
@@ -1099,18 +1101,18 @@ function Compose({
                       <span
                         className={cn(
                           "text-xs",
-                          threadFeedback[thread.key] === "Reply sent."
+                          threadFeedback[thread.key] === tr("Reply sent.")
                             ? "text-emerald-700"
                             : "text-[var(--brand-magenta)]",
                         )}
                       >
-                        {threadFeedback[thread.key] || "Reply from here and keep the whole conversation together."}
+                        {threadFeedback[thread.key] || tr("Reply from here and keep the whole conversation together.")}
                       </span>
                       <button
                         onClick={() => setReplyModalThreadKey(thread.key)}
                         className="rounded-full bg-[var(--brand-magenta)] px-4 py-2 font-mono text-[9px] uppercase tracking-[0.24em] text-white hover:bg-foreground"
                       >
-                        reply
+                        {tr("reply")}
                       </button>
                     </div>
                   </div>
@@ -1119,7 +1121,7 @@ function Compose({
             );
           })}
           {receivedThreads.length === 0 ? (
-            <li className="font-hand text-2xl text-[var(--brand-magenta)]">no replies yet</li>
+            <li className="font-hand text-2xl text-[var(--brand-magenta)]">{tr("no replies yet")}</li>
           ) : null}
         </ul>
         {receivedThreads.length > 5 ? (
@@ -1127,7 +1129,7 @@ function Compose({
             onClick={() => setShowAllReceived((current) => !current)}
             className="mt-3 rounded-full border border-foreground/20 px-4 py-2 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/60 hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]"
           >
-            {showAllReceived ? "show less" : `view all (${receivedThreads.length})`}
+            {showAllReceived ? tr("show less") : `${tr("view all")} (${receivedThreads.length})`}
           </button>
         ) : null}
 
@@ -1142,13 +1144,13 @@ function Compose({
               <>
                 <DialogHeader>
                   <DialogTitle className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-                    Reply to {replyModalThread.name}
+                    {tr("Reply to")} {replyModalThread.name}
                   </DialogTitle>
                 </DialogHeader>
                 <div className="mt-2 space-y-4">
                   <div className="rounded-2xl border border-foreground/10 bg-background/60 p-4">
                     <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/45">
-                      recent messages
+                      {tr("recent messages")}
                     </div>
                     <div className="mt-3 space-y-2">
                       {replyModalThread.messages.slice(0, 3).map((message) => (
@@ -1162,8 +1164,8 @@ function Compose({
                           )}
                         >
                           <div className="font-mono text-[8px] uppercase tracking-[0.24em] text-foreground/45">
-                            {message.direction === "in" ? "blogger" : "you"} ·{" "}
-                            {new Date(message.created_at).toLocaleDateString()}
+                            {message.direction === "in" ? tr("blogger") : tr("you")} ·{" "}
+                            {new Date(message.created_at).toLocaleDateString(language === "es" ? "es" : undefined)}
                           </div>
                           <div className="mt-1 font-display text-sm">{message.subject}</div>
                           {message.body ? (
@@ -1175,7 +1177,7 @@ function Compose({
                   </div>
                   <label className="block">
                     <span className="font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/45">
-                      your reply
+                      {tr("your reply")}
                     </span>
                     <textarea
                       value={threadReplyBody[replyModalThread.key] ?? ""}
@@ -1183,7 +1185,7 @@ function Compose({
                         setThreadReplyBody((current) => ({ ...current, [replyModalThread.key]: event.target.value }))
                       }
                       rows={6}
-                      placeholder={`Reply to ${replyModalThread.name}...`}
+                      placeholder={`${tr("Reply to")} ${replyModalThread.name}...`}
                       className="mt-2 w-full rounded-2xl border border-foreground/15 bg-background px-4 py-3 text-sm outline-none focus:border-[var(--brand-magenta)]"
                     />
                   </label>
@@ -1191,7 +1193,7 @@ function Compose({
                     <span
                       className={cn(
                         "text-sm",
-                        threadFeedback[replyModalThread.key] === "Reply sent."
+                        threadFeedback[replyModalThread.key] === tr("Reply sent.")
                           ? "text-emerald-700"
                           : "text-[var(--brand-magenta)]",
                       )}
@@ -1203,7 +1205,7 @@ function Compose({
                       disabled={threadSendingKey === replyModalThread.key}
                       className="rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.28em] text-white hover:bg-foreground disabled:opacity-60"
                     >
-                      {threadSendingKey === replyModalThread.key ? "sending..." : "send reply"}
+                      {threadSendingKey === replyModalThread.key ? tr("sending...") : tr("send reply")}
                     </button>
                   </div>
                 </div>
@@ -1267,6 +1269,8 @@ function Newsletter({
   newsletterView: "compose" | "sent" | "subscribers";
   setNewsletterView: (view: "compose" | "sent" | "subscribers") => void;
 }) {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>(initialSubscribers);
   const [campaigns, setCampaigns] = useState<NewsletterCampaignWithStats[]>(initialCampaigns);
   const [title, setTitle] = useState("");
@@ -1396,14 +1400,14 @@ function Newsletter({
           <GlassCard tone="pink" className="p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">NEW NEWSLETTER</div>
-                <h2 className="mt-2 font-display text-4xl leading-none">Send to the grid.</h2>
+                <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">{tr("New newsletter")}</div>
+                <h2 className="mt-2 font-display text-4xl leading-none">{tr("Send to the grid.")}</h2>
                 <p className="mt-2 text-sm text-foreground/60">
-                  Text is sent by IM. If you add a texture item name, the prim also gives that texture from its inventory; the uploaded image remains a fallback.
+                  {tr("Text is sent by IM. If you add a texture item name, the prim also gives that texture from its inventory; the uploaded image remains a fallback.")}
                 </p>
               </div>
               <label className="cursor-pointer rounded-full border border-[var(--brand-magenta)] px-5 py-2 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--brand-magenta)] transition hover:bg-[var(--brand-magenta)] hover:text-white">
-                Import CSV
+                {tr("Import CSV")}
                 <input type="file" accept=".csv,text/csv" onChange={onCsvImport} className="hidden" />
               </label>
             </div>
@@ -1411,30 +1415,30 @@ function Newsletter({
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="Title"
+              placeholder={tr("Title")}
               className="mt-6 w-full rounded-full border border-foreground/20 bg-background/70 px-5 py-3 text-sm outline-none transition focus:border-[var(--brand-magenta)]"
             />
             <textarea
               rows={7}
               value={body}
               onChange={(event) => setBody(event.target.value)}
-              placeholder="Write your promo, release note, or tiny spell..."
+              placeholder={tr("Write your promo, release note, or tiny spell...")}
               className="mt-4 w-full rounded-2xl border border-foreground/20 bg-background/70 px-5 py-3 text-sm outline-none transition focus:border-[var(--brand-magenta)]"
             />
 
             <input
               value={slTextureItemName}
               onChange={(event) => setSlTextureItemName(event.target.value)}
-              placeholder="Exact SL texture name inside the delivery prim · optional"
+              placeholder={tr("Exact SL texture name inside the delivery prim · optional")}
               className="mt-4 w-full rounded-full border border-foreground/20 bg-background/70 px-5 py-3 text-sm outline-none transition focus:border-[var(--brand-magenta)]"
             />
 
             <label className="mt-4 block cursor-pointer rounded-2xl border-2 border-dashed border-foreground/20 p-6 text-center transition hover:border-[var(--brand-magenta)] hover:bg-white/25">
               {imagePreview ? (
-                <img src={imagePreview} alt="Newsletter preview" className="mx-auto max-h-72 rounded-xl object-contain" />
+                <img src={imagePreview} alt={tr("Newsletter preview")} className="mx-auto max-h-72 rounded-xl object-contain" />
               ) : (
                 <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-                  Add campaign image · optional
+                  {tr("Add campaign image · optional")}
                 </div>
               )}
               <input type="file" accept="image/*" onChange={onImageChange} className="hidden" />
@@ -1455,7 +1459,7 @@ function Newsletter({
               <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
                 {state === "loading" ? "loading" : (
                   <>
-                    {activeSubscribers.length} <span>active subscribers</span>
+                    {activeSubscribers.length} <span>{tr("active subscribers")}</span>
                   </>
                 )}
               </span>
@@ -1465,7 +1469,7 @@ function Newsletter({
                 disabled={state === "sending" || state === "importing"}
                 className="rounded-full bg-foreground px-6 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-background transition hover:bg-[var(--brand-magenta)] disabled:opacity-60"
               >
-                {state === "sending" ? "sending..." : "Send to SL →"}
+                {state === "sending" ? tr("sending...") : tr("Send to SL →")}
               </button>
             </div>
           </GlassCard>
@@ -1492,6 +1496,8 @@ function NewsletterSubscribersPanel({
   loading: boolean;
   onSubscriberAdded: () => Promise<void>;
 }) {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const [showManualAdd, setShowManualAdd] = useState(false);
   const [manualName, setManualName] = useState("");
   const [manualUuid, setManualUuid] = useState("");
@@ -1519,12 +1525,12 @@ function NewsletterSubscribersPanel({
       setManualName("");
       setManualUuid("");
       setManualState("saved");
-      setManualMessage("Subscriber added.");
+      setManualMessage(tr("Subscriber added."));
       await onSubscriberAdded();
     } catch (addError) {
       console.error("[Newsletter] failed to add subscriber", addError);
       setManualState("error");
-      setManualMessage(addError instanceof Error ? addError.message : "Could not add subscriber.");
+      setManualMessage(addError instanceof Error ? addError.message : tr("Could not add subscriber."));
     }
   }
 
@@ -1532,7 +1538,7 @@ function NewsletterSubscribersPanel({
     <form onSubmit={(event) => void onManualSubmit(event)} className="border-b border-foreground/10 bg-[var(--brand-pink)]/25 p-6">
       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(260px,0.9fr)_auto] md:items-end">
         <label className="block">
-          <span className="font-mono text-[9px] uppercase tracking-[0.26em] text-foreground/45">Subscriber name</span>
+          <span className="font-mono text-[9px] uppercase tracking-[0.26em] text-foreground/45">{tr("Subscriber name")}</span>
           <input
             value={manualName}
             onChange={(event) => setManualName(event.target.value)}
@@ -1541,7 +1547,7 @@ function NewsletterSubscribersPanel({
           />
         </label>
         <label className="block">
-          <span className="font-mono text-[9px] uppercase tracking-[0.26em] text-foreground/45">SL avatar UUID</span>
+          <span className="font-mono text-[9px] uppercase tracking-[0.26em] text-foreground/45">{tr("SL avatar UUID")}</span>
           <input
             value={manualUuid}
             onChange={(event) => setManualUuid(event.target.value)}
@@ -1554,7 +1560,7 @@ function NewsletterSubscribersPanel({
           disabled={manualState === "saving"}
           className="rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.24em] text-white transition hover:bg-foreground disabled:opacity-60"
         >
-          {manualState === "saving" ? "Adding..." : "Add"}
+          {manualState === "saving" ? tr("Adding...") : tr("Add")}
         </button>
       </div>
       {manualMessage ? (
@@ -1575,7 +1581,7 @@ function NewsletterSubscribersPanel({
   if (loading) {
     return (
       <GlassCard tone="pink" className="p-8">
-        <div className="font-hand text-3xl text-[var(--brand-magenta)]">loading subscribers</div>
+        <div className="font-hand text-3xl text-[var(--brand-magenta)]">{tr("loading subscribers")}</div>
       </GlassCard>
     );
   }
@@ -1585,10 +1591,10 @@ function NewsletterSubscribersPanel({
       <GlassCard tone="pink" className="overflow-hidden p-0">
         <div className="flex flex-wrap items-end justify-between gap-4 p-6">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">SUBSCRIBERS</div>
-            <h2 className="mt-2 font-display text-4xl leading-none">No subscribers yet.</h2>
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">{tr("SUBSCRIBERS")}</div>
+            <h2 className="mt-2 font-display text-4xl leading-none">{tr("No subscribers yet.")}</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-foreground/60">
-              Add someone manually by name and SL UUID, or import a CSV when you have a bigger list.
+              {tr("Add someone manually by name and SL UUID, or import a CSV when you have a bigger list.")}
             </p>
           </div>
           <button
@@ -1596,7 +1602,7 @@ function NewsletterSubscribersPanel({
             onClick={() => setShowManualAdd((current) => !current)}
             className="rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.24em] text-white transition hover:bg-foreground"
           >
-            {showManualAdd ? "Close" : "+ Add subscriber"}
+            {showManualAdd ? tr("Close") : tr("+ Add subscriber")}
           </button>
         </div>
         {manualAddForm}
@@ -1609,19 +1615,19 @@ function NewsletterSubscribersPanel({
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-foreground/10 p-6">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            LOVE POTION SUBSCRIBERS
+            {tr("LOVE POTION SUBSCRIBERS")}
           </div>
-          <h2 className="mt-2 font-display text-4xl leading-none">The list.</h2>
+          <h2 className="mt-2 font-display text-4xl leading-none">{tr("The list.")}</h2>
         </div>
         <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-foreground/55">
-          {activeSubscribers.length} <span>active</span> · {subscribers.length} <span>total</span>
+          {activeSubscribers.length} <span>{tr("active")}</span> · {subscribers.length} <span>{tr("total")}</span>
         </div>
         <button
           type="button"
           onClick={() => setShowManualAdd((current) => !current)}
           className="rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.24em] text-white transition hover:bg-foreground"
         >
-          {showManualAdd ? "Close" : "+ Add subscriber"}
+          {showManualAdd ? tr("Close") : tr("+ Add subscriber")}
         </button>
       </div>
       {manualAddForm}
@@ -1629,7 +1635,7 @@ function NewsletterSubscribersPanel({
       <div className="divide-y divide-foreground/5">
         {subscribers.map((subscriber) => {
           const displayName =
-            subscriber.display_name || subscriber.sl_avatar_name || subscriber.email || "Second Life Resident";
+            subscriber.display_name || subscriber.sl_avatar_name || subscriber.email || tr("Second Life Resident");
           const active = subscriber.is_active && !subscriber.unsubscribed_at;
           const source = formatSubscriberSource(subscriber.source);
 
@@ -1642,7 +1648,7 @@ function NewsletterSubscribersPanel({
                 ) : null}
               </div>
               <div className="truncate font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/45">
-                {subscriber.sl_avatar_uuid || "no sl uuid"}
+                {subscriber.sl_avatar_uuid || tr("no sl uuid")}
               </div>
               <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-foreground/55">
                 {source}
@@ -1654,7 +1660,7 @@ function NewsletterSubscribersPanel({
                     active ? "bg-green-100 text-green-700" : "bg-foreground/5 text-foreground/50",
                   )}
                 >
-                  {active ? "active" : "paused"}
+                  {active ? tr("active") : tr("paused")}
                 </span>
               </div>
             </div>
