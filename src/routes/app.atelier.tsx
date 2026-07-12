@@ -60,6 +60,7 @@ function mergeProductCounts(stats: AtelierStats, products: ProductSummary[]) {
 function AtelierPage() {
   const language = useLang();
   const tr = (value: string) => translateAppPhrase(value, language);
+  const instanceId = useState(() => Math.random().toString(36).slice(2, 8))[0];
   const [liveStats, setLiveStats] = useState<AtelierStats>(emptyAtelierStats);
   const [liveBloggers, setLiveBloggers] = useState<BloggerPulse[]>([]);
   const [upcomingArchives, setUpcomingArchives] = useState<{ id: string; name: string; auto_archive_at: string | null }[]>([]);
@@ -153,8 +154,8 @@ function AtelierPage() {
   }, [reviewFilter]);
 
   useEffect(() => {
-    console.log("[Atelier] liveStats CHANGED to:", JSON.stringify(liveStats));
-  }, [liveStats]);
+    console.log("[Atelier] instance", instanceId, "liveStats CHANGED to:", JSON.stringify(liveStats));
+  }, [instanceId, liveStats]);
 
   async function handleRetryDelivery(claimId: string) {
     setDeliveryNotice("");
@@ -345,9 +346,12 @@ function AtelierPage() {
       </header>
 
       <section className="mt-10 grid gap-4 md:grid-cols-6">
-        {metrics.map((it) => (
+        {metrics.map((it, index) => (
           <GlassCard key={it.l} tone={it.tone} className="p-5">
             <div className="font-display text-4xl">{it.n}</div>
+            {index === 0 ? (
+              <div className="text-[8px] text-red-500">instance: {instanceId}</div>
+            ) : null}
             <div className="mt-2 font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/60">
               {it.l}
             </div>
