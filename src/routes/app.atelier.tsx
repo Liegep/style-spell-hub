@@ -98,13 +98,21 @@ function AtelierPage() {
       if (document.visibilityState === "visible") void loadDashboard();
     };
 
+    const refreshOnProfileChange = () => {
+      void loadDashboard();
+    };
+
     window.addEventListener("focus", refreshWhenVisible);
+    window.addEventListener("profile-updated", refreshOnProfileChange);
+    window.addEventListener("bloggers-updated", refreshOnProfileChange);
     document.addEventListener("visibilitychange", refreshWhenVisible);
 
     return () => {
       isMounted = false;
       if (refreshTimer) window.clearInterval(refreshTimer);
       window.removeEventListener("focus", refreshWhenVisible);
+      window.removeEventListener("profile-updated", refreshOnProfileChange);
+      window.removeEventListener("bloggers-updated", refreshOnProfileChange);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [reviewFilter]);

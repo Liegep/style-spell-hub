@@ -163,8 +163,15 @@ function AdminDash() {
     }
 
     void loadReviewQueue();
+    const handleReviewQueueRefresh = () => void loadReviewQueue();
+    window.addEventListener("profile-updated", handleReviewQueueRefresh);
+    window.addEventListener("bloggers-updated", handleReviewQueueRefresh);
+    window.addEventListener("focus", handleReviewQueueRefresh);
     return () => {
       mounted = false;
+      window.removeEventListener("profile-updated", handleReviewQueueRefresh);
+      window.removeEventListener("bloggers-updated", handleReviewQueueRefresh);
+      window.removeEventListener("focus", handleReviewQueueRefresh);
     };
   }, [reviewFilter]);
 
