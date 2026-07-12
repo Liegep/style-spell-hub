@@ -277,9 +277,19 @@ function ProfilePage() {
                 </option>
               ))}
             </select>
-            <p className="mt-2 font-hand text-base text-[var(--brand-magenta)]">
-              shown over your avatar, like instagram notes. choose a timer or leave it open-ended.
-            </p>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <p className="font-hand text-base text-[var(--brand-magenta)]">
+                shown over your avatar, like instagram notes. choose a timer or leave it open-ended.
+              </p>
+              <button
+                type="button"
+                onClick={() => void onSaveProfile()}
+                disabled={isSaving}
+                className="rounded-full bg-[var(--brand-magenta)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white shadow-lg shadow-[var(--brand-magenta)]/15 hover:opacity-90 disabled:opacity-60"
+              >
+                {isSaving ? "Saving..." : "Save note"}
+              </button>
+            </div>
           </GlassCard>
 
           <GlassCard className="p-6">
