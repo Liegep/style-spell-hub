@@ -2679,11 +2679,11 @@ function ProfileTab(props: {
           <div className="flex items-baseline justify-between">
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
               CUSTOM NOTE
-              </div>
-              <span className="font-mono text-[10px] text-foreground/50">
-                {note.length}/{NOTE_MAX} · <span>max 2 lines</span>
-              </span>
             </div>
+            <span className="font-mono text-[10px] text-foreground/50">
+              {note.length}/{NOTE_MAX} · <span>max 2 lines</span>
+            </span>
+          </div>
           <textarea
             value={note}
             onChange={(e) => onNoteChange(e.target.value)}
@@ -2692,9 +2692,19 @@ function ProfileTab(props: {
             maxLength={NOTE_MAX}
             className="mt-3 w-full resize-none rounded-2xl border border-foreground/20 bg-background/70 px-5 py-3 font-display text-xl leading-tight focus:border-[var(--brand-magenta)] focus:outline-none"
           />
-          <p className="mt-2 font-hand text-base text-[var(--brand-magenta)]">
-            shown over your avatar, like instagram notes
-          </p>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="font-hand text-base text-[var(--brand-magenta)]">
+              shown over your avatar, like instagram notes
+            </p>
+            <button
+              type="button"
+              onClick={() => void onSaveProfile()}
+              disabled={isSaving}
+              className="rounded-full bg-[var(--brand-magenta)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white shadow-lg shadow-[var(--brand-magenta)]/15 hover:opacity-90 disabled:opacity-60"
+            >
+              {isSaving ? "Saving..." : "Save note"}
+            </button>
+          </div>
         </GlassCard>
 
         {/* Status */}
