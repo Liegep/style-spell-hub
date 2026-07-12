@@ -55,13 +55,15 @@ Deno.serve(async (request) => {
     return json({ registered: false, message: "Missing Second Life server URL." }, 400);
   }
 
+  const objectKey = payload.object_key?.trim() || null;
+  const deliveryServerId = objectKey || crypto.randomUUID();
   const supabase = createClient(supabaseUrl, serviceRoleKey);
   const { error } = await supabase.from("second_life_delivery_servers").upsert(
     {
-      id: "primary",
+      id: deliveryServerId,
       server_url: serverUrl,
       object_name: payload.object_name?.trim() || null,
-      object_key: payload.object_key?.trim() || null,
+      object_key: objectKey,
       region_name: payload.region_name?.trim() || null,
       owner_key: payload.owner_key?.trim() || null,
       active: true,

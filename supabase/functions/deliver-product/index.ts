@@ -18,36 +18,40 @@ type DeliveryRequest = {
 
 type DeliveryPurpose = "product" | "demo";
 
+function isDemoDropboxName(objectName: string | null | undefined) {
+  return typeof objectName === "string" && /demo/i.test(objectName);
+}
+
 async function getActiveDeliveryUrl(
   supabase: ReturnType<typeof createClient>,
   fallbackUrl: string | undefined,
   purpose: DeliveryPurpose = "product",
 ) {
-  if (purpose === "demo") {
-    const { data, error } = await supabase
-      .from("second_life_delivery_servers")
-      .select("server_url")
-      .eq("active", true)
-      .ilike("object_name", "%demo%")
-      .order("last_seen_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!error && data?.server_url) {
-      return data.server_url as string;
-    }
-  }
-
   const { data, error } = await supabase
     .from("second_life_delivery_servers")
-    .select("server_url")
+    .select("server_url,object_name")
     .eq("active", true)
     .order("last_seen_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(20);
 
-  if (!error && data?.server_url) {
-    return data.server_url as string;
+  if (!error && data?.length) {
+    const matchingRow =
+      purpose === "demo"
+        ? data.find((row) => isDemoDropboxName(row.object_name))
+        : data.find((row) => !isDemoDropboxName(row.object_name));
+
+    if (matchingRow?.server_url) {
+      return matchingRow.server_url as string;
+    }
+
+    const fallbackRow =
+      purpose === "demo"
+        ? data.find((row) => Boolean(row.server_url))
+        : data.find((row) => Boolean(row.server_url) && !isDemoDropboxName(row.object_name));
+
+    if (fallbackRow?.server_url) {
+      return fallbackRow.server_url as string;
+    }
   }
 
   return fallbackUrl;

@@ -88,15 +88,30 @@ async function getActiveDeliveryUrl(supabase: SupabaseClient, fallbackUrl: strin
     .select("id,server_url,last_seen_at,object_name,region_name")
     .eq("active", true)
     .order("last_seen_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(20);
 
-  if (!error && data?.server_url) {
+  if (!error && data?.length) {
+    const preferredRow = data.find(
+      (row) => typeof row.object_name !== "string" || !/demo/i.test(row.object_name),
+    );
+    const row = preferredRow ?? data[0];
+
+    if (!row?.server_url) {
+      return fallbackUrl
+        ? {
+            id: "env-fallback",
+            url: fallbackUrl,
+            label: "SECOND_LIFE_DELIVERY_URL fallback",
+            lastSeenAt: null,
+          }
+        : null;
+    }
+
     return {
-      id: data.id as string,
-      url: data.server_url as string,
-      label: `${data.object_name ?? "Second Life delivery server"}${data.region_name ? ` @ ${data.region_name}` : ""}`,
-      lastSeenAt: data.last_seen_at as string | null,
+      id: row.id as string,
+      url: row.server_url as string,
+      label: `${row.object_name ?? "Second Life delivery server"}${row.region_name ? ` @ ${row.region_name}` : ""}`,
+      lastSeenAt: row.last_seen_at as string | null,
     };
   }
 

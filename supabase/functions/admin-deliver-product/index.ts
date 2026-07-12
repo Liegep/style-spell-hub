@@ -23,14 +23,19 @@ async function getActiveDeliveryUrl(
 ) {
   const { data, error } = await supabase
     .from("second_life_delivery_servers")
-    .select("server_url")
+    .select("server_url,object_name")
     .eq("active", true)
     .order("last_seen_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(20);
 
-  if (!error && data?.server_url) {
-    return data.server_url as string;
+  if (!error && data?.length) {
+    const preferredRow = data.find(
+      (row) => typeof row.object_name !== "string" || !/demo/i.test(row.object_name),
+    );
+
+    if (preferredRow?.server_url) {
+      return preferredRow.server_url as string;
+    }
   }
 
   return fallbackUrl;
