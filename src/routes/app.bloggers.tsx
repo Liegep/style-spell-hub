@@ -575,7 +575,7 @@ function BloggerDossierModal({
             ) : null}
 
             {state === "ready" ? (
-              <div className="grid gap-6 xl:grid-cols-2">
+              <div className="grid gap-6">
                 <HistoryPanel title={tr("Recent claims")} empty={tr("no products claimed yet")}>
                   {claims.map((claim) => (
                     <HistoryRow
