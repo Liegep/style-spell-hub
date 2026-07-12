@@ -118,10 +118,17 @@ function AdminDash() {
   const { section } = Route.useSearch();
   const initialData = Route.useLoaderData();
   const uiLang = (location.search as { uiLang?: string } | undefined)?.uiLang;
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const tab: Tab = section ?? "overview";
   const setTab = (v: Tab) =>
     navigate({ search: { uiLang, section: v === "overview" ? undefined : v } });
-  const meta = TITLES[tab] ?? TITLES.overview!;
+  const metaSource = TITLES[tab] ?? TITLES.overview!;
+  const meta = {
+    eyebrow: tr(metaSource.eyebrow),
+    title: tr(metaSource.title),
+    note: tr(metaSource.note),
+  };
   const [reviewQueue, setReviewQueue] = useState<ReviewQueueItem[]>(initialData.reviewQueue);
   const [reviewFilter, setReviewFilter] = useState<SubmissionStatus | "all">("pending");
   const [reviewingId, setReviewingId] = useState<string | null>(null);
@@ -525,6 +532,9 @@ function Overview({
 }
 
 function Products() {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
+
   return (
     <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4">
       {products.map((p) => {
@@ -535,16 +545,16 @@ function Products() {
             <img src={p.img} alt={p.name} loading="lazy" className="aspect-[4/5] w-full object-cover" />
             <div className="p-5">
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-                Added {p.added}
+                {tr("Added")} {p.added.replace("days ago", tr("days ago"))}
               </div>
               <h3 className="mt-1 font-display text-2xl">{p.name}</h3>
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm">{p.claims} claims</span>
+                <span className="text-sm">{p.claims} {tr("claims")}</span>
                 <span className={cn(
                   "rounded-full px-2 py-1 font-mono text-[9px] uppercase tracking-[0.25em]",
                   danger ? "bg-[var(--brand-magenta)] text-white" : "bg-foreground/10",
                 )}>
-                  {p.expires}
+                  {p.expires.replace("days", tr("days"))}
                 </span>
               </div>
               {/* Timeline bar */}
@@ -1744,6 +1754,8 @@ function SentNewsletterCampaigns({ campaigns }: { campaigns: NewsletterCampaignW
 }
 
 function Locations() {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const locs = [
     { sim: "Love Potion Mainstore",      region: "Pink Atoll",      visitors: 1240, traffic: "high"   },
     { sim: "Velvet Pose Studio",         region: "Ivory Bay",       visitors: 412,  traffic: "medium" },
@@ -1757,21 +1769,21 @@ function Locations() {
       {locs.map((l, i) => (
         <GlassCard key={l.sim} tone={i % 3 === 1 ? "pink" : "light"} className="p-6">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            SLURL · sim
+            {tr("SLURL · sim")}
           </div>
           <h3 className="mt-1 font-display text-2xl leading-tight">{l.sim}</h3>
           <div className="mt-1 text-sm text-foreground/70">{l.region}</div>
           <div className="mt-5 flex items-end justify-between">
             <div>
               <div className="font-display text-3xl">{l.visitors}</div>
-              <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/60">visitors / 7d</div>
+              <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/60">{tr("visitors / 7d")}</div>
             </div>
             <span className={cn(
               "rounded-full px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em]",
               l.traffic === "high"   ? "bg-[var(--brand-magenta)] text-white" :
               l.traffic === "medium" ? "bg-[var(--brand-rose)] text-white"    :
                                        "bg-foreground/10 text-foreground/70",
-            )}>{l.traffic}</span>
+            )}>{tr(l.traffic)}</span>
           </div>
         </GlassCard>
       ))}
@@ -1780,6 +1792,8 @@ function Locations() {
 }
 
 function Preferences() {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const prefs = [
     { k: "Post frequency",         v: "1 / month",   o: ["1 / month", "2 / month", "1 / week"] },
     { k: "Auto-archive after",     v: "90 days",     o: ["30 days", "60 days", "90 days"] },
@@ -1793,10 +1807,10 @@ function Preferences() {
         <GlassCard key={p.k} tone={i % 2 === 0 ? "light" : "pink"} className="flex items-center justify-between gap-6 p-6">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">Nº 0{i + 1}</div>
-            <h3 className="mt-1 font-display text-xl">{p.k}</h3>
+            <h3 className="mt-1 font-display text-xl">{tr(p.k)}</h3>
           </div>
           <select className="rounded-full border border-foreground/30 bg-background/70 px-4 py-2 font-mono text-xs" defaultValue={p.v}>
-            {p.o.map(opt => <option key={opt}>{opt}</option>)}
+            {p.o.map((opt) => <option key={opt}>{tr(opt)}</option>)}
           </select>
         </GlassCard>
       ))}
@@ -1825,6 +1839,8 @@ function Subscribers({
   initialError: string;
   initialSubscribers: NewsletterSubscriber[];
 }) {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>(initialSubscribers);
   const [state, setState] = useState<"loading" | "ready" | "saving" | "error">(initialError ? "error" : "ready");
   const [error, setError] = useState(initialError);
@@ -1840,7 +1856,7 @@ function Subscribers({
       setError("");
     } catch (loadError) {
       console.error("[Subscribers] failed to load subscribers", loadError);
-      setError(loadError instanceof Error ? loadError.message : "Could not load subscribers.");
+      setError(loadError instanceof Error ? loadError.message : tr("Could not load subscribers."));
       setState("error");
     }
   }
@@ -1852,7 +1868,7 @@ function Subscribers({
       await loadSubscribers();
     } catch (toggleError) {
       console.error("[Subscribers] failed to update subscriber", toggleError);
-      setError(toggleError instanceof Error ? toggleError.message : "Could not update subscriber.");
+      setError(toggleError instanceof Error ? toggleError.message : tr("Could not update subscriber."));
       setState("error");
     }
   }
@@ -1862,11 +1878,11 @@ function Subscribers({
       <GlassCard tone="pink" className="md:col-span-1 p-6">
         <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">TOTAL</div>
         <div className="mt-2 font-display text-6xl leading-none">{subscribers.length}</div>
-        <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">subscribers</div>
+        <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">{tr("subscribers")}</div>
         <div className="mt-6 space-y-2 text-sm">
-          <div className="flex justify-between"><span>Active</span><span className="font-mono">{active.length}</span></div>
-          <div className="flex justify-between"><span>Paused</span><span className="font-mono">{paused}</span></div>
-          <div className="flex justify-between"><span>Source</span><span className="font-mono">SL + CSV</span></div>
+          <div className="flex justify-between"><span>{tr("Active")}</span><span className="font-mono">{active.length}</span></div>
+          <div className="flex justify-between"><span>{tr("Paused")}</span><span className="font-mono">{paused}</span></div>
+          <div className="flex justify-between"><span>{tr("Source")}</span><span className="font-mono">SL + CSV</span></div>
         </div>
       </GlassCard>
       <GlassCard className="md:col-span-3 overflow-x-auto p-0">
@@ -1878,37 +1894,37 @@ function Subscribers({
         <table className="w-full text-sm">
           <thead className="border-b border-foreground/10">
             <tr className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-              <th className="px-6 py-4 text-left">Name</th>
+              <th className="px-6 py-4 text-left">{tr("Name")}</th>
               <th className="px-6 py-4 text-left">SL UUID</th>
-              <th className="px-6 py-4 text-left">Lang</th>
-              <th className="px-6 py-4 text-left">Status</th>
-              <th className="px-6 py-4 text-right">Action</th>
+              <th className="px-6 py-4 text-left">{tr("Lang")}</th>
+              <th className="px-6 py-4 text-left">{tr("Status")}</th>
+              <th className="px-6 py-4 text-right">{tr("Action")}</th>
             </tr>
           </thead>
           <tbody>
             {state === "loading" ? (
               <tr>
                 <td colSpan={5} className="px-6 py-10 text-center font-hand text-2xl text-[var(--brand-magenta)]">
-                  loading subscribers
+                  {tr("loading subscribers")}
                 </td>
               </tr>
             ) : subscribers.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-6 py-10 text-center font-hand text-2xl text-[var(--brand-magenta)]">
-                  no subscribers yet
+                  {tr("No subscribers yet.")}
                 </td>
               </tr>
             ) : subscribers.map((subscriber) => (
               <tr key={subscriber.id} className="border-b border-foreground/5 hover:bg-foreground/5">
                 <td className="px-6 py-4">
                   <div className="font-display text-lg">
-                    {subscriber.display_name || subscriber.sl_avatar_name || subscriber.email || "Second Life Resident"}
+                    {subscriber.display_name || subscriber.sl_avatar_name || subscriber.email || tr("Second Life Resident")}
                   </div>
                   <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/45">
                     {subscriber.source}
                   </div>
                 </td>
-                <td className="px-6 py-4 font-mono text-[10px] text-foreground/60">{subscriber.sl_avatar_uuid ?? "missing"}</td>
+                <td className="px-6 py-4 font-mono text-[10px] text-foreground/60">{subscriber.sl_avatar_uuid ?? tr("missing")}</td>
                 <td className="px-6 py-4 font-mono text-xs uppercase">{subscriber.language_preference}</td>
                 <td className="px-6 py-4">
                   <span className={cn(
@@ -1917,7 +1933,7 @@ function Subscribers({
                       ? "bg-green-50 text-green-700"
                       : "bg-foreground/5 text-foreground/50",
                   )}>
-                    {subscriber.is_active && !subscriber.unsubscribed_at ? "active" : "paused"}
+                    {subscriber.is_active && !subscriber.unsubscribed_at ? tr("active") : tr("paused")}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
@@ -1927,7 +1943,7 @@ function Subscribers({
                     onClick={() => void onToggle(subscriber)}
                     className="rounded-full border border-foreground/15 px-4 py-2 font-mono text-[9px] uppercase tracking-[0.22em] transition hover:bg-foreground hover:text-background disabled:opacity-60"
                   >
-                    {subscriber.is_active ? "pause" : "reactivate"}
+                    {subscriber.is_active ? tr("pause") : tr("reactivate")}
                   </button>
                 </td>
               </tr>

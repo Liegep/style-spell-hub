@@ -218,7 +218,7 @@ export function ApplicationFormBuilder({
                 !admissionsOpen && "bg-foreground text-background",
               )}
             >
-              {admissionsOpen ? "ON" : "OFF"}
+              {admissionsOpen ? tr("ON") : tr("OFF")}
             </span>
             <span>
               {admissionsState === "saving" ? tr("Saving...") : tr(admissionsOpen ? "Close admissions" : "Open admissions")}
@@ -277,12 +277,12 @@ export function ApplicationFormBuilder({
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-              Form builder
+              {tr("Form builder")}
             </div>
-            <h3 className="mt-2 font-display text-3xl leading-none">Question stack.</h3>
+            <h3 className="mt-2 font-display text-3xl leading-none">{tr("Question stack.")}</h3>
           </div>
           <span className="inline-flex min-w-[88px] items-center justify-center whitespace-nowrap rounded-full bg-white/70 px-4 py-2 font-mono text-[9px] uppercase tracking-[0.18em] text-foreground/55">
-            {publishedCount} live
+            {publishedCount} {tr("live")}
           </span>
         </div>
 
@@ -294,16 +294,16 @@ export function ApplicationFormBuilder({
               onClick={() => addField(type.value)}
               className="flex items-center justify-between rounded-full border border-white/70 bg-white/50 px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.25em] text-foreground/70 transition hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]"
             >
-              {type.label}
+              {tr(type.label)}
               <Plus className="h-4 w-4" />
             </button>
           ))}
         </div>
 
         <div className="mt-8 rounded-2xl border border-white/70 bg-white/50 p-4">
-          <HandwrittenNote>publish the spell</HandwrittenNote>
+          <HandwrittenNote>{tr("publish the spell")}</HandwrittenNote>
           <p className="mt-3 text-sm text-foreground/60">
-            Published questions appear on the public application page. You can remove every question and publish a clean, empty form.
+            {tr("Published questions appear on the public application page. You can remove every question and publish a clean, empty form.")}
           </p>
           <button
             type="button"
@@ -312,7 +312,7 @@ export function ApplicationFormBuilder({
             className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-background transition hover:bg-[var(--brand-magenta)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
-            {state === "saving" ? "Publishing..." : "Publish form"}
+            {state === "saving" ? tr("Publishing...") : tr("Publish form")}
           </button>
           <button
             type="button"
@@ -321,7 +321,7 @@ export function ApplicationFormBuilder({
             className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[var(--brand-magenta)] bg-white/60 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--brand-magenta)] transition hover:bg-[var(--brand-magenta)] hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
           >
             <Trash2 className="h-4 w-4" />
-            {state === "saving" ? "Clearing..." : "Clear and publish empty form"}
+            {state === "saving" ? tr("Clearing...") : tr("Clear and publish empty form")}
           </button>
           {message ? (
             <div
@@ -342,20 +342,20 @@ export function ApplicationFormBuilder({
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/55">
-              Live application form
+              {tr("Live application form")}
             </div>
-            <h3 className="mt-2 font-display text-4xl leading-none">Build the gate.</h3>
+            <h3 className="mt-2 font-display text-4xl leading-none">{tr("Build the gate.")}</h3>
           </div>
           {state === "loading" ? (
-            <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-foreground/45">Loading...</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-foreground/45">{tr("Loading...")}</span>
           ) : null}
         </div>
 
         <div className="mt-8 grid gap-4">
           {fields.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-foreground/15 bg-background/40 p-8 text-center">
-              <HandwrittenNote>clean slate</HandwrittenNote>
-              <p className="mt-3 text-sm text-foreground/55">No questions are in this form. Add one on the left when you are ready.</p>
+              <HandwrittenNote>{tr("clean slate")}</HandwrittenNote>
+              <p className="mt-3 text-sm text-foreground/55">{tr("No questions are in this form. Add one on the left when you are ready.")}</p>
             </div>
           ) : null}
           {fields.map((field, index) => {
@@ -375,24 +375,24 @@ export function ApplicationFormBuilder({
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <button type="button" onClick={() => setSelectedKey(field.field_key)} className="text-left">
                     <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/45">
-                      {String(index + 1).padStart(2, "0")} · {field.field_type.replace("_", " ")}
+                      {String(index + 1).padStart(2, "0")} · {tr(field.field_type.replace("_", " "))}
                     </div>
-                    <h4 className="mt-1 font-display text-2xl">{field.label || "Untitled question"}</h4>
+                    <h4 className="mt-1 font-display text-2xl">{field.label || tr("Untitled question")}</h4>
                   </button>
                   <div className="flex flex-wrap gap-2">
-                    <IconButton label="Move up" onClick={() => moveField(field.field_key, -1)} disabled={index === 0}>
+                    <IconButton label={tr("Move up")} onClick={() => moveField(field.field_key, -1)} disabled={index === 0}>
                       <ArrowUp className="h-4 w-4" />
                     </IconButton>
-                    <IconButton label="Move down" onClick={() => moveField(field.field_key, 1)} disabled={index === fields.length - 1}>
+                    <IconButton label={tr("Move down")} onClick={() => moveField(field.field_key, 1)} disabled={index === fields.length - 1}>
                       <ArrowDown className="h-4 w-4" />
                     </IconButton>
                     <IconButton
-                      label={field.enabled ? "Hide" : "Show"}
+                      label={field.enabled ? tr("Hide") : tr("Show")}
                       onClick={() => updateField(field.field_key, { enabled: !field.enabled })}
                     >
                       {field.enabled ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                     </IconButton>
-                    <IconButton label="Remove" onClick={() => removeField(field.field_key)}>
+                    <IconButton label={tr("Remove")} onClick={() => removeField(field.field_key)}>
                       <Trash2 className="h-4 w-4" />
                     </IconButton>
                   </div>
@@ -401,12 +401,12 @@ export function ApplicationFormBuilder({
                 {active ? (
                   <div className="mt-5 grid gap-4 md:grid-cols-2">
                     <BuilderInput
-                      label="Question label"
+                      label={tr("Question label")}
                       value={field.label}
                       onChange={(value) => updateField(field.field_key, { label: value })}
                     />
                     <label>
-                      <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/55">Field type</span>
+                      <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/55">{tr("Field type")}</span>
                       <select
                         value={field.field_type}
                         onChange={(event) => updateField(field.field_key, { field_type: event.target.value as ApplicationFieldType })}
@@ -414,25 +414,25 @@ export function ApplicationFormBuilder({
                       >
                         {FIELD_TYPES.map((type) => (
                           <option key={type.value} value={type.value}>
-                            {type.label}
+                            {tr(type.label)}
                           </option>
                         ))}
                       </select>
                     </label>
                     <BuilderInput
-                      label="Placeholder"
+                      label={tr("Placeholder")}
                       value={field.placeholder ?? ""}
                       onChange={(value) => updateField(field.field_key, { placeholder: value })}
                     />
                     <BuilderInput
-                      label="Help text"
+                      label={tr("Help text")}
                       value={field.help_text ?? ""}
                       onChange={(value) => updateField(field.field_key, { help_text: value })}
                     />
                     {field.field_type === "select" || field.field_type === "checkbox" ? (
                       <label className="md:col-span-2">
                         <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/55">
-                          Options, one per line
+                          {tr("Options, one per line")}
                         </span>
                         <textarea
                           value={field.options.join("\n")}
@@ -449,7 +449,7 @@ export function ApplicationFormBuilder({
                         onChange={(event) => updateField(field.field_key, { required: event.target.checked })}
                         className="h-4 w-4 accent-[var(--brand-magenta)]"
                       />
-                      Required
+                      {tr("Required")}
                     </label>
                   </div>
                 ) : null}
