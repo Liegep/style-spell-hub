@@ -38,11 +38,26 @@ type StudioTab = "products" | "archived" | "assets" | "content";
 type EditorMode = { type: "create" } | { type: "edit"; id: string };
 
 export const Route = createFileRoute("/app/content-studio")({
+  ssr: false,
+  loader: async () => {
+    try {
+      return {
+        products: await getProductSummaries(),
+        productsState: "live" as const,
+      };
+    } catch {
+      return {
+        products: [] as ProductSummary[],
+        productsState: "fallback" as const,
+      };
+    }
+  },
   component: ContentStudioPage,
 });
 
 function ContentStudioPage() {
   const location = useLocation();
+  const initialData = Route.useLoaderData();
   const [tab, setTab] = useState<StudioTab>("products");
   const [editor, setEditor] = useState<EditorMode | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -88,6 +103,8 @@ function ContentStudioPage() {
       <div className="mt-10">
         {tab === "products" && (
           <ProductsPanel
+            initialProducts={initialData.products}
+            initialState={initialData.productsState}
             refreshKey={refreshKey}
             view="active"
             title="Product releases"
@@ -98,6 +115,8 @@ function ContentStudioPage() {
         )}
         {tab === "archived" && (
           <ProductsPanel
+            initialProducts={initialData.products}
+            initialState={initialData.productsState}
             refreshKey={refreshKey}
             view="archived"
             title="Archived releases"
@@ -125,6 +144,8 @@ function ContentStudioPage() {
 }
 
 function ProductsPanel({
+  initialProducts,
+  initialState,
   refreshKey,
   view,
   title,
@@ -132,6 +153,8 @@ function ProductsPanel({
   emptyBody,
   onEdit,
 }: {
+  initialProducts: ProductSummary[];
+  initialState: "live" | "fallback";
   refreshKey: number;
   view: "active" | "archived";
   title: string;
@@ -139,10 +162,11 @@ function ProductsPanel({
   emptyBody: string;
   onEdit: (id: string) => void;
 }) {
-  const [productRows, setProductRows] = useState<ProductSummary[]>([]);
-  const [state, setState] = useState<"loading" | "live" | "fallback">("loading");
+  const [productRows, setProductRows] = useState<ProductSummary[]>(initialProducts);
+  const [state, setState] = useState<"loading" | "live" | "fallback">(initialState);
 
   useEffect(() => {
+    if (refreshKey === 0) return;
     let isMounted = true;
 
     async function loadProducts() {

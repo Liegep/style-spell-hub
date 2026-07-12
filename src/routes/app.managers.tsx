@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Save, Trash2, UserPlus } from "lucide-react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
@@ -18,14 +18,29 @@ type ManagerFilter = "all" | "admin" | "super" | "inactive";
 type EditorMode = { type: "create" } | { type: "edit"; manager: ManagerListItem };
 
 export const Route = createFileRoute("/app/managers")({
+  ssr: false,
+  loader: async () => {
+    try {
+      return {
+        managers: await listManagers(),
+        error: "",
+      };
+    } catch (error) {
+      return {
+        managers: [] as ManagerListItem[],
+        error: error instanceof Error ? error.message : "Could not load managers.",
+      };
+    }
+  },
   component: ManagersPage,
 });
 
 function ManagersPage() {
+  const initialData = Route.useLoaderData();
   const [filter, setFilter] = useState<ManagerFilter>("all");
-  const [managers, setManagers] = useState<ManagerListItem[]>([]);
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
-  const [message, setMessage] = useState("");
+  const [managers, setManagers] = useState<ManagerListItem[]>(initialData.managers);
+  const [state, setState] = useState<"loading" | "ready" | "error">(initialData.error ? "error" : "ready");
+  const [message, setMessage] = useState(initialData.error);
   const [editor, setEditor] = useState<EditorMode | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -43,10 +58,6 @@ function ManagersPage() {
       setState("error");
     }
   }
-
-  useEffect(() => {
-    void loadManagers();
-  }, []);
 
   async function removeManager(manager: ManagerListItem) {
     if (confirmRemoveId !== manager.id) {

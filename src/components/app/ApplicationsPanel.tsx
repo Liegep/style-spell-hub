@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { cn } from "@/lib/utils";
@@ -23,9 +23,19 @@ type LoginSummary = {
   slAvatarUuid: string | null;
 };
 
-export function ApplicationsPanel() {
-  const [applications, setApplications] = useState<BloggerApplication[]>([]);
-  const [formFields, setFormFields] = useState<ApplicationFormField[]>([]);
+type ApplicationsPanelProps = {
+  initialApplications?: BloggerApplication[];
+  initialFormFields?: ApplicationFormField[];
+  initialError?: string;
+};
+
+export function ApplicationsPanel({
+  initialApplications = [],
+  initialFormFields = [],
+  initialError = "",
+}: ApplicationsPanelProps) {
+  const [applications, setApplications] = useState<BloggerApplication[]>(initialApplications);
+  const [formFields, setFormFields] = useState<ApplicationFormField[]>(initialFormFields);
   const [filter, setFilter] = useState<ApplicationStatus | "all">("pending");
   const [selected, setSelected] = useState<BloggerApplication | null>(null);
   const [comment, setComment] = useState("");
@@ -37,10 +47,16 @@ export function ApplicationsPanel() {
   const [loginSummary, setLoginSummary] = useState<LoginSummary | null>(null);
   const [rejoinHistory, setRejoinHistory] = useState<BloggerRejoinHistory | null>(null);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
-  const [state, setState] = useState<"idle" | "loading" | "reviewing" | "error">("loading");
-  const [error, setError] = useState("");
+  const [state, setState] = useState<"idle" | "loading" | "reviewing" | "error">(initialError ? "error" : "idle");
+  const [error, setError] = useState(initialError);
+  const didUseInitialApplications = useRef(false);
 
   useEffect(() => {
+    if (!didUseInitialApplications.current) {
+      didUseInitialApplications.current = true;
+      if (filter === "pending") return;
+    }
+
     let mounted = true;
 
     async function loadApplications() {

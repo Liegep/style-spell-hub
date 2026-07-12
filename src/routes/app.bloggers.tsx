@@ -20,14 +20,29 @@ import { notifySecondLifeQuietly } from "@/integrations/supabase/messages";
 type BloggerFilter = "all" | "active" | "friends" | "blocked" | "vacation" | "missing_uuid";
 
 export const Route = createFileRoute("/app/bloggers")({
+  ssr: false,
+  loader: async () => {
+    try {
+      return {
+        rows: await listBloggers(),
+        error: "",
+      };
+    } catch (error) {
+      return {
+        rows: [] as BloggerListItem[],
+        error: error instanceof Error ? error.message : "Could not load bloggers.",
+      };
+    }
+  },
   component: BloggersPage,
 });
 
 function BloggersPage() {
+  const initialData = Route.useLoaderData();
   const [filter, setFilter] = useState<BloggerFilter>("active");
-  const [rows, setRows] = useState<BloggerListItem[]>([]);
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [rows, setRows] = useState<BloggerListItem[]>(initialData.rows);
+  const [state, setState] = useState<"loading" | "ready" | "error">(initialData.error ? "error" : "ready");
+  const [errorMessage, setErrorMessage] = useState(initialData.error);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedBlogger, setSelectedBlogger] = useState<BloggerListItem | null>(null);
   const [statusAction, setStatusAction] = useState<Record<string, "idle" | "saving" | "saved" | "error">>({});
@@ -46,8 +61,6 @@ function BloggersPage() {
   }
 
   useEffect(() => {
-    void loadRows();
-
     const onBloggersUpdated = () => void loadRows();
     window.addEventListener("bloggers-updated", onBloggersUpdated);
     window.addEventListener("focus", onBloggersUpdated);

@@ -69,6 +69,7 @@ function getProductClaimState(claim?: BloggerProductClaimSummary, submission?: B
 }
 
 export const Route = createFileRoute("/app/blogger")({
+  ssr: false,
   validateSearch: (s: Record<string, unknown>): { section?: Tab; tour?: "blogger" } => {
     const rawSection = typeof s.section === "string" ? s.section : undefined;
     const validSections: Tab[] = ["home", "products", "posts", "goodies", "inbox", "profile"];
@@ -76,6 +77,50 @@ export const Route = createFileRoute("/app/blogger")({
       section: validSections.includes(rawSection as Tab) ? (rawSection as Tab) : undefined,
       tour: s.tour === "blogger" || rawSection === "help" ? "blogger" : undefined,
     };
+  },
+  loader: async () => {
+    try {
+      const profile = await getCurrentProfile();
+      if (!profile?.id) {
+        return {
+          claims: [] as BloggerProductClaimSummary[],
+          goodies: [] as SharedResource[],
+          inboxUnreadCount: 0,
+          loadState: "fallback" as const,
+          products: [] as BloggerProduct[],
+          profile: null as AuthProfile | null,
+          submissions: [] as BloggerSubmissionSummary[],
+        };
+      }
+
+      const [liveProducts, liveSubmissions, liveClaims, sharedGoodies, inboxMessages] = await Promise.all([
+        listAvailableProductsForBlogger(),
+        listSubmissionSummariesForBlogger(profile.id),
+        listProductClaimsForBlogger(profile.id).catch(() => [] as BloggerProductClaimSummary[]),
+        listSharedResources(),
+        listInboxMessages(profile.id),
+      ]);
+
+      return {
+        claims: liveClaims,
+        goodies: sharedGoodies,
+        inboxUnreadCount: countPersonalUnread(inboxMessages),
+        loadState: "ready" as const,
+        products: liveProducts,
+        profile,
+        submissions: liveSubmissions,
+      };
+    } catch {
+      return {
+        claims: [] as BloggerProductClaimSummary[],
+        goodies: [] as SharedResource[],
+        inboxUnreadCount: 0,
+        loadState: "fallback" as const,
+        products: [] as BloggerProduct[],
+        profile: null as AuthProfile | null,
+        submissions: [] as BloggerSubmissionSummary[],
+      };
+    }
   },
   component: BloggerDash,
 });
@@ -110,6 +155,7 @@ function countPersonalUnread(messages: InboxMessage[]) {
 function BloggerDash() {
   const navigate = useNavigate({ from: "/app/blogger" });
   const language = useLang();
+  const initialData = Route.useLoaderData();
   const { section, tour } = Route.useSearch();
   const tab: Tab = section ?? "home";
   const setTab = (v: Tab) =>
@@ -130,20 +176,24 @@ function BloggerDash() {
   };
 
   // Profile state (lifted so overlay note appears across Overview too)
-  const [photo, setPhoto] = useState<string>(bloggerAvatar);
-  const [overlayNote, setOverlayNote] = useState<string>("on a velvet night ♡");
-  const [status, setStatus] = useState<Status>("active");
-  const [profileId, setProfileId] = useState<string | null>(null);
-  const [profile, setProfile] = useState<AuthProfile | null>(null);
-  const [productRows, setProductRows] = useState<Product[]>([]);
-  const [submissions, setSubmissions] = useState<BloggerSubmissionSummary[]>([]);
-  const [claims, setClaims] = useState<BloggerProductClaimSummary[]>([]);
-  const [loadState, setLoadState] = useState<"loading" | "ready" | "fallback">("loading");
+  const [photo, setPhoto] = useState<string>(getSafeAvatarUrl(initialData.profile?.avatar_url));
+  const [overlayNote, setOverlayNote] = useState<string>(initialData.profile?.status_message || "");
+  const [status, setStatus] = useState<Status>(mapAvailabilityToStatus(initialData.profile?.availability_status));
+  const [profileId] = useState<string | null>(initialData.profile?.id ?? null);
+  const [profile, setProfile] = useState<AuthProfile | null>(initialData.profile);
+  const [productRows, setProductRows] = useState<Product[]>(
+    initialData.loadState === "ready"
+      ? initialData.products.map((product) => mapProductForUi(product, language))
+      : products.map((product) => mapMockProductForUi(product, language)),
+  );
+  const [submissions, setSubmissions] = useState<BloggerSubmissionSummary[]>(initialData.submissions);
+  const [claims, setClaims] = useState<BloggerProductClaimSummary[]>(initialData.claims);
+  const [loadState] = useState<"loading" | "ready" | "fallback">(initialData.loadState);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quickNoteState, setQuickNoteState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [goodies, setGoodies] = useState<SharedResource[]>([]);
-  const [mailUnreadCount, setMailUnreadCount] = useState(0);
-  const [hasLeftProgram, setHasLeftProgram] = useState(false);
+  const [goodies] = useState<SharedResource[]>(initialData.goodies);
+  const [mailUnreadCount, setMailUnreadCount] = useState(initialData.inboxUnreadCount);
+  const [hasLeftProgram, setHasLeftProgram] = useState(initialData.profile?.account_status === "left");
 
   const displayName = profile?.display_name || profile?.full_name || profile?.email || "Blogger";
   const isAccountBlocked = profile?.account_status === "blocked";
@@ -190,52 +240,6 @@ function BloggerDash() {
       }, {}),
     [claims],
   );
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadBloggerData() {
-      try {
-        const profile = await getCurrentProfile();
-        if (!mounted || !profile?.id) return;
-        setProfileId(profile.id);
-        setProfile(profile);
-        setHasLeftProgram(profile.account_status === "left");
-        setPhoto(getSafeAvatarUrl(profile.avatar_url));
-        setOverlayNote(profile.status_message || "");
-        setStatus(mapAvailabilityToStatus(profile.availability_status));
-
-        const [liveProducts, liveSubmissions, liveClaims, sharedGoodies, inboxMessages] = await Promise.all([
-          listAvailableProductsForBlogger(),
-          listSubmissionSummariesForBlogger(profile.id),
-          listProductClaimsForBlogger(profile.id).catch((error) => {
-            console.error("[Blogger] Failed to load product claims", error);
-            return [] as BloggerProductClaimSummary[];
-          }),
-          listSharedResources(),
-          listInboxMessages(profile.id)
-        ]);
-
-        if (!mounted) return;
-        setProductRows(liveProducts.map((product) => mapProductForUi(product, language)));
-        setSubmissions(liveSubmissions);
-        setClaims(liveClaims);
-        setGoodies(sharedGoodies);
-        setMailUnreadCount(countPersonalUnread(inboxMessages));
-        setLoadState("ready");
-      } catch (error) {
-        console.error("[Blogger] Failed to load live products", error);
-        if (!mounted) return;
-        setProductRows(products.map((product) => mapMockProductForUi(product, language)));
-        setLoadState("fallback");
-      }
-    }
-
-    void loadBloggerData();
-    return () => {
-      mounted = false;
-    };
-  }, [language]);
 
   useEffect(() => {
     if (!profileId) return;

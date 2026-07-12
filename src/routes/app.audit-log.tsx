@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import {
@@ -15,69 +15,59 @@ import { getCurrentProfile, type AuthProfile } from "@/integrations/supabase/aut
 import type { AuditLog, NotificationStatus, SecondLifeDropbox } from "@/integrations/supabase/database.types";
 
 export const Route = createFileRoute("/app/audit-log")({
+  ssr: false,
+  loader: async () => {
+    let currentProfile: AuthProfile | null = null;
+    let logs: AuditLog[] = [];
+    let notificationHealth: NotificationHealth | null = null;
+    let dropboxes: SecondLifeDropbox[] = [];
+    let error = "";
+    let dropboxError = "";
+
+    try {
+      const [profile, rows, health] = await Promise.all([getCurrentProfile(), listAuditLogs(), getNotificationHealth()]);
+      currentProfile = profile;
+      logs = rows;
+      notificationHealth = health;
+
+      if (profile?.role === "super_admin") {
+        try {
+          dropboxes = await listSecondLifeDropboxes();
+        } catch (dropboxLoadError) {
+          dropboxError =
+            dropboxLoadError instanceof Error
+              ? dropboxLoadError.message
+              : "Could not load Second Life dropboxes.";
+        }
+      }
+    } catch (loadError) {
+      error = loadError instanceof Error ? loadError.message : "Could not load the audit log yet.";
+    }
+
+    return {
+      currentProfile,
+      dropboxes,
+      dropboxError,
+      error,
+      logs,
+      notificationHealth,
+    };
+  },
   component: AuditLogPage,
 });
 
 function AuditLogPage() {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [notificationHealth, setNotificationHealth] = useState<NotificationHealth | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  const initialData = Route.useLoaderData();
+  const [logs] = useState<AuditLog[]>(initialData.logs);
+  const [notificationHealth, setNotificationHealth] = useState<NotificationHealth | null>(initialData.notificationHealth);
+  const [isLoading] = useState(false);
+  const [error] = useState(initialData.error);
   const [automationError, setAutomationError] = useState("");
   const [automationNotice, setAutomationNotice] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [currentProfile, setCurrentProfile] = useState<AuthProfile | null>(null);
-  const [dropboxes, setDropboxes] = useState<SecondLifeDropbox[]>([]);
-  const [dropboxError, setDropboxError] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadPage() {
-      setIsLoading(true);
-      setError("");
-      setDropboxError("");
-      try {
-        const [profile, rows, health] = await Promise.all([getCurrentProfile(), listAuditLogs(), getNotificationHealth()]);
-        if (!cancelled) {
-          setCurrentProfile(profile);
-          setLogs(rows);
-          setNotificationHealth(health);
-        }
-        if (profile?.role === "super_admin") {
-          try {
-            const nextDropboxes = await listSecondLifeDropboxes();
-            if (!cancelled) setDropboxes(nextDropboxes);
-          } catch (dropboxLoadError) {
-            console.error("[Audit Log] Failed to load Second Life dropboxes.", dropboxLoadError);
-            if (!cancelled) {
-              setDropboxError(
-                dropboxLoadError instanceof Error
-                  ? dropboxLoadError.message
-                  : "Could not load Second Life dropboxes.",
-              );
-            }
-          }
-        }
-      } catch (loadError) {
-        console.error("[Audit Log] Failed to load logs.", loadError);
-        if (!cancelled) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Could not load the audit log yet.",
-          );
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-
-    void loadPage();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const [currentProfile] = useState<AuthProfile | null>(initialData.currentProfile);
+  const [dropboxes] = useState<SecondLifeDropbox[]>(initialData.dropboxes);
+  const [dropboxError] = useState(initialData.dropboxError);
 
   async function refreshHealth() {
     setNotificationHealth(await getNotificationHealth());

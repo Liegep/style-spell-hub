@@ -5,8 +5,6 @@ import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_APPLICATION_FORM_FIELDS,
-  getBloggerAdmissionsSettings,
-  listApplicationFormFields,
   publishApplicationFormFields,
   updateBloggerAdmissionsSettings,
 } from "@/integrations/supabase/application-form";
@@ -24,43 +22,32 @@ const FIELD_TYPES: Array<{ value: ApplicationFieldType; label: string }> = [
   { value: "date", label: "Date" },
 ];
 
-export function ApplicationFormBuilder() {
+type ApplicationFormBuilderProps = {
+  initialFields?: ApplicationFormField[];
+  initialSettings?: {
+    open: boolean;
+    rulesText: string;
+  };
+  initialError?: string;
+};
+
+export function ApplicationFormBuilder({
+  initialFields = DEFAULT_APPLICATION_FORM_FIELDS,
+  initialSettings = { open: true, rulesText: "" },
+  initialError = "",
+}: ApplicationFormBuilderProps) {
   const language = useLang();
   const tr = (value: string) => translateAppPhrase(value, language);
-  const [fields, setFields] = useState<ApplicationFormField[]>(DEFAULT_APPLICATION_FORM_FIELDS);
-  const [selectedKey, setSelectedKey] = useState(DEFAULT_APPLICATION_FORM_FIELDS[0]?.field_key ?? "");
+  const [fields, setFields] = useState<ApplicationFormField[]>(initialFields);
+  const [selectedKey, setSelectedKey] = useState(initialFields[0]?.field_key ?? "");
   const [scrollToKey, setScrollToKey] = useState("");
-  const [state, setState] = useState<"idle" | "loading" | "saving" | "saved" | "error">("loading");
-  const [admissionsOpen, setAdmissionsOpen] = useState(true);
-  const [rulesText, setRulesText] = useState("");
+  const [state, setState] = useState<"idle" | "loading" | "saving" | "saved" | "error">(initialError ? "error" : "idle");
+  const [admissionsOpen, setAdmissionsOpen] = useState(initialSettings.open);
+  const [rulesText, setRulesText] = useState(initialSettings.rulesText);
   const [admissionsState, setAdmissionsState] = useState<"idle" | "saving" | "error">("idle");
   const [admissionsMessage, setAdmissionsMessage] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(initialError);
   const fieldRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadFields() {
-      setState("loading");
-      setMessage("");
-      const [settings, rows] = await Promise.all([
-        getBloggerAdmissionsSettings(),
-        listApplicationFormFields({ includeDisabled: true }),
-      ]);
-      if (!mounted) return;
-      setAdmissionsOpen(settings.open);
-      setRulesText(settings.rulesText);
-      setFields(rows);
-      setSelectedKey(rows[0]?.field_key ?? "");
-      setState("idle");
-    }
-
-    void loadFields();
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   const selected = useMemo(
     () => fields.find((field) => field.field_key === selectedKey) ?? fields[0],

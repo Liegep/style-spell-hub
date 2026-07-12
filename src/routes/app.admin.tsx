@@ -1,5 +1,5 @@
 import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
@@ -54,9 +54,44 @@ function normalizeAdminSection(section: unknown): Tab | undefined {
 }
 
 export const Route = createFileRoute("/app/admin")({
+  ssr: false,
   validateSearch: (s: Record<string, unknown>): { section?: Tab } => ({
     section: normalizeAdminSection(s.section),
   }),
+  loader: async () => {
+    const profile = await getCurrentProfile();
+    const [reviewQueueResult, recipientsResult, sentResult, receivedResult, subscribersResult, campaignsResult] = await Promise.allSettled([
+      getReviewQueue("pending"),
+      listMessageRecipients(),
+      profile?.id ? listRecentSentMessages(profile.id) : Promise.resolve([]),
+      profile?.id ? listPersonalInboxMessages(profile.id) : Promise.resolve([]),
+      listNewsletterSubscribers(),
+      listNewsletterCampaignsWithStats(),
+    ]);
+    const received = receivedResult.status === "fulfilled" ? receivedResult.value : [];
+
+    return {
+      campaigns: campaignsResult.status === "fulfilled" ? campaignsResult.value : ([] as NewsletterCampaignWithStats[]),
+      composeError:
+        recipientsResult.status === "rejected" || sentResult.status === "rejected" || receivedResult.status === "rejected"
+          ? "Could not load mailbox tools."
+          : "",
+      received,
+      recipients: recipientsResult.status === "fulfilled" ? recipientsResult.value : ([] as MessageRecipient[]),
+      reviewQueue: reviewQueueResult.status === "fulfilled" ? reviewQueueResult.value : [],
+      reviewError:
+        reviewQueueResult.status === "rejected"
+          ? reviewQueueResult.reason instanceof Error
+            ? reviewQueueResult.reason.message
+            : "Could not load review queue."
+          : "",
+      mailUnreadCount: received.filter((message) => !message.read_at).length,
+      newsletterError:
+        subscribersResult.status === "rejected" || campaignsResult.status === "rejected" ? "Could not load newsletter." : "",
+      recent: sentResult.status === "fulfilled" ? sentResult.value : ([] as SentMessage[]),
+      subscribers: subscribersResult.status === "fulfilled" ? subscribersResult.value : ([] as NewsletterSubscriber[]),
+    };
+  },
   component: AdminDash,
 });
 
@@ -74,19 +109,21 @@ function AdminDash() {
   const navigate = useNavigate({ from: "/app/admin" });
   const location = useLocation();
   const { section } = Route.useSearch();
+  const initialData = Route.useLoaderData();
   const uiLang = (location.search as { uiLang?: string } | undefined)?.uiLang;
   const tab: Tab = section ?? "overview";
   const setTab = (v: Tab) =>
     navigate({ search: { uiLang, section: v === "overview" ? undefined : v } });
   const meta = TITLES[tab] ?? TITLES.overview!;
-  const [reviewQueue, setReviewQueue] = useState<ReviewQueueItem[]>([]);
+  const [reviewQueue, setReviewQueue] = useState<ReviewQueueItem[]>(initialData.reviewQueue);
   const [reviewFilter, setReviewFilter] = useState<SubmissionStatus | "all">("pending");
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [reviewMessage, setReviewMessage] = useState<Record<string, string>>({});
   const [reviewSent, setReviewSent] = useState<Record<string, SubmissionStatus>>({});
-  const [reviewError, setReviewError] = useState("");
-  const [mailUnreadCount, setMailUnreadCount] = useState(0);
+  const [reviewError, setReviewError] = useState(initialData.reviewError);
+  const [mailUnreadCount, setMailUnreadCount] = useState(initialData.mailUnreadCount);
   const [newsletterView, setNewsletterView] = useState<"compose" | "sent" | "subscribers">("compose");
+  const didUseInitialReviewQueue = useRef(false);
   const adminTabs: Array<{ id: Tab; label: string; sub: string }> = [];
   if (tab === "overview") {
     adminTabs.push({ id: "overview", label: "Overview", sub: "01" });
@@ -102,6 +139,11 @@ function AdminDash() {
   }
 
   useEffect(() => {
+    if (!didUseInitialReviewQueue.current) {
+      didUseInitialReviewQueue.current = true;
+      if (reviewFilter === "pending") return;
+    }
+
     let mounted = true;
 
     async function loadReviewQueue() {
@@ -136,7 +178,6 @@ function AdminDash() {
       }
     }
 
-    void loadMailUnreadCount();
     const handleMessagesUpdated = () => void loadMailUnreadCount();
     const handleFocus = () => void loadMailUnreadCount();
     window.addEventListener("messages-updated", handleMessagesUpdated);
@@ -242,13 +283,29 @@ function AdminDash() {
           />
         )}
         {tab === "products" && <Products />}
-        {tab === "inbox" && <Compose onUnreadChange={setMailUnreadCount} />}
+        {tab === "inbox" && (
+          <Compose
+            initialError={initialData.composeError}
+            initialReceived={initialData.received}
+            initialRecent={initialData.recent}
+            initialRecipients={initialData.recipients}
+            onUnreadChange={setMailUnreadCount}
+          />
+        )}
         {tab === "newsletter" && (
-          <Newsletter newsletterView={newsletterView} setNewsletterView={setNewsletterView} />
+          <Newsletter
+            initialCampaigns={initialData.campaigns}
+            initialError={initialData.newsletterError}
+            initialSubscribers={initialData.subscribers}
+            newsletterView={newsletterView}
+            setNewsletterView={setNewsletterView}
+          />
         )}
         {tab === "locations" && <Locations />}
         {tab === "preferences" && <Preferences />}
-        {tab === "subscribers" && <Subscribers />}
+        {tab === "subscribers" && (
+          <Subscribers initialError={initialData.newsletterError} initialSubscribers={initialData.subscribers} />
+        )}
       </div>
     </div>
   );
@@ -558,16 +615,28 @@ function FormBuilder() {
   );
 }
 
-function Compose({ onUnreadChange }: { onUnreadChange: (count: number) => void }) {
+function Compose({
+  initialError,
+  initialReceived,
+  initialRecent,
+  initialRecipients,
+  onUnreadChange,
+}: {
+  initialError: string;
+  initialReceived: InboxMessage[];
+  initialRecent: SentMessage[];
+  initialRecipients: MessageRecipient[];
+  onUnreadChange: (count: number) => void;
+}) {
   const [scope, setScope] = useState<MessageScope>("personal");
-  const [recipients, setRecipients] = useState<MessageRecipient[]>([]);
-  const [recipientId, setRecipientId] = useState("");
+  const [recipients, setRecipients] = useState<MessageRecipient[]>(initialRecipients);
+  const [recipientId, setRecipientId] = useState(initialRecipients[0]?.id ?? "");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [recent, setRecent] = useState<SentMessage[]>([]);
-  const [received, setReceived] = useState<InboxMessage[]>([]);
+  const [recent, setRecent] = useState<SentMessage[]>(initialRecent);
+  const [received, setReceived] = useState<InboxMessage[]>(initialReceived);
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(initialError);
   const [markingReadId, setMarkingReadId] = useState<string | null>(null);
   const [showAllReceived, setShowAllReceived] = useState(false);
   const [openThreadKey, setOpenThreadKey] = useState<string | null>(null);
@@ -644,36 +713,6 @@ function Compose({ onUnreadChange }: { onUnreadChange: (count: number) => void }
       }))
       .sort((a, b) => Date.parse(b.latestAt) - Date.parse(a.latestAt));
   }, [received, recent]);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadComposeData() {
-      try {
-        const profile = await getCurrentProfile();
-        const [recipientRows, sentRows, receivedRows] = await Promise.all([
-          listMessageRecipients(),
-          profile?.id ? listRecentSentMessages(profile.id) : Promise.resolve([]),
-          profile?.id ? listPersonalInboxMessages(profile.id) : Promise.resolve([]),
-        ]);
-        if (!mounted) return;
-        setRecipients(recipientRows);
-        setRecent(sentRows);
-        setReceived(receivedRows);
-        onUnreadChange(receivedRows.filter((message) => !message.read_at).length);
-        setRecipientId(recipientRows[0]?.id ?? "");
-      } catch (error) {
-        console.error("[Compose] failed to load", error);
-        if (!mounted) return;
-        setError(error instanceof Error ? error.message : "Could not load mailbox tools.");
-      }
-    }
-
-    void loadComposeData();
-    return () => {
-      mounted = false;
-    };
-  }, [onUnreadChange]);
 
   async function onMarkRead(messageId: string) {
     setMarkingReadId(messageId);
@@ -1125,22 +1164,30 @@ function NewsletterViewTabs({
 }
 
 function Newsletter({
+  initialCampaigns,
+  initialError,
+  initialSubscribers,
   newsletterView,
   setNewsletterView,
 }: {
+  initialCampaigns: NewsletterCampaignWithStats[];
+  initialError: string;
+  initialSubscribers: NewsletterSubscriber[];
   newsletterView: "compose" | "sent" | "subscribers";
   setNewsletterView: (view: "compose" | "sent" | "subscribers") => void;
 }) {
-  const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
-  const [campaigns, setCampaigns] = useState<NewsletterCampaignWithStats[]>([]);
+  const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>(initialSubscribers);
+  const [campaigns, setCampaigns] = useState<NewsletterCampaignWithStats[]>(initialCampaigns);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
   const [slTextureItemName, setSlTextureItemName] = useState("");
-  const [state, setState] = useState<"loading" | "ready" | "sending" | "importing" | "error">("loading");
+  const [state, setState] = useState<"loading" | "ready" | "sending" | "importing" | "error">(
+    initialError ? "error" : "ready",
+  );
   const [feedback, setFeedback] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(initialError);
 
   const activeSubscribers = subscribers.filter((subscriber) => subscriber.is_active && !subscriber.unsubscribed_at);
 
@@ -1160,10 +1207,6 @@ function Newsletter({
       setError(loadError instanceof Error ? loadError.message : "Could not load newsletter.");
     }
   }
-
-  useEffect(() => {
-    void loadNewsletter();
-  }, []);
 
   useEffect(() => {
     if (!imageFile) {
@@ -1678,10 +1721,16 @@ function formatPrettyDate(value: string | null) {
   }).format(date);
 }
 
-function Subscribers() {
-  const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
-  const [state, setState] = useState<"loading" | "ready" | "saving" | "error">("loading");
-  const [error, setError] = useState("");
+function Subscribers({
+  initialError,
+  initialSubscribers,
+}: {
+  initialError: string;
+  initialSubscribers: NewsletterSubscriber[];
+}) {
+  const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>(initialSubscribers);
+  const [state, setState] = useState<"loading" | "ready" | "saving" | "error">(initialError ? "error" : "ready");
+  const [error, setError] = useState(initialError);
 
   const active = subscribers.filter((subscriber) => subscriber.is_active && !subscriber.unsubscribed_at);
   const paused = subscribers.length - active.length;
@@ -1698,10 +1747,6 @@ function Subscribers() {
       setState("error");
     }
   }
-
-  useEffect(() => {
-    void loadSubscribers();
-  }, []);
 
   async function onToggle(subscriber: NewsletterSubscriber) {
     setState("saving");

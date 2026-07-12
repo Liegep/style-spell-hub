@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Check, Copy, Download, GripVertical, ImagePlus, Link2, Pencil, Save, Trash2, X } from "lucide-react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
@@ -21,14 +21,32 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/files-links")({
+  ssr: false,
+  loader: async () => {
+    try {
+      const [profile, resources] = await Promise.all([getCurrentProfile(), listSharedResources()]);
+      return {
+        isSuper: profile?.role === "super_admin",
+        resources,
+        error: "",
+      };
+    } catch (error) {
+      return {
+        isSuper: false,
+        resources: [] as SharedResource[],
+        error: error instanceof Error ? error.message : "Could not load files and links.",
+      };
+    }
+  },
   component: FilesLinksPage,
 });
 
 function FilesLinksPage() {
-  const [resources, setResources] = useState<SharedResource[]>([]);
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
-  const [message, setMessage] = useState("");
-  const [isSuper, setIsSuper] = useState(false);
+  const initialData = Route.useLoaderData();
+  const [resources, setResources] = useState<SharedResource[]>(initialData.resources);
+  const [state, setState] = useState<"loading" | "ready" | "error">(initialData.error ? "error" : "ready");
+  const [message, setMessage] = useState(initialData.error);
+  const [isSuper, setIsSuper] = useState(initialData.isSuper);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState({ title: "", url: "", description: "", sort_order: 0 });
@@ -58,10 +76,6 @@ function FilesLinksPage() {
       setMessage(error instanceof Error ? error.message : "Could not load files and links.");
     }
   }
-
-  useEffect(() => {
-    void load();
-  }, []);
 
   const links = useMemo(() => resources.filter(isSharedLink), [resources]);
   const images = useMemo(() => resources.filter(isSharedImage), [resources]);

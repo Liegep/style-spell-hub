@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { cn } from "@/lib/utils";
@@ -32,59 +32,45 @@ const NOTE_MAX = 60;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const Route = createFileRoute("/app/profile")({
+  ssr: false,
+  loader: async () => {
+    try {
+      return {
+        profile: await getCurrentProfile(),
+      };
+    } catch {
+      return {
+        profile: null as AuthProfile | null,
+      };
+    }
+  },
   component: ProfilePage,
 });
 
 function ProfilePage() {
-  const [profile, setProfile] = useState<AuthProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const initialData = Route.useLoaderData();
+  const initialProfile = initialData.profile;
+  const [profile, setProfile] = useState<AuthProfile | null>(initialProfile);
+  const [isLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
-  const [photo, setPhoto] = useState(bloggerAvatar);
+  const [photo, setPhoto] = useState(getSafeAvatarUrl(initialProfile?.avatar_url));
   const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [displayName, setDisplayName] = useState("");
-  const [avatarName, setAvatarName] = useState("");
-  const [avatarUuid, setAvatarUuid] = useState("");
-  const [language, setLanguage] = useState<"en" | "es">("en");
-  const [flickr, setFlickr] = useState("");
-  const [instagram, setInstagram] = useState("");
-  const [facebook, setFacebook] = useState("");
-  const [blogUrl, setBlogUrl] = useState("");
-  const [note, setNote] = useState("");
-  const [status, setStatus] = useState<Status>("available");
+  const [displayName, setDisplayName] = useState(initialProfile?.display_name || initialProfile?.full_name || "");
+  const [avatarName, setAvatarName] = useState(initialProfile?.sl_avatar_name || "");
+  const [avatarUuid, setAvatarUuid] = useState(initialProfile?.sl_avatar_uuid || "");
+  const [language, setLanguage] = useState<"en" | "es">(initialProfile?.language_preference || "en");
+  const [flickr, setFlickr] = useState(initialProfile?.flickr_url || "");
+  const [instagram, setInstagram] = useState(initialProfile?.instagram_url || "");
+  const [facebook, setFacebook] = useState(initialProfile?.facebook_url || "");
+  const [blogUrl, setBlogUrl] = useState(initialProfile?.blog_url || "");
+  const [note, setNote] = useState(initialProfile?.status_message || "");
+  const [status, setStatus] = useState<Status>((initialProfile?.availability_status as Status) || "available");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState("");
-
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
-      try {
-        const current = await getCurrentProfile();
-        if (!mounted || !current) return;
-        setProfile(current);
-        setPhoto(getSafeAvatarUrl(current.avatar_url));
-        setDisplayName(current.display_name || current.full_name || "");
-        setAvatarName(current.sl_avatar_name || "");
-        setAvatarUuid(current.sl_avatar_uuid || "");
-        setLanguage(current.language_preference || "en");
-        setFlickr(current.flickr_url || "");
-        setInstagram(current.instagram_url || "");
-        setFacebook(current.facebook_url || "");
-        setBlogUrl(current.blog_url || "");
-        setNote(current.status_message || "");
-        setStatus((current.availability_status as Status) || "available");
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    }
-    void load();
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   const onPickPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
