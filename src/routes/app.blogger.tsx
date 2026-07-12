@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowRight, Check, Copy, Download, Plus, Send, Trash2, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Copy, Download, Plus, Send, Trash2, X } from "lucide-react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
@@ -2016,18 +2016,23 @@ function ProductSubmissionModal({
               {links.map((link) => (
                 <div key={link.id} className="rounded-2xl bg-foreground/[0.04] p-4">
                   <div className="grid gap-3 md:grid-cols-[160px_1fr_auto]">
-                    <select
-                      value={link.platform}
-                      onChange={(event) => updateLink(link.id, { platform: event.target.value })}
-                      className="rounded-xl border border-foreground/10 bg-background px-4 py-3 font-mono text-[10px] uppercase tracking-[0.2em] outline-none focus:border-[var(--brand-magenta)]"
-                    >
-                      <option>Flickr</option>
-                      <option>Blog</option>
-                      <option>Instagram</option>
-                      <option>Facebook</option>
-                      <option>Primfeed</option>
-                      <option>Other</option>
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={link.platform}
+                        onChange={(event) => updateLink(link.id, { platform: event.target.value })}
+                        className="w-full appearance-none rounded-xl border border-foreground/10 bg-background px-4 py-3 pr-11 font-mono text-[10px] uppercase tracking-[0.2em] outline-none transition focus:border-[var(--brand-magenta)]"
+                      >
+                        <option>Flickr</option>
+                        <option>Blog</option>
+                        <option>Instagram</option>
+                        <option>Facebook</option>
+                        <option>Primfeed</option>
+                        <option>Other</option>
+                      </select>
+                      <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-foreground/70">
+                        <ChevronDown className="h-4 w-4" strokeWidth={1.9} />
+                      </span>
+                    </div>
                     <input
                       value={link.url}
                       onChange={(event) => updateLink(link.id, { url: event.target.value })}
