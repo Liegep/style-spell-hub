@@ -159,7 +159,7 @@ export async function getLatestSubmissionForProduct(bloggerId: string, productId
   let latestReviewer: SubmissionCommentProfile | null = null;
 
   if (latestReviewRow?.reviewed_by) {
-    latestReviewer = await getCommentProfileById(latestReviewRow.reviewed_by);
+    latestReviewer = await getCommentProfileForSubmission(latestReviewRow.id);
   }
 
   if (latestReviewNote && !latestReviewer) {
@@ -188,11 +188,29 @@ export async function getLatestSubmissionForProduct(bloggerId: string, productId
   };
 }
 
-async function getCommentProfileById(profileId: string) {
+async function getCommentProfileForSubmission(submissionId: string) {
+  const rpcResult = await supabase
+    .rpc("get_submission_reviewer_profile", { submission_lookup: submissionId })
+    .maybeSingle<SubmissionCommentProfile>();
+
+  if (!rpcResult.error) {
+    return rpcResult.data ?? null;
+  }
+
+  const fallback = await supabase
+    .from("blog_submissions")
+    .select("reviewed_by")
+    .eq("id", submissionId)
+    .maybeSingle<Pick<BlogSubmission, "reviewed_by">>();
+
+  if (fallback.error || !fallback.data?.reviewed_by) {
+    return null;
+  }
+
   const { data } = await supabase
     .from("profiles")
     .select("id,display_name,full_name,email,avatar_url,status_message,availability_status")
-    .eq("id", profileId)
+    .eq("id", fallback.data.reviewed_by)
     .maybeSingle<SubmissionCommentProfile>();
 
   return data ?? null;
