@@ -859,7 +859,7 @@ function ProductsTab({
 
   return (
     <div className="grid gap-6 md:grid-cols-3">
-      {products.slice(0, 6).map((p) => {
+      {products.map((p) => {
         const submission = submissionByProduct[p.id];
         const claim = claimByProduct[p.id];
         const claimDeadline = formatClaimDeadline(claim, p, language);
