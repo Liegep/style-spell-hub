@@ -217,27 +217,16 @@ async function getCommentProfileForSubmission(submissionId: string) {
 }
 
 async function getPrimaryStaffCommentProfile() {
-  const { data } = await supabase
-    .from("profiles")
-    .select("id,display_name,full_name,email,avatar_url,status_message,availability_status,role,account_status")
-    .in("role", ["admin", "super_admin"])
-    .neq("account_status", "left")
-    .limit(10);
+  const { data, error } = await supabase
+    .rpc("get_primary_staff_comment_profile")
+    .maybeSingle<SubmissionCommentProfile>();
 
-  const staff = (data ?? []) as Array<
-    SubmissionCommentProfile & { role?: string; account_status?: string }
-  >;
+  if (error) {
+    console.error("[Blogger] failed to load primary staff comment profile", error);
+    return null;
+  }
 
-  return (
-    staff.find((profile) =>
-      [profile.display_name, profile.full_name, profile.email]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes("marie")),
-    ) ??
-    staff.find((profile) => profile.role === "super_admin") ??
-    staff[0] ??
-    null
-  );
+  return data ?? null;
 }
 
 async function requestSecondLifeDelivery(productId: string, claimId: string) {
