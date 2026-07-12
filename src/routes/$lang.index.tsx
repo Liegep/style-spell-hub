@@ -159,22 +159,22 @@ function Landing() {
       <ScrollReveal as="section" variant="fade" className="relative overflow-hidden px-3 pt-6 md:px-6">
         <div className="relative mx-auto max-w-[1600px]">
           {/* huge headline behind image */}
-          <div className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-center gap-[1.5vw] md:gap-[0.75vw]">
-            <h1 className="font-display text-[22vw] leading-[0.85] text-[var(--brand-ink)] md:text-[18vw] tracking-tighter">
+          <div className="pointer-events-none absolute inset-0 z-0">
+            <h1 className="absolute left-1/2 top-[34%] -translate-x-1/2 -translate-y-1/2 font-display text-[22vw] leading-[0.85] tracking-tighter text-[var(--brand-ink)] md:text-[18vw]">
               {content.hero_headline_top}
             </h1>
-            <h1 className="font-display text-[22vw] leading-[0.85] text-[var(--brand-ink)] md:text-[18vw] tracking-tighter">
+            <h1 className="absolute left-1/2 top-[69%] -translate-x-1/2 -translate-y-1/2 font-display text-[22vw] leading-[0.85] tracking-tighter text-[var(--brand-ink)] md:text-[18vw]">
               {content.hero_headline_bottom}
             </h1>
           </div>
 
           {/* pink halo behind the figure */}
           <div
-            className="pointer-events-none absolute left-1/2 top-[14%] z-[5] h-[55vw] w-[55vw] max-h-[820px] max-w-[820px] -translate-x-1/2 rounded-full blur-3xl"
+            className="pointer-events-none absolute left-1/2 top-[18%] z-[5] h-[42vw] w-[38vw] max-h-[680px] max-w-[620px] -translate-x-1/2 rounded-full blur-3xl"
             style={{
               background:
-                "radial-gradient(closest-side, var(--brand-rose) 0%, var(--brand-coral) 35%, transparent 70%)",
-              opacity: 0.55,
+                "radial-gradient(closest-side, color-mix(in srgb, var(--brand-rose) 72%, white 28%) 0%, color-mix(in srgb, var(--brand-coral) 52%, white 48%) 42%, transparent 78%)",
+              opacity: 0.34,
             }}
           />
 
@@ -190,22 +190,12 @@ function Landing() {
                 alt="Love Potion avatar"
                 width={1536}
                 height={1920}
-                className="w-[58vw] max-w-[680px] object-contain drop-shadow-[0_40px_70px_rgba(219,24,97,0.35)] [filter:drop-shadow(0_8px_24px_rgba(0,0,0,0.25))_drop-shadow(0_0_60px_rgba(241,122,169,0.45))]"
+                className="max-h-[76vh] w-[58vw] max-w-[680px] object-contain [filter:drop-shadow(0_10px_26px_rgba(0,0,0,0.22))_drop-shadow(0_0_28px_rgba(241,122,169,0.18))]"
               />
             ) : (
               <div className="aspect-[4/5] w-[58vw] max-w-[680px]" />
             )}
           </ScrollReveal>
-
-          {/* magenta wash overlay */}
-          <div
-            className="pointer-events-none absolute z-20 left-1/2 top-[60%] h-[36vw] w-[34vw] -translate-x-1/2 rounded-full mix-blend-multiply"
-            style={{
-              background:
-                "radial-gradient(closest-side, var(--brand-magenta) 20%, transparent 75%)",
-              opacity: 0.25,
-            }}
-          />
 
 
           {/* vertical labels */}
