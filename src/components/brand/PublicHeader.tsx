@@ -24,6 +24,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+const NOTE_MAX = 60;
+
 export function PublicHeader() {
   const { t, lang } = useT();
   const logoAssetUrl = useSiteAssetUrl("logo_icon", logoIcon);
@@ -78,6 +80,8 @@ export function PublicHeader() {
 function PublicSessionCard({ lang, loginLabel }: { lang: "en" | "es"; loginLabel: string }) {
   const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteState, setNoteState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   useEffect(() => {
     let mounted = true;
@@ -119,6 +123,11 @@ function PublicSessionCard({ lang, loginLabel }: { lang: "en" | "es"; loginLabel
     };
   }, []);
 
+  useEffect(() => {
+    setNoteDraft(profile?.status_message || "");
+    setNoteState("idle");
+  }, [profile?.status_message]);
+
   if (loading) {
     return <span className="h-8 w-20 rounded-full bg-foreground/5" aria-hidden="true" />;
   }
@@ -156,8 +165,25 @@ function PublicSessionCard({ lang, loginLabel }: { lang: "en" | "es"; loginLabel
     try {
       const updated = await updateCurrentProfile({ availability_status: status });
       setProfile(updated);
+      window.dispatchEvent(new Event("profile-updated"));
     } catch (error) {
       console.warn("[Public header] Could not update status", error);
+    }
+  }
+
+  async function saveNote() {
+    setNoteState("saving");
+    try {
+      const trimmed = noteDraft.trim();
+      const updated = await updateCurrentProfile({
+        status_message: trimmed || null,
+      });
+      setProfile(updated);
+      setNoteState("saved");
+      window.dispatchEvent(new Event("profile-updated"));
+    } catch (error) {
+      console.warn("[Public header] Could not update note", error);
+      setNoteState("error");
     }
   }
 
@@ -202,6 +228,49 @@ function PublicSessionCard({ lang, loginLabel }: { lang: "en" | "es"; loginLabel
               {statusLabel}
             </span>
           </DropdownMenuLabel>
+          <div className="px-2 pb-2" onKeyDown={(event) => event.stopPropagation()}>
+            <div className="rounded-2xl border border-foreground/10 bg-background/60 p-3">
+              <div className="mb-2 font-mono text-[9px] uppercase tracking-[0.22em] text-foreground/50">
+                {lang === "es" ? "Nota rápida" : "Quick note"}
+              </div>
+              <textarea
+                value={noteDraft}
+                onChange={(event) => {
+                  const lines = event.target.value.split("\n").slice(0, 2);
+                  setNoteDraft(lines.join("\n").slice(0, NOTE_MAX));
+                  if (noteState !== "idle") setNoteState("idle");
+                }}
+                rows={2}
+                maxLength={NOTE_MAX}
+                className="w-full resize-none rounded-xl border border-foreground/15 bg-white/80 px-3 py-2 text-sm leading-snug outline-none transition focus:border-[var(--brand-magenta)]"
+                placeholder={lang === "es" ? "Escribe tu nota flotante..." : "Write your floating note..."}
+              />
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <span
+                  className={cn(
+                    "text-xs",
+                    noteState === "saved" && "text-green-700",
+                    noteState === "error" && "text-rose-700",
+                    noteState !== "saved" && noteState !== "error" && "text-foreground/55",
+                  )}
+                >
+                  {noteState === "saving" && (lang === "es" ? "Guardando..." : "Saving...")}
+                  {noteState === "saved" && (lang === "es" ? "Guardado" : "Saved")}
+                  {noteState === "error" && (lang === "es" ? "No se pudo guardar" : "Could not save")}
+                  {noteState === "idle" && `${noteDraft.length}/${NOTE_MAX}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void saveNote()}
+                  disabled={noteState === "saving"}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-magenta)] font-mono text-[8px] uppercase tracking-[0.2em] text-white transition hover:bg-foreground disabled:opacity-60"
+                  aria-label={lang === "es" ? "Guardar nota" : "Save note"}
+                >
+                  {noteState === "saving" ? "..." : "OK"}
+                </button>
+              </div>
+            </div>
+          </div>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => void setStatus("available")}>
             <Circle className="mr-2 h-3.5 w-3.5 fill-green-500 text-green-500" />
