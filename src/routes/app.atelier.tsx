@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import bloggerAvatar from "@/assets/blogger-avatar.jpg";
@@ -105,7 +106,7 @@ function AtelierPage() {
       console.log("[Atelier] nextStats VALUE:", JSON.stringify(nextStats));
       if (nextStats.status === "fulfilled") {
         const products = nextProducts.status === "fulfilled" ? nextProducts.value : [];
-        setLiveStats(mergeProductCounts(nextStats.value, products));
+        flushSync(() => setLiveStats(mergeProductCounts(nextStats.value, products)));
       }
       else console.error("[Atelier] Failed to load stats", nextStats.reason);
 
