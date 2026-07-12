@@ -37,7 +37,14 @@ export type SubmissionLinkInput = Pick<BlogSubmissionLink, "platform" | "url" | 
 export type SubmissionLinkRow = Pick<BlogSubmissionLink, "id" | "platform" | "url" | "note" | "sort_order">;
 export type SubmissionCommentProfile = Pick<
   Profile,
-  "id" | "display_name" | "full_name" | "email" | "avatar_url" | "status_message" | "availability_status"
+  | "id"
+  | "display_name"
+  | "full_name"
+  | "email"
+  | "avatar_url"
+  | "status_message"
+  | "status_message_expires_at"
+  | "availability_status"
 >;
 export type BloggerProductClaimSummary = Pick<
   ProductClaim,
@@ -209,7 +216,7 @@ async function getCommentProfileForSubmission(submissionId: string) {
 
   const { data } = await supabase
     .from("profiles")
-    .select("id,display_name,full_name,email,avatar_url,status_message,availability_status")
+    .select("id,display_name,full_name,email,avatar_url,status_message,status_message_expires_at,availability_status")
     .eq("id", fallback.data.reviewed_by)
     .maybeSingle<SubmissionCommentProfile>();
 

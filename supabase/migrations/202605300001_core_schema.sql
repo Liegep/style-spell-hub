@@ -66,6 +66,11 @@ create table if not exists public.profiles (
   account_status public.account_status not null default 'pending',
   availability_status public.availability_status not null default 'available',
   status_message text check (char_length(status_message) <= 60),
+  status_message_expires_at timestamptz,
+  status_message_duration text check (
+    status_message_duration is null
+    or status_message_duration in ('3d', '1w', '15d', '1m')
+  ),
   language_preference text not null default 'en' check (language_preference in ('en', 'es')),
   flickr_url text,
   instagram_url text,

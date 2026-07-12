@@ -2,6 +2,7 @@ import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 import { logAuditEvent } from "@/integrations/supabase/audit-log";
 import { createStaffInAppNotification } from "@/integrations/supabase/notifications";
 import type { AppRole, Profile } from "@/integrations/supabase/database.types";
+import { normalizeStatusNote } from "@/lib/status-note";
 
 export type AuthProfile = Pick<
   Profile,
@@ -16,6 +17,8 @@ export type AuthProfile = Pick<
   | "account_status"
   | "availability_status"
   | "status_message"
+  | "status_message_expires_at"
+  | "status_message_duration"
   | "language_preference"
   | "flickr_url"
   | "instagram_url"
@@ -23,9 +26,46 @@ export type AuthProfile = Pick<
   | "blog_url"
 >;
 
+const PROFILE_SELECT = [
+  "id",
+  "email",
+  "display_name",
+  "full_name",
+  "sl_avatar_name",
+  "sl_avatar_uuid",
+  "avatar_url",
+  "role",
+  "account_status",
+  "availability_status",
+  "status_message",
+  "status_message_expires_at",
+  "status_message_duration",
+  "language_preference",
+  "flickr_url",
+  "instagram_url",
+  "facebook_url",
+  "blog_url",
+].join(",");
+
 export function getRoleHome(role: AppRole) {
   if (role === "blogger") return "/app/blogger";
   return "/app/atelier";
+}
+
+async function clearExpiredStatusMessage(profile: AuthProfile) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({
+      status_message: null,
+      status_message_expires_at: null,
+      status_message_duration: null,
+    })
+    .eq("id", profile.id)
+    .select(PROFILE_SELECT)
+    .single<AuthProfile>();
+
+  if (error) throw describeProfileSaveError(error);
+  return data;
 }
 
 async function resolveEmailFromAvatarName(avatarName: string) {
@@ -116,14 +156,21 @@ export async function getCurrentProfile(userId?: string) {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select(
-      "id,email,display_name,full_name,sl_avatar_name,sl_avatar_uuid,avatar_url,role,account_status,availability_status,status_message,language_preference,flickr_url,instagram_url,facebook_url,blog_url",
-    )
+    .select(PROFILE_SELECT)
     .eq("id", id)
     .maybeSingle<AuthProfile>();
 
   if (error) throw describeProfileSaveError(error);
-  return data;
+  if (!data) return null;
+
+  const normalized = normalizeStatusNote(data);
+  if (
+    normalized.status_message === data.status_message &&
+    normalized.status_message_expires_at === data.status_message_expires_at
+  ) {
+    return data;
+  }
+  return clearExpiredStatusMessage(normalized);
 }
 
 export async function leaveBloggerProgram(reason?: string) {
@@ -139,13 +186,14 @@ export async function leaveBloggerProgram(reason?: string) {
     .update({
       account_status: "left",
       availability_status: "offline",
+      status_message: null,
+      status_message_expires_at: null,
+      status_message_duration: null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", userId)
     .eq("role", "blogger")
-    .select(
-      "id,email,display_name,full_name,sl_avatar_name,sl_avatar_uuid,avatar_url,role,account_status,availability_status,status_message,language_preference,flickr_url,instagram_url,facebook_url,blog_url",
-    )
+    .select(PROFILE_SELECT)
     .single<AuthProfile>();
 
   if (error) throw describeProfileSaveError(error);
@@ -269,6 +317,8 @@ export async function updateCurrentProfile(
       | "sl_avatar_uuid"
       | "availability_status"
       | "status_message"
+      | "status_message_expires_at"
+      | "status_message_duration"
       | "language_preference"
       | "flickr_url"
       | "instagram_url"
@@ -288,9 +338,7 @@ export async function updateCurrentProfile(
     .from("profiles")
     .update(patch)
     .eq("id", userId)
-    .select(
-      "id,email,display_name,full_name,sl_avatar_name,sl_avatar_uuid,avatar_url,role,account_status,availability_status,status_message,language_preference,flickr_url,instagram_url,facebook_url,blog_url",
-    )
+    .select(PROFILE_SELECT)
     .single<AuthProfile>();
 
   if (error) throw error;

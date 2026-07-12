@@ -11,6 +11,7 @@ import {
   type AuthProfile,
 } from "@/integrations/supabase/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { STATUS_NOTE_DURATION_OPTIONS, STATUS_NOTE_MAX, buildStatusNoteExpiry, type StatusNoteDuration } from "@/lib/status-note";
 
 type Status = "available" | "vacation" | "busy" | "offline";
 
@@ -28,7 +29,6 @@ const STATUS_COLOR: Record<Status, string> = {
   offline: "bg-slate-400",
 };
 
-const NOTE_MAX = 60;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const Route = createFileRoute("/app/profile")({
@@ -65,6 +65,7 @@ function ProfilePage() {
   const [facebook, setFacebook] = useState(initialProfile?.facebook_url || "");
   const [blogUrl, setBlogUrl] = useState(initialProfile?.blog_url || "");
   const [note, setNote] = useState(initialProfile?.status_message || "");
+  const [noteDuration, setNoteDuration] = useState<StatusNoteDuration>(initialProfile?.status_message_duration ?? "none");
   const [status, setStatus] = useState<Status>((initialProfile?.availability_status as Status) || "available");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -81,7 +82,7 @@ function ProfilePage() {
 
   const onNoteChange = (value: string) => {
     const lines = value.split("\n").slice(0, 2);
-    setNote(lines.join("\n").slice(0, NOTE_MAX));
+    setNote(lines.join("\n").slice(0, STATUS_NOTE_MAX));
   };
 
   async function uploadAvatarIfNeeded() {
@@ -116,6 +117,8 @@ function ProfilePage() {
         avatar_url: uploadedAvatar ?? existingAvatar,
         availability_status: status,
         status_message: note.trim() || null,
+        status_message_expires_at: note.trim() ? buildStatusNoteExpiry(noteDuration) : null,
+        status_message_duration: note.trim() && noteDuration !== "none" ? noteDuration : null,
         language_preference: language,
         flickr_url: flickr.trim() || null,
         instagram_url: instagram.trim() || null,
@@ -253,18 +256,29 @@ function ProfilePage() {
                 Custom note
               </div>
               <span className="font-mono text-[10px] text-foreground/50">
-                {note.length}/{NOTE_MAX} · <span>max 2 lines</span>
+                {note.length}/{STATUS_NOTE_MAX} · <span>max 2 lines</span>
               </span>
             </div>
             <textarea
               value={note}
               onChange={(event) => onNoteChange(event.target.value)}
               rows={2}
-              maxLength={NOTE_MAX}
+              maxLength={STATUS_NOTE_MAX}
               className="mt-3 w-full resize-none rounded-2xl border border-foreground/20 bg-background/70 px-5 py-3 font-display text-xl leading-tight focus:border-[var(--brand-magenta)] focus:outline-none"
             />
+            <select
+              value={noteDuration}
+              onChange={(event) => setNoteDuration(event.target.value as StatusNoteDuration)}
+              className="mt-3 w-full rounded-full border border-foreground/20 bg-background/70 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-foreground/70 focus:border-[var(--brand-magenta)] focus:outline-none"
+            >
+              {STATUS_NOTE_DURATION_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <p className="mt-2 font-hand text-base text-[var(--brand-magenta)]">
-              shown over your avatar, like instagram notes
+              shown over your avatar, like instagram notes. choose a timer or leave it open-ended.
             </p>
           </GlassCard>
 

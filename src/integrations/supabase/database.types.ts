@@ -42,6 +42,8 @@ export type Profile = {
   availability_status: AvailabilityStatus;
   blogger_tier: BloggerTier;
   status_message: string | null;
+  status_message_expires_at: string | null;
+  status_message_duration: "3d" | "1w" | "15d" | "1m" | null;
   language_preference: "en" | "es";
   flickr_url: string | null;
   instagram_url: string | null;

@@ -23,8 +23,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-const NOTE_MAX = 60;
+import {
+  STATUS_NOTE_DURATION_OPTIONS,
+  STATUS_NOTE_MAX,
+  buildStatusNoteExpiry,
+  getVisibleStatusMessage,
+  type StatusNoteDuration,
+} from "@/lib/status-note";
 
 export function PublicHeader() {
   const { t, lang } = useT();
@@ -81,6 +86,7 @@ function PublicSessionCard({ lang, loginLabel }: { lang: "en" | "es"; loginLabel
   const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [noteDraft, setNoteDraft] = useState("");
+  const [noteDuration, setNoteDuration] = useState<StatusNoteDuration>("none");
   const [noteState, setNoteState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   useEffect(() => {
@@ -124,9 +130,10 @@ function PublicSessionCard({ lang, loginLabel }: { lang: "en" | "es"; loginLabel
   }, []);
 
   useEffect(() => {
-    setNoteDraft(profile?.status_message || "");
+    setNoteDraft(getVisibleStatusMessage(profile) || "");
+    setNoteDuration(profile?.status_message_duration ?? "none");
     setNoteState("idle");
-  }, [profile?.status_message]);
+  }, [profile?.status_message, profile?.status_message_duration, profile?.status_message_expires_at]);
 
   if (loading) {
     return <span className="h-8 w-20 rounded-full bg-foreground/5" aria-hidden="true" />;
@@ -159,7 +166,7 @@ function PublicSessionCard({ lang, loginLabel }: { lang: "en" | "es"; loginLabel
     busy: "bg-[var(--brand-magenta)]",
     offline: "bg-slate-400",
   }[profile.availability_status ?? "available"];
-  const note = (profile.status_message || statusLabel).slice(0, 42);
+  const note = (getVisibleStatusMessage(profile) || statusLabel).slice(0, 42);
 
   async function setStatus(status: AuthProfile["availability_status"]) {
     try {
@@ -177,10 +184,12 @@ function PublicSessionCard({ lang, loginLabel }: { lang: "en" | "es"; loginLabel
       const trimmed = noteDraft.trim();
       const updated = await updateCurrentProfile({
         status_message: trimmed || null,
+        status_message_expires_at: trimmed ? buildStatusNoteExpiry(noteDuration) : null,
+        status_message_duration: trimmed && noteDuration !== "none" ? noteDuration : null,
       });
       setProfile(updated);
       setNoteState("saved");
-      window.dispatchEvent(new Event("profile-updated"));
+      window.dispatchEvent(new CustomEvent("profile-updated", { detail: updated }));
     } catch (error) {
       console.warn("[Public header] Could not update note", error);
       setNoteState("error");
@@ -237,14 +246,28 @@ function PublicSessionCard({ lang, loginLabel }: { lang: "en" | "es"; loginLabel
                 value={noteDraft}
                 onChange={(event) => {
                   const lines = event.target.value.split("\n").slice(0, 2);
-                  setNoteDraft(lines.join("\n").slice(0, NOTE_MAX));
+                  setNoteDraft(lines.join("\n").slice(0, STATUS_NOTE_MAX));
                   if (noteState !== "idle") setNoteState("idle");
                 }}
                 rows={2}
-                maxLength={NOTE_MAX}
+                maxLength={STATUS_NOTE_MAX}
                 className="w-full resize-none rounded-xl border border-foreground/15 bg-white/80 px-3 py-2 text-sm leading-snug outline-none transition focus:border-[var(--brand-magenta)]"
                 placeholder={lang === "es" ? "Escribe tu nota flotante..." : "Write your floating note..."}
               />
+              <select
+                value={noteDuration}
+                onChange={(event) => {
+                  setNoteDuration(event.target.value as StatusNoteDuration);
+                  if (noteState !== "idle") setNoteState("idle");
+                }}
+                className="mt-2 w-full rounded-full border border-foreground/15 bg-white/80 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/70 outline-none transition focus:border-[var(--brand-magenta)]"
+              >
+                {STATUS_NOTE_DURATION_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {lang === "es" && option.value === "none" ? "Hasta que la cambie" : option.label}
+                  </option>
+                ))}
+              </select>
               <div className="mt-2 flex items-center justify-between gap-3">
                 <span
                   className={cn(
@@ -257,7 +280,7 @@ function PublicSessionCard({ lang, loginLabel }: { lang: "en" | "es"; loginLabel
                   {noteState === "saving" && (lang === "es" ? "Guardando..." : "Saving...")}
                   {noteState === "saved" && (lang === "es" ? "Guardado" : "Saved")}
                   {noteState === "error" && (lang === "es" ? "No se pudo guardar" : "Could not save")}
-                  {noteState === "idle" && `${noteDraft.length}/${NOTE_MAX}`}
+                  {noteState === "idle" && `${noteDraft.length}/${STATUS_NOTE_MAX}`}
                 </span>
                 <button
                   type="button"

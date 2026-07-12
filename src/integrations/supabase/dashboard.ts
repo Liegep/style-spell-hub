@@ -30,7 +30,14 @@ export type AtelierStatsError = {
 
 export type BloggerPulse = Pick<
   Profile,
-  "id" | "display_name" | "full_name" | "email" | "account_status" | "availability_status" | "status_message"
+  | "id"
+  | "display_name"
+  | "full_name"
+  | "email"
+  | "account_status"
+  | "availability_status"
+  | "status_message"
+  | "status_message_expires_at"
 > & {
   posts_this_month?: number;
 };
@@ -67,6 +74,7 @@ export type ReviewQueueItem = Pick<
   blogger_name: string;
   blogger_avatar_url: string | null;
   blogger_status_message: string | null;
+  blogger_status_message_expires_at: string | null;
   blogger_availability_status: AvailabilityStatus | null;
   links_count: number;
   links: Array<{
@@ -224,7 +232,7 @@ export async function getUpcomingArchives() {
 export async function getBloggerPulse() {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id,display_name,full_name,email,account_status,availability_status,status_message")
+    .select("id,display_name,full_name,email,account_status,availability_status,status_message,status_message_expires_at")
     .eq("role", "blogger")
     .order("updated_at", { ascending: false })
     .limit(4);
@@ -328,7 +336,7 @@ export async function getReviewQueue(status: SubmissionStatus | "all" = "all") {
       .in("id", productIds),
     supabase
       .from("profiles")
-      .select("id,display_name,full_name,email,avatar_url,status_message,availability_status")
+      .select("id,display_name,full_name,email,avatar_url,status_message,status_message_expires_at,availability_status")
       .in("id", bloggerIds),
     supabase
       .from("blog_submission_links")
@@ -370,6 +378,7 @@ export async function getReviewQueue(status: SubmissionStatus | "all" = "all") {
       blogger_name: blogger?.display_name ?? blogger?.full_name ?? blogger?.email ?? "Unknown blogger",
       blogger_avatar_url: blogger?.avatar_url ?? null,
       blogger_status_message: blogger?.status_message ?? null,
+      blogger_status_message_expires_at: blogger?.status_message_expires_at ?? null,
       blogger_availability_status: blogger?.availability_status ?? null,
       links_count: rowLinks.length,
       links: rowLinks,

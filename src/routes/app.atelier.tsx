@@ -21,6 +21,7 @@ import { notifySecondLifeQuietly } from "@/integrations/supabase/messages";
 import type { ClaimStatus, SubmissionStatus } from "@/integrations/supabase/database.types";
 import { useLang } from "@/i18n/dict";
 import { translateAppPhrase } from "@/i18n/app-text";
+import { getVisibleStatusMessage } from "@/lib/status-note";
 
 export const Route = createFileRoute("/app/atelier")({
   ssr: false,
@@ -651,6 +652,7 @@ function AtelierPage() {
                           {formatCommentStatus(
                             selectedReview.blogger_status_message,
                             selectedReview.blogger_availability_status,
+                            selectedReview.blogger_status_message_expires_at,
                           )}
                         </span>
                       </div>
@@ -766,8 +768,11 @@ function getSafeAvatarUrl(value?: string | null) {
   return value;
 }
 
-function formatCommentStatus(value?: string | null, availability?: string | null) {
-  const note = value?.trim();
+function formatCommentStatus(value?: string | null, availability?: string | null, expiresAt?: string | null) {
+  const note = getVisibleStatusMessage({
+    status_message: value ?? null,
+    status_message_expires_at: expiresAt ?? null,
+  })?.trim();
   if (note) return note;
   if (availability === "available") return "Available";
   if (availability === "vacation") return "On vacation";

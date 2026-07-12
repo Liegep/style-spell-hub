@@ -6,6 +6,7 @@ import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
 import { products } from "@/mocks/data";
 import { cn } from "@/lib/utils";
+import { STATUS_NOTE_DURATION_OPTIONS, STATUS_NOTE_MAX, buildStatusNoteExpiry, getStatusNoteDurationLabel, getVisibleStatusMessage, type StatusNoteDuration } from "@/lib/status-note";
 import bloggerAvatar from "@/assets/blogger-avatar.jpg";
 import { useLang, type Lang } from "@/i18n/dict";
 import { getCurrentProfile, leaveBloggerProgram, signOut, updateCurrentPassword, updateCurrentProfile } from "@/integrations/supabase/auth";
@@ -178,6 +179,7 @@ function BloggerDash() {
   // Profile state (lifted so overlay note appears across Overview too)
   const [photo, setPhoto] = useState<string>(getSafeAvatarUrl(initialData.profile?.avatar_url));
   const [overlayNote, setOverlayNote] = useState<string>(initialData.profile?.status_message || "");
+  const [overlayNoteDuration, setOverlayNoteDuration] = useState<StatusNoteDuration>(initialData.profile?.status_message_duration ?? "none");
   const [status, setStatus] = useState<Status>(mapAvailabilityToStatus(initialData.profile?.availability_status));
   const [profileId] = useState<string | null>(initialData.profile?.id ?? null);
   const [profile, setProfile] = useState<AuthProfile | null>(initialData.profile);
@@ -277,15 +279,19 @@ function BloggerDash() {
     } as never);
   }, [hasLeftProgram, navigate, profile?.id, profile?.role, tour]);
 
-  async function handleQuickNoteSave(nextNote: string) {
+  async function handleQuickNoteSave(nextNote: string, duration: StatusNoteDuration) {
     if (!profile) return;
     setQuickNoteState("saving");
     try {
+      const trimmed = nextNote.trim();
       const updated = await updateCurrentProfile({
-        status_message: nextNote.trim() || null,
+        status_message: trimmed || null,
+        status_message_expires_at: trimmed ? buildStatusNoteExpiry(duration) : null,
+        status_message_duration: trimmed && duration !== "none" ? duration : null,
       });
       setProfile(updated);
       setOverlayNote(updated.status_message || "");
+      setOverlayNoteDuration(updated.status_message_duration ?? "none");
       window.dispatchEvent(new CustomEvent("profile-updated", { detail: updated }));
       setQuickNoteState("saved");
       window.setTimeout(() => setQuickNoteState("idle"), 1800);
@@ -348,6 +354,7 @@ function BloggerDash() {
             submissions={submissions}
             onOpenProduct={setSelectedProduct}
             onQuickSaveNote={handleQuickNoteSave}
+            noteDuration={overlayNoteDuration}
             quickNoteState={quickNoteState}
           />
         )}
@@ -378,6 +385,8 @@ function BloggerDash() {
             setNote={setOverlayNote}
             status={status}
             setStatus={setStatus}
+            noteDuration={overlayNoteDuration}
+            setNoteDuration={setOverlayNoteDuration}
             profile={profile}
             onLeftProgram={(updated) => {
               setProfile(updated);
@@ -388,6 +397,7 @@ function BloggerDash() {
               setHasLeftProgram(updated.account_status === "left");
               setPhoto(getSafeAvatarUrl(updated.avatar_url));
               setOverlayNote(updated.status_message || "");
+              setOverlayNoteDuration(updated.status_message_duration ?? "none");
               setStatus(mapAvailabilityToStatus(updated.availability_status));
             }}
           />
@@ -518,7 +528,7 @@ function getProfileDisplayName(profile?: SubmissionCommentProfile | null) {
 }
 
 function getCommentStatus(profile?: SubmissionCommentProfile | null) {
-  const note = profile?.status_message?.trim();
+  const note = getVisibleStatusMessage(profile)?.trim();
   if (note) return note;
   if (profile?.availability_status === "available") return "Available";
   if (profile?.availability_status === "vacation") return "On vacation";
@@ -650,6 +660,7 @@ function Overview({
   submissions,
   onOpenProduct,
   onQuickSaveNote,
+  noteDuration,
   quickNoteState,
 }: {
   photo: string;
@@ -660,14 +671,17 @@ function Overview({
   products: Product[];
   submissions: BloggerSubmissionSummary[];
   onOpenProduct: (product: Product) => void;
-  onQuickSaveNote: (nextNote: string) => Promise<void>;
+  onQuickSaveNote: (nextNote: string, duration: StatusNoteDuration) => Promise<void>;
+  noteDuration: StatusNoteDuration;
   quickNoteState: "idle" | "saving" | "saved" | "error";
 }) {
   const [draftNote, setDraftNote] = useState(note);
+  const [draftDuration, setDraftDuration] = useState<StatusNoteDuration>(noteDuration);
 
   useEffect(() => {
     setDraftNote(note);
-  }, [note]);
+    setDraftDuration(noteDuration);
+  }, [note, noteDuration]);
 
   const submittedItems = submissions
     .map((submission) => ({
@@ -700,13 +714,24 @@ function Overview({
               value={draftNote}
               onChange={(event) => {
                 const lines = event.target.value.split("\n").slice(0, 2);
-                setDraftNote(lines.join("\n").slice(0, NOTE_MAX));
+                setDraftNote(lines.join("\n").slice(0, STATUS_NOTE_MAX));
               }}
               rows={2}
-              maxLength={NOTE_MAX}
+              maxLength={STATUS_NOTE_MAX}
               className="w-full resize-none rounded-lg border border-foreground/20 bg-background px-3 py-2 text-sm leading-snug focus:border-[var(--brand-magenta)] focus:outline-none"
               placeholder="Write your floating note..."
             />
+            <select
+              value={draftDuration}
+              onChange={(event) => setDraftDuration(event.target.value as StatusNoteDuration)}
+              className="mt-2 w-full rounded-full border border-foreground/20 bg-background px-3 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/70 focus:border-[var(--brand-magenta)] focus:outline-none"
+            >
+              {STATUS_NOTE_DURATION_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <div className="mt-2 flex items-center justify-between">
               <span
                 className={cn(
@@ -719,10 +744,10 @@ function Overview({
                 {quickNoteState === "saving" && "Saving..."}
                 {quickNoteState === "saved" && "Saved"}
                 {quickNoteState === "error" && "Could not save"}
-                {quickNoteState === "idle" && `${draftNote.length}/${NOTE_MAX}`}
+                {quickNoteState === "idle" && `${draftNote.length}/${STATUS_NOTE_MAX} · ${getStatusNoteDurationLabel(draftDuration)}`}
               </span>
               <button
-                onClick={() => void onQuickSaveNote(draftNote)}
+                onClick={() => void onQuickSaveNote(draftNote, draftDuration)}
                 disabled={quickNoteState === "saving"}
                 className="rounded-full bg-[var(--brand-magenta)] px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.22em] text-white disabled:opacity-60"
               >
@@ -2456,8 +2481,6 @@ function LeftProgramSuccess({ language }: { language: "en" | "es" }) {
 
 /* ───────── Profile editor ───────── */
 
-const NOTE_MAX = 60;
-
 function ProfileTab(props: {
   photo: string;
   setPhoto: (v: string) => void;
@@ -2465,11 +2488,13 @@ function ProfileTab(props: {
   setNote: (v: string) => void;
   status: Status;
   setStatus: (v: Status) => void;
+  noteDuration: StatusNoteDuration;
+  setNoteDuration: (v: StatusNoteDuration) => void;
   profile: AuthProfile | null;
   onLeftProgram: (profile: AuthProfile) => void;
   onProfileUpdated: (profile: AuthProfile) => void;
 }) {
-  const { photo, setPhoto, note, setNote, status, setStatus, profile, onLeftProgram, onProfileUpdated } = props;
+  const { photo, setPhoto, note, setNote, status, setStatus, noteDuration, setNoteDuration, profile, onLeftProgram, onProfileUpdated } = props;
   const uiLanguage = useLang();
   const [displayName, setDisplayName] = useState("");
   const [language, setLanguage] = useState<"en" | "es">("en");
@@ -2502,9 +2527,9 @@ function ProfileTab(props: {
   };
 
   const onNoteChange = (v: string) => {
-    // Limit to 2 lines, NOTE_MAX chars
+    // Limit to 2 lines, STATUS_NOTE_MAX chars
     const lines = v.split("\n").slice(0, 2);
-    const trimmed = lines.join("\n").slice(0, NOTE_MAX);
+    const trimmed = lines.join("\n").slice(0, STATUS_NOTE_MAX);
     setNote(trimmed);
   };
 
@@ -2531,6 +2556,8 @@ function ProfileTab(props: {
       const updated = await updateCurrentProfile({
         display_name: displayName.trim() || null,
         status_message: note.trim() || null,
+        status_message_expires_at: note.trim() ? buildStatusNoteExpiry(noteDuration) : null,
+        status_message_duration: note.trim() && noteDuration !== "none" ? noteDuration : null,
         availability_status: mapStatusToAvailability(status),
         language_preference: language,
         avatar_url: uploadedAvatar ?? existingAvatar,
@@ -2681,7 +2708,7 @@ function ProfileTab(props: {
               CUSTOM NOTE
             </div>
             <span className="font-mono text-[10px] text-foreground/50">
-              {note.length}/{NOTE_MAX} · <span>max 2 lines</span>
+              {note.length}/{STATUS_NOTE_MAX} · <span>max 2 lines</span>
             </span>
           </div>
           <textarea
@@ -2689,12 +2716,23 @@ function ProfileTab(props: {
             onChange={(e) => onNoteChange(e.target.value)}
             placeholder="e.g. on a velvet night ♡"
             rows={2}
-            maxLength={NOTE_MAX}
+            maxLength={STATUS_NOTE_MAX}
             className="mt-3 w-full resize-none rounded-2xl border border-foreground/20 bg-background/70 px-5 py-3 font-display text-xl leading-tight focus:border-[var(--brand-magenta)] focus:outline-none"
           />
+          <select
+            value={noteDuration}
+            onChange={(event) => setNoteDuration(event.target.value as StatusNoteDuration)}
+            className="mt-3 w-full rounded-full border border-foreground/20 bg-background/70 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-foreground/70 focus:border-[var(--brand-magenta)] focus:outline-none"
+          >
+            {STATUS_NOTE_DURATION_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <p className="font-hand text-base text-[var(--brand-magenta)]">
-              shown over your avatar, like instagram notes
+              shown over your avatar, like instagram notes. choose a timer or leave it open-ended.
             </p>
             <button
               type="button"

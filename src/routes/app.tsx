@@ -34,6 +34,7 @@ import {
 import bloggerAvatar from "@/assets/blogger-avatar.jpg";
 import logoIcon from "@/assets/logo-icon.png";
 import { countPersonalUnread, listInboxMessages, listPersonalInboxMessages } from "@/integrations/supabase/messages";
+import { getVisibleStatusMessage } from "@/lib/status-note";
 
 export const Route = createFileRoute("/app")({
   component: AppLayout,
@@ -464,7 +465,7 @@ function ProfileQuickCard({
   onStatusChange: (status: "available" | "vacation" | "busy" | "offline") => Promise<void>;
 }) {
   const displayName = profile.display_name || profile.full_name || profile.email;
-  const note = (profile.status_message ?? "").trim().slice(0, 60);
+  const note = (getVisibleStatusMessage(profile) ?? "").trim().slice(0, 60);
   const avatar = getSafeAvatarUrl(profile.avatar_url);
   const statusLabel = {
     available: "Available",
