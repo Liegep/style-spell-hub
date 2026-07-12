@@ -54,6 +54,8 @@ function ProfilePage() {
   const [isLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [noteSaveMessage, setNoteSaveMessage] = useState("");
   const [photo, setPhoto] = useState(getSafeAvatarUrl(initialProfile?.avatar_url));
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [displayName, setDisplayName] = useState(initialProfile?.display_name || initialProfile?.full_name || "");
@@ -151,6 +153,28 @@ function ProfilePage() {
       setSaveMessage(error instanceof Error ? error.message : "Could not save profile.");
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function onSaveNote() {
+    if (!profile) return;
+    setIsSavingNote(true);
+    setNoteSaveMessage("");
+    try {
+      const updated = await updateCurrentProfile({
+        status_message: note.trim() || null,
+        status_message_expires_at: note.trim() ? buildStatusNoteExpiry(noteDuration) : null,
+        status_message_duration: note.trim() && noteDuration !== "none" ? noteDuration : null,
+      });
+      setProfile(updated);
+      window.dispatchEvent(new CustomEvent("profile-updated", { detail: updated }));
+      setNoteSaveMessage("Note saved.");
+      window.setTimeout(() => setNoteSaveMessage(""), 2200);
+    } catch (error) {
+      console.error("[Profile] note save failed", error);
+      setNoteSaveMessage(error instanceof Error ? error.message : "Could not save note.");
+    } finally {
+      setIsSavingNote(false);
     }
   }
 
@@ -296,14 +320,28 @@ function ProfilePage() {
               <p className="font-hand text-base text-[var(--brand-magenta)]">
                 shown over your avatar, like instagram notes. choose a timer or leave it open-ended.
               </p>
-              <button
-                type="button"
-                onClick={() => void onSaveProfile()}
-                disabled={isSaving}
-                className="rounded-full bg-[var(--brand-magenta)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white shadow-lg shadow-[var(--brand-magenta)]/15 hover:opacity-90 disabled:opacity-60"
-              >
-                {isSaving ? "Saving..." : "Save note"}
-              </button>
+              <div className="flex items-center gap-3">
+                {noteSaveMessage ? (
+                  <span
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-medium",
+                      noteSaveMessage === "Note saved."
+                        ? "bg-green-100 text-green-700"
+                        : "bg-rose-100 text-rose-700",
+                    )}
+                  >
+                    {noteSaveMessage}
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => void onSaveNote()}
+                  disabled={isSavingNote}
+                  className="rounded-full bg-[var(--brand-magenta)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white shadow-lg shadow-[var(--brand-magenta)]/15 hover:opacity-90 disabled:opacity-60"
+                >
+                  {isSavingNote ? "Saving..." : "Save note"}
+                </button>
+              </div>
             </div>
           </GlassCard>
 
