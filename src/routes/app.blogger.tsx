@@ -6,9 +6,17 @@ import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
 import { products } from "@/mocks/data";
 import { cn } from "@/lib/utils";
-import { STATUS_NOTE_DURATION_OPTIONS, STATUS_NOTE_MAX, buildStatusNoteExpiry, getStatusNoteDurationLabel, getVisibleStatusMessage, type StatusNoteDuration } from "@/lib/status-note";
+import {
+  STATUS_NOTE_MAX,
+  buildStatusNoteExpiry,
+  getStatusNoteDurationLabel,
+  getStatusNoteDurationOptions,
+  getVisibleStatusMessage,
+  type StatusNoteDuration,
+} from "@/lib/status-note";
 import bloggerAvatar from "@/assets/blogger-avatar.jpg";
 import { useLang, type Lang } from "@/i18n/dict";
+import { translateAppPhrase } from "@/i18n/app-text";
 import { getCurrentProfile, leaveBloggerProgram, signOut, updateCurrentPassword, updateCurrentProfile } from "@/integrations/supabase/auth";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -156,6 +164,7 @@ function countPersonalUnread(messages: InboxMessage[]) {
 function BloggerDash() {
   const navigate = useNavigate({ from: "/app/blogger" });
   const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const initialData = Route.useLoaderData();
   const { section, tour } = Route.useSearch();
   const tab: Tab = section ?? "home";
@@ -205,26 +214,65 @@ function BloggerDash() {
   const accountNotice =
     profile?.account_status === "blocked"
       ? {
-          title: "Account paused by monthly rule.",
-          body: "Your account is blocked because there was no approved post in the previous month. You can still review your history, but claiming products and submitting links are paused until Love Potion HQ reactivates you.",
+          title: tr("Account paused by monthly rule."),
+          body: tr(
+            "Your account is blocked because there was no approved post in the previous month. You can still review your history, but claiming products and submitting links are paused until Love Potion HQ reactivates you.",
+          ),
         }
       : profile?.account_status === "pending"
         ? {
-            title: "Account waiting for approval.",
-            body: "Your account exists, but it is still pending. Product claims and submissions unlock once Love Potion HQ activates your profile.",
+            title: tr("Account waiting for approval."),
+            body: tr(
+              "Your account exists, but it is still pending. Product claims and submissions unlock once Love Potion HQ activates your profile.",
+            ),
           }
         : profile?.account_status === "left"
           ? {
-              title: "You left the blogger program.",
-              body: "Your account history stays saved, but product claims and submissions are closed unless Love Potion HQ decides to reactivate you.",
+              title: tr("You left the blogger program."),
+              body: tr(
+                "Your account history stays saved, but product claims and submissions are closed unless Love Potion HQ decides to reactivate you.",
+              ),
             }
           : null;
+  const localizedTitles: Record<Tab, { eyebrow: string; title: string; note: string }> = {
+    home: TITLES.home,
+    products: {
+      ...TITLES.products,
+      eyebrow: tr("STUDIO · PRODUCTS"),
+      title: tr("The wardrobe."),
+      note: tr("pick a spell"),
+    },
+    posts: {
+      ...TITLES.posts,
+      eyebrow: tr("STUDIO · POSTS"),
+      title: tr("Your gallery."),
+      note: tr("share the magic"),
+    },
+    goodies: {
+      ...TITLES.goodies,
+      eyebrow: tr("STUDIO · GOODIES"),
+      title: tr("Bag of goodies."),
+      note: tr("take what you need"),
+    },
+    inbox: {
+      ...TITLES.inbox,
+      eyebrow: tr("STUDIO · MAILBOX"),
+      title: tr("Messages."),
+      note: tr("open with care"),
+    },
+    profile: {
+      ...TITLES.profile,
+      eyebrow: tr("STUDIO · PROFILE"),
+      title: tr("About you."),
+      note: tr("set the scene"),
+    },
+  };
   const meta = {
-    ...TITLES[tab],
+    ...localizedTitles[tab],
     title:
       tab === "home"
         ? `${language === "es" ? "Hola" : "Bonjour"}, ${displayName.split(" ")[0] || displayName}.`
-        : TITLES[tab].title,
+        : localizedTitles[tab].title,
   };
   const submissionByProduct = useMemo(
     () =>
@@ -337,7 +385,7 @@ function BloggerDash() {
         {accountNotice ? (
           <GlassCard tone="pink" className="mb-6 p-5">
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-              Access notice
+              {tr("Access notice")}
             </div>
             <div className="mt-2 font-display text-2xl">{accountNotice.title}</div>
             <p className="mt-2 max-w-3xl text-sm text-foreground/70">{accountNotice.body}</p>
@@ -527,13 +575,20 @@ function getProfileDisplayName(profile?: SubmissionCommentProfile | null) {
   return profile?.display_name ?? profile?.full_name ?? profile?.email ?? "Love Potion HQ";
 }
 
-function getCommentStatus(profile?: SubmissionCommentProfile | null) {
+function getStatusLabel(status: Status, language: Lang) {
+  if (status === "active") return translateAppPhrase("Active", language);
+  if (status === "vacation") return translateAppPhrase("On vacation", language);
+  if (status === "busy") return translateAppPhrase("Busy", language);
+  return translateAppPhrase("Offline", language);
+}
+
+function getCommentStatus(profile?: SubmissionCommentProfile | null, language: Lang = "en") {
   const note = getVisibleStatusMessage(profile)?.trim();
   if (note) return note;
-  if (profile?.availability_status === "available") return "Available";
-  if (profile?.availability_status === "vacation") return "On vacation";
-  if (profile?.availability_status === "busy") return "Busy";
-  if (profile?.availability_status === "offline") return "Offline";
+  if (profile?.availability_status === "available") return translateAppPhrase("Available", language);
+  if (profile?.availability_status === "vacation") return translateAppPhrase("On vacation", language);
+  if (profile?.availability_status === "busy") return translateAppPhrase("Busy", language);
+  if (profile?.availability_status === "offline") return translateAppPhrase("Offline", language);
   return "Love Potion";
 }
 
@@ -546,12 +601,6 @@ function statusBadgeClass(status: SubmissionStatus) {
 
 /* ───────── Avatar with Instagram-style overlay note ───────── */
 
-const STATUS_LABEL: Record<Status, string> = {
-  active: "Active",
-  vacation: "On vacation",
-  busy: "Busy",
-  offline: "Offline",
-};
 const STATUS_COLOR: Record<Status, string> = {
   active: "bg-[var(--brand-rose)]",
   vacation: "bg-[var(--brand-magenta)]",
@@ -570,6 +619,7 @@ function AvatarCard({
   status: Status;
   size?: "sm" | "lg";
 }) {
+  const language = useLang();
   // Instagram-style: max 2 lines, big condensed display type centered
   const lines = (note || "").split("\n").slice(0, 2);
   const noteLength = lines.join(" ").trim().length;
@@ -592,7 +642,7 @@ function AvatarCard({
       <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full bg-black/45 px-3 py-1 backdrop-blur-md">
         <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_COLOR[status])} />
         <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-white">
-          {STATUS_LABEL[status]}
+          {getStatusLabel(status, language)}
         </span>
       </div>
       {/* overlay note */}
@@ -624,6 +674,7 @@ function ProductCommentBubble({
   profile?: SubmissionCommentProfile | null;
   children: ReactNode;
 }) {
+  const language = useLang();
   return (
     <div className="mt-3 rounded-2xl border border-white/45 bg-white/45 p-3 shadow-sm backdrop-blur-md">
       <div className="flex gap-3">
@@ -634,7 +685,7 @@ function ProductCommentBubble({
             className="h-14 w-14 rounded-2xl object-cover shadow-sm"
           />
           <span className="absolute -right-2 -top-2 max-w-[8rem] truncate rounded-full bg-[var(--brand-rose)] px-2.5 py-1 font-mono text-[7px] uppercase tracking-[0.18em] text-white shadow-md">
-            {getCommentStatus(profile)}
+            {getCommentStatus(profile, language)}
           </span>
         </div>
         <div className="min-w-0 flex-1 pt-1">
@@ -675,6 +726,8 @@ function Overview({
   noteDuration: StatusNoteDuration;
   quickNoteState: "idle" | "saving" | "saved" | "error";
 }) {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const [draftNote, setDraftNote] = useState(note);
   const [draftDuration, setDraftDuration] = useState<StatusNoteDuration>(noteDuration);
 
@@ -697,7 +750,7 @@ function Overview({
         <AvatarCard photo={photo} note={note} status={status} />
         <div className="relative p-5 pr-12">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            PROFILE
+            {tr("PROFILE")}
           </div>
           <div className="mt-1 font-display text-2xl">{displayName}</div>
           <p className="mt-1 font-hand text-lg text-[var(--brand-magenta)] leading-tight">
@@ -708,7 +761,7 @@ function Overview({
           </div>
           <div className="mt-3 rounded-xl border border-foreground/15 bg-background/70 p-3">
             <div className="mb-2 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/55">
-              Quick note · 60 chars
+              {tr("Quick note · 60 chars")}
             </div>
             <textarea
               value={draftNote}
@@ -719,14 +772,14 @@ function Overview({
               rows={2}
               maxLength={STATUS_NOTE_MAX}
               className="w-full resize-none rounded-lg border border-foreground/20 bg-background px-3 py-2 text-sm leading-snug focus:border-[var(--brand-magenta)] focus:outline-none"
-              placeholder="Write your floating note..."
+              placeholder={tr("Write your floating note...")}
             />
             <select
               value={draftDuration}
               onChange={(event) => setDraftDuration(event.target.value as StatusNoteDuration)}
               className="mt-2 w-full rounded-full border border-foreground/20 bg-background px-3 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/70 focus:border-[var(--brand-magenta)] focus:outline-none"
             >
-              {STATUS_NOTE_DURATION_OPTIONS.map((option) => (
+              {getStatusNoteDurationOptions(language).map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -741,17 +794,18 @@ function Overview({
                   quickNoteState !== "saved" && quickNoteState !== "error" && "text-foreground/55",
                 )}
               >
-                {quickNoteState === "saving" && "Saving..."}
-                {quickNoteState === "saved" && "Saved"}
-                {quickNoteState === "error" && "Could not save"}
-                {quickNoteState === "idle" && `${draftNote.length}/${STATUS_NOTE_MAX} · ${getStatusNoteDurationLabel(draftDuration)}`}
+                {quickNoteState === "saving" && tr("Saving...")}
+                {quickNoteState === "saved" && tr("Saved")}
+                {quickNoteState === "error" && tr("Could not save")}
+                {quickNoteState === "idle" &&
+                  `${draftNote.length}/${STATUS_NOTE_MAX} · ${getStatusNoteDurationLabel(draftDuration, language)}`}
               </span>
               <button
                 onClick={() => void onQuickSaveNote(draftNote, draftDuration)}
                 disabled={quickNoteState === "saving"}
                 className="rounded-full bg-[var(--brand-magenta)] px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.22em] text-white disabled:opacity-60"
               >
-                {quickNoteState === "saving" ? "Saving" : "Save"}
+                {quickNoteState === "saving" ? tr("Saving") : tr("Save")}
               </button>
             </div>
           </div>
@@ -760,10 +814,10 @@ function Overview({
       <div className="md:col-span-2 grid gap-6 sm:grid-cols-2">
         <GlassCard tone="pink">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            STATUS
+            {tr("STATUS")}
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-3">
-            <div className="font-display text-3xl">{STATUS_LABEL[status]}</div>
+            <div className="font-display text-3xl">{getStatusLabel(status, language)}</div>
             <span
               className={cn(
                 "rounded-full px-3 py-1 font-mono text-[9px] uppercase tracking-[0.22em]",
@@ -779,22 +833,22 @@ function Overview({
           </div>
           <p className="mt-2 text-sm text-foreground/70">
             {accountStatus === "blocked"
-              ? "Claims and submissions are paused until HQ reactivates your profile."
+              ? tr("Claims and submissions are paused until HQ reactivates your profile.")
               : accountStatus === "pending"
-                ? "Your profile is waiting for Love Potion HQ approval."
-              : "Keep one approved post per month to stay active."}
+                ? tr("Your profile is waiting for Love Potion HQ approval.")
+                : tr("Keep one approved post per month to stay active.")}
           </p>
         </GlassCard>
         <GlassCard>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            NEXT DEADLINE
+            {tr("NEXT DEADLINE")}
           </div>
-          <div className="mt-2 font-display text-3xl">14 days</div>
-          <p className="mt-2 text-sm text-foreground/70">One post per month minimum.</p>
+          <div className="mt-2 font-display text-3xl">{tr("14 days")}</div>
+          <p className="mt-2 text-sm text-foreground/70">{tr("One post per month minimum.")}</p>
         </GlassCard>
         <GlassCard className="sm:col-span-2">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            RULES
+            {tr("RULES")}
           </div>
           <ul className="mt-3 space-y-2 text-sm">
             <li>· 1 post / month minimum</li>
@@ -804,11 +858,9 @@ function Overview({
         </GlassCard>
 
         <GlassCard className="sm:col-span-2">
-          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            Submitted posts
-          </div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">{tr("Submitted posts")}</div>
           {submittedItems.length === 0 ? (
-            <p className="mt-3 text-sm text-foreground/60">No submissions yet.</p>
+            <p className="mt-3 text-sm text-foreground/60">{tr("No submissions yet.")}</p>
           ) : (
             <div className="mt-4 space-y-3">
               {submittedItems.map((item, index) => (
@@ -844,7 +896,7 @@ function Overview({
                   </button>
                   {item.submission.review_comment ? (
                     <div className="mx-1 -mt-1 rounded-xl border border-foreground/10 bg-foreground/[0.03] px-3 py-2 text-sm text-foreground/75">
-                      Review note: {item.submission.review_comment}
+                      {tr("Review note")}: {item.submission.review_comment}
                     </div>
                   ) : null}
                 </div>
@@ -873,6 +925,7 @@ function ProductsTab({
   locked: boolean;
 }) {
   const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
 
   if (loading) {
     return (
@@ -890,11 +943,11 @@ function ProductsTab({
         const claimDeadline = formatClaimDeadline(claim, p, language);
         const claimBadge =
           claim?.status === "delivered"
-            ? "Delivered"
+            ? tr("Delivered")
             : claim?.status === "failed"
-              ? "Delivery failed"
+              ? tr("Delivery failed")
             : claim
-              ? "Delivery pending"
+              ? tr("Delivery pending")
               : null;
         return (
         <GlassCard key={p.id} className="overflow-hidden p-0">
@@ -913,7 +966,7 @@ function ProductsTab({
               <p className="mt-1 text-sm italic text-foreground/70">“{p.shortDescription}”</p>
             ) : null}
             <div className="mt-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--brand-magenta)]">
-              <span>Deadline</span> · {claimDeadline.deadline}
+              <span>{tr("Deadline")}</span> · {claimDeadline.deadline}
             </div>
             {submission ? (
               <div className="mt-2 inline-flex rounded-full bg-foreground/10 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/80">
@@ -937,7 +990,7 @@ function ProductsTab({
             ) : null}
             {locked && !submission && !claim ? (
               <div className="mt-2 inline-flex rounded-full bg-rose-100 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-rose-700">
-                Account paused
+                {tr("Account paused")}
               </div>
             ) : null}
             <button
@@ -945,12 +998,12 @@ function ProductsTab({
               className="mt-4 w-full rounded-full bg-foreground px-4 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)]"
             >
               {submission
-                ? "View submission →"
+                ? tr("View submission →")
                 : claim?.status === "delivered"
-                  ? "Open delivered dossier →"
+                  ? tr("Open delivered dossier →")
                   : claim
-                    ? "Retry delivery →"
-                    : "Open dossier →"}
+                    ? tr("Retry delivery →")
+                    : tr("Open dossier →")}
             </button>
           </div>
         </GlassCard>
@@ -2496,6 +2549,7 @@ function ProfileTab(props: {
 }) {
   const { photo, setPhoto, note, setNote, status, setStatus, noteDuration, setNoteDuration, profile, onLeftProgram, onProfileUpdated } = props;
   const uiLanguage = useLang();
+  const tr = (value: string) => translateAppPhrase(value, uiLanguage);
   const [displayName, setDisplayName] = useState("");
   const [language, setLanguage] = useState<"en" | "es">("en");
   const [isSaving, setIsSaving] = useState(false);
@@ -2579,7 +2633,7 @@ function ProfileTab(props: {
   async function onUpdatePassword() {
     setPasswordMessage("");
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordMessage("Fill in all password fields.");
+      setPasswordMessage(tr("Fill in all password fields."));
       return;
     }
     if (newPassword.length < 6) {
@@ -2597,7 +2651,7 @@ function ProfileTab(props: {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setPasswordMessage("Password updated.");
+      setPasswordMessage(tr("Password updated."));
       window.setTimeout(() => setPasswordMessage(""), 2600);
     } catch (error) {
       console.error("[Blogger Profile] password update failed", error);
@@ -2643,10 +2697,10 @@ function ProfileTab(props: {
   }
 
   const statuses: { id: Status; label: string; help: string }[] = [
-    { id: "active", label: "Active", help: "Posting as usual" },
-    { id: "vacation", label: "On vacation", help: "Pause monthly rule" },
-    { id: "busy", label: "Busy", help: "Reduced activity" },
-    { id: "offline", label: "Offline", help: "Temporarily unavailable" },
+    { id: "active", label: tr("Active"), help: tr("Posting as usual") },
+    { id: "vacation", label: tr("On vacation"), help: tr("Pause monthly rule") },
+    { id: "busy", label: tr("Busy"), help: tr("Reduced activity") },
+    { id: "offline", label: tr("Offline"), help: tr("Temporarily unavailable") },
   ];
 
   return (
@@ -2656,10 +2710,10 @@ function ProfileTab(props: {
         <AvatarCard photo={photo} note={note} status={status} />
         <div className="p-5">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            LIVE PREVIEW
+            {tr("Live preview")}
           </div>
           <div className="mt-1 font-display text-2xl">{displayName || "—"}</div>
-          <p className="mt-1 text-sm text-foreground/70">This is how others see you.</p>
+          <p className="mt-1 text-sm text-foreground/70">{tr("This is how others see you.")}</p>
         </div>
       </GlassCard>
 
@@ -2668,14 +2722,14 @@ function ProfileTab(props: {
         {/* Identity + photo */}
         <GlassCard tone="pink" className="p-6">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">
-            IDENTITY
+            {tr("Identity")}
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <Field label="Display name" value={displayName} onChange={setDisplayName} />
-            <Field label="SL avatar" value={slAvatar} disabled />
+            <Field label={tr("Display name")} value={displayName} onChange={setDisplayName} />
+            <Field label={tr("SL avatar")} value={slAvatar} disabled />
             <label className="block">
               <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-                Language
+                {tr("Language")}
               </span>
               <select
                 value={language}
@@ -2686,7 +2740,7 @@ function ProfileTab(props: {
                 <option value="es">ES</option>
               </select>
             </label>
-            <Field label="Email" value={email} disabled />
+            <Field label={tr("Email")} value={email} disabled />
           </div>
           <div className="mt-6 flex items-center gap-4">
             <img
@@ -2695,7 +2749,7 @@ function ProfileTab(props: {
               className="h-16 w-16 rounded-full object-cover ring-2 ring-[var(--brand-magenta)]/50"
             />
             <label className="cursor-pointer rounded-full border border-foreground/30 bg-background/70 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.3em] hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]">
-              Change photo
+              {tr("Change photo")}
               <input type="file" accept="image/*" className="hidden" onChange={onPickPhoto} />
             </label>
           </div>
@@ -2705,16 +2759,16 @@ function ProfileTab(props: {
         <GlassCard className="p-6">
           <div className="flex items-baseline justify-between">
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-              CUSTOM NOTE
+              {tr("Status")}
             </div>
             <span className="font-mono text-[10px] text-foreground/50">
-              {note.length}/{STATUS_NOTE_MAX} · <span>max 2 lines</span>
+              {note.length}/{STATUS_NOTE_MAX} · <span>{tr("max 2 lines")}</span>
             </span>
           </div>
           <textarea
             value={note}
             onChange={(e) => onNoteChange(e.target.value)}
-            placeholder="e.g. on a velvet night ♡"
+            placeholder={tr("e.g. on a velvet night ♡")}
             rows={2}
             maxLength={STATUS_NOTE_MAX}
             className="mt-3 w-full resize-none rounded-2xl border border-foreground/20 bg-background/70 px-5 py-3 font-display text-xl leading-tight focus:border-[var(--brand-magenta)] focus:outline-none"
@@ -2724,7 +2778,7 @@ function ProfileTab(props: {
             onChange={(event) => setNoteDuration(event.target.value as StatusNoteDuration)}
             className="mt-3 w-full rounded-full border border-foreground/20 bg-background/70 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-foreground/70 focus:border-[var(--brand-magenta)] focus:outline-none"
           >
-            {STATUS_NOTE_DURATION_OPTIONS.map((option) => (
+            {getStatusNoteDurationOptions(uiLanguage).map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -2732,7 +2786,7 @@ function ProfileTab(props: {
           </select>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <p className="font-hand text-base text-[var(--brand-magenta)]">
-              shown over your avatar, like instagram notes. choose a timer or leave it open-ended.
+              {tr("shown over your avatar, like instagram notes")} {tr("choose a timer or leave it open-ended.")}
             </p>
             <button
               type="button"
@@ -2740,7 +2794,7 @@ function ProfileTab(props: {
               disabled={isSaving}
               className="rounded-full bg-[var(--brand-magenta)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white shadow-lg shadow-[var(--brand-magenta)]/15 hover:opacity-90 disabled:opacity-60"
             >
-              {isSaving ? "Saving..." : "Save note"}
+              {isSaving ? tr("Saving...") : tr("Save note")}
             </button>
           </div>
         </GlassCard>
@@ -2748,7 +2802,7 @@ function ProfileTab(props: {
         {/* Status */}
         <GlassCard className="p-6">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            STATUS
+            {tr("STATUS")}
           </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-4">
               {statuses.map((s) => {
@@ -2784,19 +2838,19 @@ function ProfileTab(props: {
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             <Field
-              label="Current"
+              label={tr("Current")}
               type="password"
               value={currentPassword}
               onChange={setCurrentPassword}
             />
             <Field
-              label="New"
+              label={tr("New")}
               type="password"
               value={newPassword}
               onChange={setNewPassword}
             />
             <Field
-              label="Confirm new"
+              label={tr("Confirm new")}
               type="password"
               value={confirmPassword}
               onChange={setConfirmPassword}
@@ -2820,24 +2874,24 @@ function ProfileTab(props: {
               disabled={isUpdatingPassword}
               className="rounded-full bg-foreground px-6 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)] disabled:opacity-60"
             >
-              {isUpdatingPassword ? "Updating..." : "Update password"}
+              {isUpdatingPassword ? tr("Updating...") : tr("Update password")}
             </button>
           </div>
         </GlassCard>
 
         <GlassCard className="border-[var(--brand-magenta)]/25 bg-[var(--brand-pink)]/35 p-6">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-            DANGER ZONE
+            {tr("DANGER ZONE")}
           </div>
-          <h3 className="mt-2 font-display text-3xl leading-none">Leave blogger program.</h3>
+          <h3 className="mt-2 font-display text-3xl leading-none">{tr("Leave blogger program.")}</h3>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-foreground/65">
-            This marks your account as left and removes you from the active blogger program.
+            {tr("This marks your account as left and removes you from the active blogger program.")}
           </p>
           <textarea
             value={leaveReason}
             onChange={(event) => setLeaveReason(event.target.value)}
             rows={2}
-            placeholder="Optional note for Love Potion HQ"
+            placeholder={tr("Optional note for Love Potion HQ")}
             disabled={leaveState === "leaving" || leaveState === "left"}
             className="mt-4 w-full resize-none rounded-2xl border border-[var(--brand-magenta)]/20 bg-background/70 px-5 py-3 text-sm outline-none focus:border-[var(--brand-magenta)] disabled:opacity-60"
           />
@@ -2863,12 +2917,12 @@ function ProfileTab(props: {
               className="rounded-full bg-[var(--brand-magenta)] px-6 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-white shadow-lg shadow-[var(--brand-magenta)]/20 hover:bg-foreground disabled:cursor-not-allowed disabled:opacity-60"
             >
               {leaveState === "leaving"
-                ? "Leaving..."
+                ? tr("Leaving...")
                 : leaveState === "confirming"
-                  ? "Confirm leave program"
+                  ? tr("Confirm leave program")
                   : profile?.account_status === "left" || leaveState === "left"
-                    ? "Program left"
-                    : "Leave program"}
+                    ? tr("Program left")
+                    : tr("Leave program")}
             </button>
           </div>
         </GlassCard>
@@ -2886,14 +2940,14 @@ function ProfileTab(props: {
             </span>
           ) : null}
           <button className="rounded-full border border-foreground/30 px-5 py-2 font-mono text-[10px] uppercase tracking-[0.3em] hover:bg-foreground/5">
-            Discard
+            {tr("Discard")}
           </button>
           <button
             onClick={() => void onSaveProfile()}
             disabled={isSaving}
             className="rounded-full bg-[var(--brand-magenta)] px-6 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-white hover:opacity-90 disabled:opacity-60"
           >
-            {isSaving ? "Saving..." : "Save profile →"}
+            {isSaving ? tr("Saving...") : tr("Save profile →")}
           </button>
         </div>
       </div>

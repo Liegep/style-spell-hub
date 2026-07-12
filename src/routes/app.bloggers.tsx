@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
+import { translateAppPhrase } from "@/i18n/app-text";
+import { useLang } from "@/i18n/dict";
 import { cn } from "@/lib/utils";
 import {
   createBloggerAccount,
@@ -38,6 +40,8 @@ export const Route = createFileRoute("/app/bloggers")({
 });
 
 function BloggersPage() {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const initialData = Route.useLoaderData();
   const [filter, setFilter] = useState<BloggerFilter>("active");
   const [rows, setRows] = useState<BloggerListItem[]>(initialData.rows);
@@ -117,11 +121,11 @@ function BloggersPage() {
       <header className="flex items-end justify-between">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-            SUPER ADMIN · BLOGGERS
+            {tr("SUPER ADMIN · BLOGGERS")}
           </div>
-          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">The bloggers.</h1>
+          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">{tr("The bloggers.")}</h1>
         </div>
-        <HandwrittenNote>your circle</HandwrittenNote>
+        <HandwrittenNote>{tr("your circle")}</HandwrittenNote>
       </header>
 
       <div className="mt-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -129,39 +133,39 @@ function BloggersPage() {
           value={filter}
           onChange={setFilter}
           tabs={[
-            { id: "all", label: "All bloggers", sub: "01" },
-            { id: "active", label: "Active", sub: "02" },
-            { id: "friends", label: "Friends", sub: "03" },
-            { id: "blocked", label: "Blocked / Removed", sub: "04" },
-            { id: "vacation", label: "Vacation", sub: "05" },
-            { id: "missing_uuid", label: "Missing UUID", sub: "06" },
+            { id: "all", label: tr("All bloggers"), sub: "01" },
+            { id: "active", label: tr("Active"), sub: "02" },
+            { id: "friends", label: tr("Friends"), sub: "03" },
+            { id: "blocked", label: tr("Blocked / Removed"), sub: "04" },
+            { id: "vacation", label: tr("Vacation"), sub: "05" },
+            { id: "missing_uuid", label: tr("Missing UUID"), sub: "06" },
           ]}
         />
         <button
           onClick={() => setIsCreateOpen(true)}
           className="rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-white shadow-lg shadow-[var(--brand-magenta)]/20 hover:opacity-90"
         >
-          + Create blogger
+          + {tr("Create blogger")}
         </button>
       </div>
 
       {state === "loading" ? (
         <GlassCard tone="pink" className="mt-10 p-8">
-          <div className="font-hand text-3xl text-[var(--brand-magenta)]">loading bloggers...</div>
+          <div className="font-hand text-3xl text-[var(--brand-magenta)]">{tr("loading bloggers...")}</div>
         </GlassCard>
       ) : null}
 
       {state === "error" ? (
         <GlassCard tone="pink" className="mt-10 p-8">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-            Could not load
+            {tr("Could not load")}
           </div>
-          <p className="mt-3 text-sm text-foreground/80">{errorMessage}</p>
+          <p className="mt-3 text-sm text-foreground/80">{tr(errorMessage)}</p>
           <button
             onClick={() => void loadRows()}
             className="mt-4 rounded-full bg-foreground px-5 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-background"
           >
-            Retry
+            {tr("Retry")}
           </button>
         </GlassCard>
       ) : null}
@@ -182,24 +186,24 @@ function BloggersPage() {
                   {blogger.display_name || blogger.full_name || blogger.sl_avatar_name || blogger.email}
                 </div>
                 <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-                  {blogger.sl_avatar_name || "avatar pending"} · UUID {blogger.sl_avatar_uuid ? "connected" : "missing"} · {blogger.language_preference.toUpperCase()}
+                  {blogger.sl_avatar_name || tr("avatar pending")} · UUID {blogger.sl_avatar_uuid ? tr("connected") : tr("missing")} · {blogger.language_preference.toUpperCase()}
                 </div>
                 {blogger.blogger_tier === "friend" ? (
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <span className="rounded-full border border-[var(--brand-magenta)]/25 bg-[var(--brand-pink)]/55 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--brand-magenta)]">
-                      Honor guest
+                      {tr("Honor guest")}
                     </span>
-                    <span className="text-sm text-foreground/55">No monthly minimum.</span>
+                    <span className="text-sm text-foreground/55">{tr("No monthly minimum.")}</span>
                   </div>
                 ) : null}
                 {blogger.account_status === "blocked" ? (
                   <p className="mt-2 text-sm text-rose-700">
-                    Blocked or removed by Love Potion. Review her history before reactivating.
+                    {tr("Blocked or removed by Love Potion. Review her history before reactivating.")}
                   </p>
                 ) : null}
                 {blogger.account_status === "left" ? (
                   <p className="mt-2 text-sm text-rose-700">
-                    Left the blogger program. Reactivate only if Love Potion decides to bring her back.
+                    {tr("Left the blogger program. Reactivate only if Love Potion decides to bring her back.")}
                   </p>
                 ) : null}
               </div>
@@ -217,10 +221,10 @@ function BloggersPage() {
                     className="rounded-full bg-foreground px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] text-background hover:bg-[var(--brand-magenta)] disabled:opacity-60"
                   >
                     {statusAction[blogger.id] === "saving"
-                      ? "Saving..."
+                      ? tr("Saving...")
                       : statusAction[blogger.id] === "saved"
-                        ? "Reactivated"
-                        : "Reactivate"}
+                        ? tr("Reactivated")
+                        : tr("Reactivate")}
                   </button>
                 ) : null}
                 <button
@@ -229,17 +233,17 @@ function BloggersPage() {
                     event.stopPropagation();
                     setSelectedBlogger(blogger);
                   }}
-                  aria-label={`Open ${blogger.display_name || blogger.full_name || blogger.sl_avatar_name || "blogger"} dossier`}
+                  aria-label={`${tr("Open")} ${blogger.display_name || blogger.full_name || blogger.sl_avatar_name || "blogger"} ${tr("dossier")}`}
                   className="cursor-pointer rounded-full border border-foreground/25 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] hover:bg-foreground hover:text-background"
                 >
-                  Open →
+                  {tr("Open →")}
                 </button>
               </div>
             </GlassCard>
           ))}
           {filtered.length === 0 ? (
             <GlassCard className="p-8">
-              <div className="font-hand text-3xl text-[var(--brand-magenta)]">no bloggers in this filter</div>
+              <div className="font-hand text-3xl text-[var(--brand-magenta)]">{tr("no bloggers in this filter")}</div>
             </GlassCard>
           ) : null}
         </section>
@@ -275,6 +279,8 @@ function BloggerDossierModal({
   onClose: () => void;
   onUpdated: (blogger: BloggerListItem) => void;
 }) {
+  const languageCode = useLang();
+  const tr = (value: string) => translateAppPhrase(value, languageCode);
   const [dossier, setDossier] = useState<BloggerDossier | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState("");
@@ -409,7 +415,7 @@ function BloggerDossierModal({
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-              Blogger · dossier
+              {tr("Blogger · dossier")}
             </div>
             <h2 className="mt-2 font-display text-5xl leading-none md:text-6xl">{name}</h2>
           </div>
@@ -417,7 +423,7 @@ function BloggerDossierModal({
             type="button"
             onClick={onClose}
             className="grid h-12 w-12 place-items-center rounded-full bg-foreground text-2xl text-background hover:bg-[var(--brand-magenta)]"
-            aria-label="Close blogger dossier"
+            aria-label={tr("Close blogger dossier")}
           >
             ×
           </button>
@@ -425,15 +431,15 @@ function BloggerDossierModal({
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[0.95fr_1.35fr]">
           <GlassCard tone="pink" className="p-5">
-            <HandwrittenNote>look closer</HandwrittenNote>
+            <HandwrittenNote>{tr("look closer")}</HandwrittenNote>
             <div className="mt-5 grid gap-4">
-              <Field label="Display name">
+              <Field label={tr("Display name")}>
                 <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} className={inputClass} />
               </Field>
-              <Field label="SL avatar name">
+              <Field label={tr("SL avatar name")}>
                 <input value={avatarName} onChange={(event) => setAvatarName(event.target.value)} className={inputClass} />
               </Field>
-              <Field label="SL avatar UUID">
+              <Field label={tr("SL avatar UUID")}>
                 <input
                   value={avatarUuid}
                   onChange={(event) => setAvatarUuid(event.target.value)}
@@ -441,36 +447,36 @@ function BloggerDossierModal({
                   placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                 />
               </Field>
-              <Field label="Email">
+              <Field label={tr("Email")}>
                 <input value={blogger.email} className={cn(inputClass, "opacity-70")} readOnly />
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Account">
+                <Field label={tr("Account")}>
                   <select
                     value={accountStatus}
                     onChange={(event) => setAccountStatus(event.target.value as AccountStatus)}
                     className={inputClass}
                   >
-                    <option value="active">Active</option>
-                    <option value="pending">Pending</option>
-                    <option value="blocked">Blocked</option>
-                    <option value="left">Left</option>
+                    <option value="active">{tr("Active")}</option>
+                    <option value="pending">{tr("Pending")}</option>
+                    <option value="blocked">{tr("Blocked")}</option>
+                    <option value="left">{tr("Left")}</option>
                   </select>
                 </Field>
-                <Field label="Presence">
+                <Field label={tr("Presence")}>
                   <select
                     value={availabilityStatus}
                     onChange={(event) => setAvailabilityStatus(event.target.value as AvailabilityStatus)}
                     className={inputClass}
                   >
-                    <option value="available">Available</option>
-                    <option value="vacation">Vacation</option>
-                    <option value="busy">Busy</option>
-                    <option value="offline">Offline</option>
+                    <option value="available">{tr("Available")}</option>
+                    <option value="vacation">{tr("Vacation")}</option>
+                    <option value="busy">{tr("Busy")}</option>
+                    <option value="offline">{tr("Offline")}</option>
                   </select>
                 </Field>
               </div>
-              <Field label="Language">
+              <Field label={tr("Language")}>
                 <select
                   value={language}
                   onChange={(event) => setLanguage(event.target.value as "en" | "es")}
@@ -480,17 +486,17 @@ function BloggerDossierModal({
                   <option value="es">ES</option>
                 </select>
               </Field>
-              <Field label="Blogging rule">
+              <Field label={tr("Blogging rule")}>
                 <select
                   value={bloggerTier}
                   onChange={(event) => setBloggerTier(event.target.value as BloggerTier)}
                   className={inputClass}
                 >
-                  <option value="standard">Standard · 1 post/month</option>
-                  <option value="friend">Friend · honor guest</option>
+                  <option value="standard">{tr("Standard · 1 post/month")}</option>
+                  <option value="friend">{tr("Friend · honor guest")}</option>
                 </select>
                 <p className="mt-2 text-xs text-foreground/55">
-                  Friends are invited guests: they can blog whenever they want and are skipped by the monthly block rule.
+                  {tr("Friends are invited guests: they can blog whenever they want and are skipped by the monthly block rule.")}
                 </p>
               </Field>
             </div>
@@ -504,7 +510,7 @@ function BloggerDossierModal({
                     : "border-[var(--brand-magenta)]/30 bg-[var(--brand-pink)]/50 text-[var(--brand-magenta)]",
                 )}
               >
-                {message}
+                {tr(message)}
               </div>
             ) : null}
 
@@ -513,13 +519,13 @@ function BloggerDossierModal({
               disabled={saveState === "saving" || removeState === "removing"}
               className="mt-6 w-full rounded-full bg-foreground px-6 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)] disabled:opacity-60"
             >
-              {saveState === "saving" ? "Saving..." : saveState === "saved" ? "Saved" : "Save dossier"}
+              {saveState === "saving" ? tr("Saving...") : saveState === "saved" ? tr("Saved") : tr("Save dossier")}
             </button>
 
             <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50/50 p-4">
-              <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-rose-600">Danger zone</div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-rose-600">{tr("Danger zone")}</div>
               <p className="mt-2 text-sm text-rose-700/80">
-                Remove this blogger from active lists without deleting her history, posts, claims, or audit trail.
+                {tr("Remove this blogger from active lists without deleting her history, posts, claims, or audit trail.")}
               </p>
               <button
                 type="button"
@@ -534,35 +540,35 @@ function BloggerDossierModal({
               >
                 {accountStatus === "left" || removeState === "removed"
                   ? accountStatus === "left"
-                    ? "Left by blogger"
-                    : "Removed"
+                    ? tr("Left by blogger")
+                    : tr("Removed")
                   : removeState === "removing"
-                    ? "Removing..."
+                    ? tr("Removing...")
                     : removeState === "confirming"
-                      ? "Confirm delete"
-                      : "Delete blogger"}
+                      ? tr("Confirm delete")
+                      : tr("Delete blogger")}
               </button>
             </div>
           </GlassCard>
 
           <div className="grid gap-6">
             <div className="grid max-w-3xl items-start gap-4 sm:grid-cols-4">
-              <MiniStat label="Claims" value={claims.length} />
-              <MiniStat label="Delivered" value={deliveredCount} tone="pink" />
-              <MiniStat label="Posts" value={submissions.length} />
-              <MiniStat label="Pending" value={pendingCount} tone={pendingCount > 0 ? "pink" : "plain"} />
+              <MiniStat label={tr("Claims")} value={claims.length} />
+              <MiniStat label={tr("Delivered")} value={deliveredCount} tone="pink" />
+              <MiniStat label={tr("Posts")} value={submissions.length} />
+              <MiniStat label={tr("Pending")} value={pendingCount} tone={pendingCount > 0 ? "pink" : "plain"} />
             </div>
 
             {state === "loading" ? (
               <GlassCard className="p-8">
-                <div className="font-hand text-3xl text-[var(--brand-magenta)]">opening dossier...</div>
+                <div className="font-hand text-3xl text-[var(--brand-magenta)]">{tr("opening dossier...")}</div>
               </GlassCard>
             ) : null}
 
             {state === "error" ? (
               <GlassCard tone="pink" className="p-8">
                 <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-                  Could not load history
+                  {tr("Could not load history")}
                 </div>
                 <p className="mt-3 text-sm text-foreground/75">{message}</p>
               </GlassCard>
@@ -570,25 +576,25 @@ function BloggerDossierModal({
 
             {state === "ready" ? (
               <div className="grid gap-6 xl:grid-cols-2">
-                <HistoryPanel title="Recent claims" empty="no products claimed yet">
+                <HistoryPanel title={tr("Recent claims")} empty={tr("no products claimed yet")}>
                   {claims.map((claim) => (
                     <HistoryRow
                       key={claim.id}
                       imageUrl={claim.product_image_url}
                       title={claim.product_name}
-                      meta={`${formatShortDate(claim.claimed_at)} · ${claim.delivered_at ? "delivered" : "delivery pending"}`}
-                      badge={claim.status}
+                      meta={`${formatShortDate(claim.claimed_at)} · ${claim.delivered_at ? tr("delivered") : tr("delivery pending")}`}
+                      badge={tr(claim.status)}
                     />
                   ))}
                 </HistoryPanel>
-                <HistoryPanel title="Recent posts" empty="no posts submitted yet">
+                <HistoryPanel title={tr("Recent posts")} empty={tr("no posts submitted yet")}>
                   {submissions.map((submission) => (
                     <HistoryRow
                       key={submission.id}
                       imageUrl={submission.product_image_url}
                       title={submission.product_name}
-                      meta={`${formatShortDate(submission.submitted_at)} · ${submission.links_count} links`}
-                      badge={submission.status.replace("_", " ")}
+                      meta={`${formatShortDate(submission.submitted_at)} · ${submission.links_count} ${tr("links")}`}
+                      badge={tr(submission.status.replace("_", " "))}
                       note={submission.review_comment}
                     />
                   ))}
@@ -668,6 +674,8 @@ function CreateBloggerModal({
   onClose: () => void;
   onCreated: () => void;
 }) {
+  const languageCode = useLang();
+  const tr = (value: string) => translateAppPhrase(value, languageCode);
   const [displayName, setDisplayName] = useState("");
   const [avatarName, setAvatarName] = useState("");
   const [avatarUuid, setAvatarUuid] = useState("");
@@ -724,12 +732,12 @@ function CreateBloggerModal({
         className="mx-auto max-w-2xl rounded-[2rem] border border-[var(--brand-pink)] bg-background p-6 shadow-2xl md:p-8"
       >
         <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-          Blogger · onboarding
+          {tr("Blogger · onboarding")}
         </div>
-        <h2 className="mt-2 font-display text-5xl leading-none">Create blogger.</h2>
+        <h2 className="mt-2 font-display text-5xl leading-none">{tr("Create blogger.")}</h2>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <Field label="Display name">
+          <Field label={tr("Display name")}>
             <input
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
@@ -737,7 +745,7 @@ function CreateBloggerModal({
               required
             />
           </Field>
-          <Field label="Email">
+          <Field label={tr("Email")}>
             <input
               type="email"
               value={email}
@@ -746,7 +754,7 @@ function CreateBloggerModal({
               required
             />
           </Field>
-          <Field label="SL avatar name">
+          <Field label={tr("SL avatar name")}>
             <input
               value={avatarName}
               onChange={(event) => setAvatarName(event.target.value)}
@@ -755,7 +763,7 @@ function CreateBloggerModal({
               required
             />
           </Field>
-          <Field label="SL avatar UUID">
+          <Field label={tr("SL avatar UUID")}>
             <input
               value={avatarUuid}
               onChange={(event) => setAvatarUuid(event.target.value)}
@@ -763,7 +771,7 @@ function CreateBloggerModal({
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
             />
           </Field>
-          <Field label="Temporary password">
+          <Field label={tr("Temporary password")}>
             <input
               type="password"
               minLength={6}
@@ -773,7 +781,7 @@ function CreateBloggerModal({
               required
             />
           </Field>
-          <Field label="Language">
+          <Field label={tr("Language")}>
             <select
               value={language}
               onChange={(event) => setLanguage(event.target.value as "en" | "es")}
@@ -783,31 +791,31 @@ function CreateBloggerModal({
               <option value="es">ES</option>
             </select>
           </Field>
-          <Field label="Initial account status">
+          <Field label={tr("Initial account status")}>
             <select
               value={accountStatus}
               onChange={(event) => setAccountStatus(event.target.value as "pending" | "active")}
               className={inputClass}
             >
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
+              <option value="active">{tr("Active")}</option>
+              <option value="pending">{tr("Pending")}</option>
             </select>
           </Field>
-          <Field label="Blogging rule">
+          <Field label={tr("Blogging rule")}>
             <select
               value={bloggerTier}
               onChange={(event) => setBloggerTier(event.target.value as BloggerTier)}
               className={inputClass}
             >
-              <option value="standard">Standard · 1 post/month</option>
-              <option value="friend">Friend · honor guest</option>
+              <option value="standard">{tr("Standard · 1 post/month")}</option>
+              <option value="friend">{tr("Friend · honor guest")}</option>
             </select>
           </Field>
         </div>
 
         {message ? (
           <div className="mt-4 rounded-xl border border-[var(--brand-magenta)]/30 bg-[var(--brand-pink)]/50 px-4 py-3 text-sm text-[var(--brand-magenta)]">
-            {message}
+            {tr(message)}
           </div>
         ) : null}
 
@@ -817,14 +825,14 @@ function CreateBloggerModal({
             onClick={onClose}
             className="rounded-full border border-foreground/25 px-5 py-2 font-mono text-[10px] uppercase tracking-[0.3em]"
           >
-            Cancel
+            {tr("Cancel")}
           </button>
           <button
             type="submit"
             disabled={state === "saving"}
             className="rounded-full bg-foreground px-6 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)] disabled:opacity-60"
           >
-            {state === "saving" ? "Creating..." : "Create blogger"}
+            {state === "saving" ? tr("Creating...") : tr("Create blogger")}
           </button>
         </div>
       </form>
@@ -844,6 +852,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function StatusChip({ status }: { status: string }) {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const color =
     status === "active"
       ? "bg-green-500/10 text-green-700"
@@ -852,7 +862,12 @@ function StatusChip({ status }: { status: string }) {
         : status === "blocked" || status === "left"
           ? "bg-red-500/10 text-red-700"
           : "bg-foreground/10 text-foreground/70";
-  const label = status === "left" ? "program left" : status === "blocked" ? "blocked / removed" : status;
+  const label =
+    status === "left"
+      ? tr("program left")
+      : status === "blocked"
+        ? tr("blocked / removed")
+        : tr(status === "pending" ? "Pending" : status === "active" ? "Active" : status);
 
   return (
     <span
@@ -867,6 +882,8 @@ function StatusChip({ status }: { status: string }) {
 }
 
 function BloggerProgress({ blogger }: { blogger: BloggerListItem }) {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const progress = blogger.progress ?? {
     claims: 0,
     delivered: 0,
@@ -880,17 +897,17 @@ function BloggerProgress({ blogger }: { blogger: BloggerListItem }) {
   const monthProgress = monthlyTarget === 0 ? 100 : Math.min(100, Math.round((progress.approvedThisMonth / monthlyTarget) * 100));
   const isPaused = blogger.account_status === "blocked" || blogger.account_status === "left";
   const statusText = isPaused
-    ? "paused"
+    ? tr("paused")
     : blogger.blogger_tier === "friend"
-      ? "honor guest"
+      ? tr("honor guest")
       : progress.approvedThisMonth >= monthlyTarget
-        ? "month done"
-        : "monthly post due";
+        ? tr("month done")
+        : tr("monthly post due");
 
   return (
     <div className="min-w-[220px] rounded-2xl border border-foreground/10 bg-background/55 px-4 py-3">
       <div className="flex items-center justify-between gap-3">
-        <div className="font-mono text-[9px] uppercase tracking-[0.28em] text-foreground/45">Progress</div>
+        <div className="font-mono text-[9px] uppercase tracking-[0.28em] text-foreground/45">{tr("Progress")}</div>
         <div
           className={cn(
             "rounded-full px-2.5 py-1 font-mono text-[8px] uppercase tracking-[0.22em]",
@@ -911,19 +928,19 @@ function BloggerProgress({ blogger }: { blogger: BloggerListItem }) {
         />
       </div>
       <div className="mt-3 grid grid-cols-4 gap-2 text-center">
-        <ProgressMetric label="claims" value={progress.claims} />
-        <ProgressMetric label="sent" value={progress.delivered} />
-        <ProgressMetric label="posts" value={progress.posts} />
-        <ProgressMetric label="ok" value={progress.approved} />
+        <ProgressMetric label={tr("claims")} value={progress.claims} />
+        <ProgressMetric label={tr("sent")} value={progress.delivered} />
+        <ProgressMetric label={tr("posts")} value={progress.posts} />
+        <ProgressMetric label={tr("ok")} value={progress.approved} />
       </div>
       <div className="mt-2 flex flex-wrap gap-2 font-mono text-[8px] uppercase tracking-[0.22em] text-foreground/45">
-        <span>{progress.approvedThisMonth} this month</span>
+        <span>{progress.approvedThisMonth} {tr("this month")}</span>
         <span>·</span>
-        <span>{progress.pending} pending</span>
+        <span>{progress.pending} {tr("pending")}</span>
         {progress.needsRevision > 0 ? (
           <>
             <span>·</span>
-            <span>{progress.needsRevision} revision</span>
+            <span>{progress.needsRevision} {tr("revision")}</span>
           </>
         ) : null}
       </div>

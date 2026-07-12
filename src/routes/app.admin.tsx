@@ -10,6 +10,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { products, stats } from "@/mocks/data";
+import { translateAppPhrase } from "@/i18n/app-text";
+import { useLang } from "@/i18n/dict";
 import { cn } from "@/lib/utils";
 import { getCurrentProfile } from "@/integrations/supabase/auth";
 import { getReviewQueue, reviewSubmission, type ReviewQueueItem } from "@/integrations/supabase/dashboard";
@@ -344,13 +346,15 @@ function Overview({
   reviewError: string;
   onReview: (submissionId: string, status: SubmissionStatus) => Promise<void>;
 }) {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const items = [
-    { n: stats.activeBloggers,   l: "Active bloggers" },
-    { n: stats.inactiveBloggers, l: "Inactive" },
-    { n: stats.postsThisMonth,   l: "Posts this month" },
-    { n: stats.productsLive,     l: "Products live" },
-    { n: stats.archiveSoon,      l: "Archive soon" },
-    { n: stats.subscribers,      l: "Subscribers" },
+    { n: stats.activeBloggers,   l: tr("Active bloggers") },
+    { n: stats.inactiveBloggers, l: tr("Inactive") },
+    { n: stats.postsThisMonth,   l: tr("Posts this month") },
+    { n: stats.productsLive,     l: tr("Products live") },
+    { n: stats.archiveSoon,      l: tr("Archive soon") },
+    { n: stats.subscribers,      l: tr("Subscribers") },
   ];
   return (
     <div>
@@ -367,15 +371,15 @@ function Overview({
         <GlassCard className="md:col-span-3">
           <div className="flex items-center justify-between gap-4">
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-              REVIEW QUEUE
+              {tr("REVIEW QUEUE")}
             </div>
             <div className="flex gap-2">
               {[
-                { label: "All", value: "all" as const },
-                { label: "Pending", value: "pending" as const },
-                { label: "Approved", value: "approved" as const },
-                { label: "Needs revision", value: "needs_revision" as const },
-                { label: "Rejected", value: "rejected" as const },
+                { label: tr("All"), value: "all" as const },
+                { label: tr("Pending"), value: "pending" as const },
+                { label: tr("Approved"), value: "approved" as const },
+                { label: tr("Needs revision"), value: "needs_revision" as const },
+                { label: tr("Rejected"), value: "rejected" as const },
               ].map((filter) => (
                 <button
                   key={filter.value}
@@ -401,7 +405,7 @@ function Overview({
 
           {reviewQueue.length === 0 ? (
             <div className="mt-4 rounded-xl border border-dashed border-foreground/15 p-6 text-center font-hand text-2xl text-[var(--brand-magenta)]">
-              {reviewFilter === "pending" ? "no pending submissions · try ALL" : "no submissions to review"}
+              {reviewFilter === "pending" ? tr("no pending submissions · try ALL") : tr("no submissions to review")}
             </div>
           ) : (
             <div className="mt-4 space-y-3">
@@ -428,11 +432,11 @@ function Overview({
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-display text-xl">{item.product_name}</div>
                       <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-foreground/55">
-                        {item.blogger_name} · {item.links_count} links
+                        {item.blogger_name} · {item.links_count} {tr("links")}
                       </div>
                     </div>
                     <span className="rounded-full bg-foreground/10 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.22em]">
-                      {item.status.replace("_", " ")}
+                      {tr(item.status.replace("_", " "))}
                     </span>
                   </div>
 
@@ -442,18 +446,18 @@ function Overview({
                       setReviewMessage((current) => ({ ...current, [item.id]: event.target.value }))
                     }
                     rows={2}
-                    placeholder="Comment for blogger"
+                    placeholder={tr("Comment for blogger")}
                     className="mt-3 w-full rounded-xl border border-foreground/15 bg-background px-3 py-2 text-sm outline-none focus:border-[var(--brand-magenta)]"
                   />
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     {reviewingId === item.id ? (
                       <span className="rounded-full bg-foreground/10 px-3 py-2 font-mono text-[9px] uppercase tracking-[0.22em] text-foreground/70">
-                        sending...
+                        {tr("sending...")}
                       </span>
                     ) : reviewSent[item.id] ? (
                       <span className="rounded-full bg-emerald-100 px-3 py-2 font-mono text-[9px] uppercase tracking-[0.22em] text-emerald-700">
-                        sent to blogger
+                        {tr("sent to blogger")}
                       </span>
                     ) : (
                       <>
@@ -461,19 +465,19 @@ function Overview({
                           onClick={() => void onReview(item.id, "approved")}
                           className="rounded-full bg-green-600 px-3 py-2 font-mono text-[9px] uppercase tracking-[0.22em] text-white"
                         >
-                          Approve
+                          {tr("Approve")}
                         </button>
                         <button
                           onClick={() => void onReview(item.id, "needs_revision")}
                           className="rounded-full bg-amber-500 px-3 py-2 font-mono text-[9px] uppercase tracking-[0.22em] text-white"
                         >
-                          Needs revision
+                          {tr("Needs revision")}
                         </button>
                         <button
                           onClick={() => void onReview(item.id, "rejected")}
                           className="rounded-full bg-rose-600 px-3 py-2 font-mono text-[9px] uppercase tracking-[0.22em] text-white"
                         >
-                          Reject
+                          {tr("Reject")}
                         </button>
                       </>
                     )}
@@ -487,12 +491,12 @@ function Overview({
 
       <div className="mt-10 grid gap-6 md:grid-cols-3">
         <GlassCard className="md:col-span-2">
-          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">RULES IN EFFECT</div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">{tr("RULES IN EFFECT")}</div>
           <ul className="mt-4 space-y-3">
             {[
-              { k: "Post frequency", v: "1 post / month" },
-              { k: "Auto-archive", v: "After 90 days available" },
-              { k: "Inactivity warning", v: "21 days no posts" },
+              { k: tr("Post frequency"), v: tr("1 post / month") },
+              { k: tr("Auto-archive"), v: tr("After 90 days available") },
+              { k: tr("Inactivity warning"), v: tr("21 days no posts") },
             ].map((r) => (
               <li key={r.k} className="flex items-center justify-between rounded-xl bg-background/60 px-4 py-3">
                 <span className="font-display text-lg">{r.k}</span>
@@ -502,12 +506,14 @@ function Overview({
           </ul>
         </GlassCard>
         <GlassCard tone="pink">
-          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">UPCOMING ARCHIVE</div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">{tr("UPCOMING ARCHIVE")}</div>
           <ul className="mt-4 space-y-2 text-sm">
             {products.filter(p => p.expires.includes("days") && parseInt(p.expires) < 30).map(p => (
               <li key={p.id} className="flex items-center justify-between border-b border-foreground/10 pb-2">
                 <span>{p.name}</span>
-                <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">in {p.expires}</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
+                  {tr("in")} {p.expires.replace("days", tr("days"))}
+                </span>
               </li>
             ))}
           </ul>

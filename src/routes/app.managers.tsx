@@ -4,6 +4,8 @@ import { Save, Trash2, UserPlus } from "lucide-react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
+import { translateAppPhrase } from "@/i18n/app-text";
+import { useLang } from "@/i18n/dict";
 import {
   createManagerAccount,
   listManagers,
@@ -36,6 +38,8 @@ export const Route = createFileRoute("/app/managers")({
 });
 
 function ManagersPage() {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const initialData = Route.useLoaderData();
   const [filter, setFilter] = useState<ManagerFilter>("all");
   const [managers, setManagers] = useState<ManagerListItem[]>(initialData.managers);
@@ -94,11 +98,11 @@ function ManagersPage() {
       <header className="flex items-end justify-between">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-            SUPER ADMIN · MANAGERS
+            {tr("SUPER ADMIN · MANAGERS")}
           </div>
-          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">The keepers.</h1>
+          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">{tr("The keepers.")}</h1>
         </div>
-        <HandwrittenNote>trusted hands</HandwrittenNote>
+        <HandwrittenNote>{tr("trusted hands")}</HandwrittenNote>
       </header>
 
       <div className="mt-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -106,10 +110,10 @@ function ManagersPage() {
           value={filter}
           onChange={setFilter}
           tabs={[
-            { id: "all", label: "All managers", sub: "01" },
-            { id: "admin", label: "Admins", sub: "02" },
-            { id: "super", label: "Super admins", sub: "03" },
-            { id: "inactive", label: "Inactive", sub: "04" },
+            { id: "all", label: tr("All managers"), sub: "01" },
+            { id: "admin", label: tr("Admins"), sub: "02" },
+            { id: "super", label: tr("Super admins"), sub: "03" },
+            { id: "inactive", label: tr("Inactive"), sub: "04" },
           ]}
         />
         <button
@@ -117,13 +121,13 @@ function ManagersPage() {
           className="rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-white shadow-lg shadow-[var(--brand-magenta)]/20 hover:opacity-90"
         >
           <UserPlus className="mr-2 inline h-4 w-4" />
-          Create manager
+          {tr("Create manager")}
         </button>
       </div>
 
       {message ? (
         <div className="mt-6 rounded-3xl border border-[var(--brand-pink)] bg-[var(--brand-pink)]/50 px-5 py-4 text-sm text-foreground/70">
-          {message}
+          {tr(message)}
         </div>
       ) : null}
 
@@ -132,11 +136,11 @@ function ManagersPage() {
           <table className="w-full min-w-[760px] text-sm">
             <thead className="border-b border-foreground/10 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
               <tr>
-                <th className="px-6 py-4 text-left">Name</th>
-                <th className="px-6 py-4 text-left">Role</th>
-                <th className="px-6 py-4 text-left">Email</th>
-                <th className="px-6 py-4 text-left">Status</th>
-                <th className="px-6 py-4 text-left">Updated</th>
+                <th className="px-6 py-4 text-left">{tr("Name")}</th>
+                <th className="px-6 py-4 text-left">{tr("Role")}</th>
+                <th className="px-6 py-4 text-left">{tr("Email")}</th>
+                <th className="px-6 py-4 text-left">{tr("Status")}</th>
+                <th className="px-6 py-4 text-left">{tr("Updated")}</th>
                 <th className="px-6 py-4" />
               </tr>
             </thead>
@@ -155,14 +159,14 @@ function ManagersPage() {
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-foreground/55">
-                    No managers in this view yet.
+                    {tr("No managers in this view yet.")}
                   </td>
                 </tr>
               ) : (
                 filtered.map((manager) => (
                   <tr key={manager.id} className="border-b border-foreground/5 last:border-0">
                     <td className="px-6 py-4 font-display text-lg">
-                      {manager.display_name ?? manager.full_name ?? "Unnamed manager"}
+                      {manager.display_name ?? manager.full_name ?? tr("Unnamed manager")}
                     </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex whitespace-nowrap rounded-full bg-foreground px-4 py-1 font-mono text-[9px] uppercase tracking-[0.2em] text-background">
@@ -182,7 +186,7 @@ function ManagersPage() {
                           onClick={() => setEditor({ type: "edit", manager })}
                           className="rounded-full border border-foreground/30 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] hover:bg-foreground hover:text-background"
                         >
-                          Edit
+                          {tr("Edit")}
                         </button>
                         <button
                           onClick={() => void removeManager(manager)}
@@ -191,10 +195,10 @@ function ManagersPage() {
                         >
                           <Trash2 className="mr-1 h-3 w-3" />
                           {removingId === manager.id
-                            ? "Removing"
+                            ? tr("Removing")
                             : confirmRemoveId === manager.id
-                              ? "Confirm"
-                              : "Remove"}
+                              ? tr("Confirm")
+                              : tr("Remove")}
                         </button>
                       </div>
                     </td>

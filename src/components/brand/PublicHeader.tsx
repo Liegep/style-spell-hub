@@ -24,9 +24,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  STATUS_NOTE_DURATION_OPTIONS,
   STATUS_NOTE_MAX,
   buildStatusNoteExpiry,
+  getStatusNoteDurationOptions,
   getVisibleStatusMessage,
   type StatusNoteDuration,
 } from "@/lib/status-note";
@@ -262,9 +262,9 @@ function PublicSessionCard({ lang, loginLabel }: { lang: "en" | "es"; loginLabel
                 }}
                 className="mt-2 w-full rounded-full border border-foreground/15 bg-white/80 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/70 outline-none transition focus:border-[var(--brand-magenta)]"
               >
-                {STATUS_NOTE_DURATION_OPTIONS.map((option) => (
+                {getStatusNoteDurationOptions(lang).map((option) => (
                   <option key={option.value} value={option.value}>
-                    {lang === "es" && option.value === "none" ? "Hasta que la cambie" : option.label}
+                    {option.label}
                   </option>
                 ))}
               </select>

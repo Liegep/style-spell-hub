@@ -1,3 +1,5 @@
+import type { Lang } from "@/i18n/dict";
+
 export const STATUS_NOTE_MAX = 60;
 
 export const STATUS_NOTE_DURATION_OPTIONS = [
@@ -47,6 +49,20 @@ export function buildStatusNoteExpiry(duration: StatusNoteDuration, now = new Da
   return expiresAt.toISOString();
 }
 
-export function getStatusNoteDurationLabel(duration: StatusNoteDuration) {
+export function getStatusNoteDurationOptions(lang: Lang = "en") {
+  return STATUS_NOTE_DURATION_OPTIONS.map((option) => ({
+    ...option,
+    label: getStatusNoteDurationLabel(option.value, lang),
+  }));
+}
+
+export function getStatusNoteDurationLabel(duration: StatusNoteDuration, lang: Lang = "en") {
+  if (lang === "es") {
+    if (duration === "none") return "Hasta que la cambie";
+    if (duration === "3d") return "3 días";
+    if (duration === "1w") return "1 semana";
+    if (duration === "15d") return "15 días";
+    if (duration === "1m") return "1 mes";
+  }
   return STATUS_NOTE_DURATION_OPTIONS.find((option) => option.value === duration)?.label ?? "Until I change it";
 }

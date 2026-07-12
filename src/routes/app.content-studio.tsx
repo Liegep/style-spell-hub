@@ -9,6 +9,7 @@ import logoIcon from "@/assets/logo-icon.png";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
+import { translateAppPhrase } from "@/i18n/app-text";
 import { dict, type Lang } from "@/i18n/dict";
 import { getProductSummaries, type ProductSummary } from "@/integrations/supabase/dashboard";
 import {
@@ -62,20 +63,21 @@ function ContentStudioPage() {
   const [editor, setEditor] = useState<EditorMode | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const uiLang: Lang = (location.search as { uiLang?: string } | undefined)?.uiLang === "es" ? "es" : "en";
+  const tr = (value: string) => translateAppPhrase(value, uiLang);
 
   return (
     <div className="px-6 py-10 md:px-12">
       <header className="flex items-end justify-between">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-            ADMIN · STUDIO
+            {tr("ADMIN · STUDIO")}
           </div>
-          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">Content Studio.</h1>
+          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">{tr("Content Studio.")}</h1>
           <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/45">
-            Manage the Love Potion experience
+            {tr("Manage the Love Potion experience")}
           </p>
         </div>
-        <HandwrittenNote>make it official</HandwrittenNote>
+        <HandwrittenNote>{tr("make it official")}</HandwrittenNote>
       </header>
 
       <div className="mt-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -83,10 +85,10 @@ function ContentStudioPage() {
           value={tab}
           onChange={setTab}
           tabs={[
-            { id: "products", label: "Products", sub: "01" },
-            { id: "archived", label: "Archived", sub: "02" },
-            { id: "assets", label: "Assets", sub: "03" },
-            { id: "content", label: "Content", sub: "04" },
+            { id: "products", label: tr("Products"), sub: "01" },
+            { id: "archived", label: tr("Archived"), sub: "02" },
+            { id: "assets", label: tr("Assets"), sub: "03" },
+            { id: "content", label: tr("Content"), sub: "04" },
           ]}
         />
         <button
@@ -96,7 +98,7 @@ function ContentStudioPage() {
           }}
           className="rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-white shadow-lg shadow-[var(--brand-magenta)]/20 hover:opacity-90"
         >
-          + Create new release
+          {tr("+ Create new release")}
         </button>
       </div>
 
@@ -106,10 +108,11 @@ function ContentStudioPage() {
             initialProducts={initialData.products}
             initialState={initialData.productsState}
             refreshKey={refreshKey}
+            uiLang={uiLang}
             view="active"
-            title="Product releases"
-            emptyTitle="no releases yet"
-            emptyBody="Create a new release when you are ready to send products to bloggers."
+            title={tr("Product releases")}
+            emptyTitle={tr("no releases yet")}
+            emptyBody={tr("Create a new release when you are ready to send products to bloggers.")}
             onEdit={(id) => setEditor({ type: "edit", id })}
           />
         )}
@@ -118,10 +121,11 @@ function ContentStudioPage() {
             initialProducts={initialData.products}
             initialState={initialData.productsState}
             refreshKey={refreshKey}
+            uiLang={uiLang}
             view="archived"
-            title="Archived releases"
-            emptyTitle="no archived releases"
-            emptyBody="Archived products will appear here when you retire a release."
+            title={tr("Archived releases")}
+            emptyTitle={tr("no archived releases")}
+            emptyBody={tr("Archived products will appear here when you retire a release.")}
             onEdit={(id) => setEditor({ type: "edit", id })}
           />
         )}
@@ -147,6 +151,7 @@ function ProductsPanel({
   initialProducts,
   initialState,
   refreshKey,
+  uiLang,
   view,
   title,
   emptyTitle,
@@ -156,6 +161,7 @@ function ProductsPanel({
   initialProducts: ProductSummary[];
   initialState: "live" | "fallback";
   refreshKey: number;
+  uiLang: Lang;
   view: "active" | "archived";
   title: string;
   emptyTitle: string;
@@ -164,6 +170,7 @@ function ProductsPanel({
 }) {
   const [productRows, setProductRows] = useState<ProductSummary[]>(initialProducts);
   const [state, setState] = useState<"loading" | "live" | "fallback">(initialState);
+  const tr = (value: string) => translateAppPhrase(value, uiLang);
 
   useEffect(() => {
     if (refreshKey === 0) return;
@@ -194,8 +201,8 @@ function ProductsPanel({
 
   return (
     <div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-        <span>{title}</span> · {rows.length} · <span>{state === "loading" ? "syncing" : state}</span>
+      <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
+        <span>{title}</span> · {rows.length} · <span>{state === "loading" ? tr("syncing") : tr(state)}</span>
       </div>
       {state !== "loading" && rows.length === 0 ? (
         <GlassCard tone="pink" className="mt-6 p-8 text-center">
@@ -213,7 +220,7 @@ function ProductsPanel({
               onClick={() => onEdit(release.id)}
               className="block w-full cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-magenta)]"
               aria-label={`Edit ${release.name}`}
-              title="Edit product"
+              title={tr("Edit product")}
             >
               <img
                 src={release.editorial_image_url ?? release.image_url ?? ""}
@@ -223,15 +230,15 @@ function ProductsPanel({
             </button>
             <div className="p-5">
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-                {release.category ?? "General"}
+                {release.category ?? tr("General")}
               </div>
               <h3 className="mt-1 font-display text-2xl leading-tight">{release.name}</h3>
               <div className="mt-3 flex flex-wrap gap-2 font-mono text-[9px] uppercase tracking-[0.22em] text-foreground/55">
                 <span className="rounded-full border border-foreground/10 bg-white/55 px-3 py-1">
-                  {release.claims_count ?? 0} {(release.claims_count ?? 0) === 1 ? "blogger" : "bloggers"}
+                  {release.claims_count ?? 0} {(release.claims_count ?? 0) === 1 ? tr("blogger") : tr("bloggers")}
                 </span>
                 <span className="rounded-full border border-foreground/10 bg-white/55 px-3 py-1">
-                  {release.submissions_count ?? 0} {(release.submissions_count ?? 0) === 1 ? "post" : "posts"}
+                  {release.submissions_count ?? 0} {(release.submissions_count ?? 0) === 1 ? tr("post") : tr("posts")}
                 </span>
               </div>
               <div className="mt-4 flex items-center justify-between">
@@ -239,12 +246,12 @@ function ProductsPanel({
                   {release.status}
                 </span>
                 <span className="font-hand text-lg text-[var(--brand-magenta)]">
-                  {release.handwritten_note ?? "new drop"}
+                  {release.handwritten_note ?? tr("new drop")}
                 </span>
               </div>
               {release.featured_on_landing ? (
                 <div className="mt-3 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--brand-magenta)]">
-                  featured on landing
+                  {tr("featured on landing")}
                 </div>
               ) : null}
             </div>

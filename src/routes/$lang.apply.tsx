@@ -65,7 +65,7 @@ function ApplyPage() {
     try {
       const requiredMissing = fields.find((field) => field.required && !readFormValue(form, field.field_key));
       if (requiredMissing) {
-        throw new Error(`Please fill: ${requiredMissing.label}.`);
+        throw new Error(`${t.apply.missingField}: ${requiredMissing.label}.`);
       }
 
       await submitBloggerApplication({
@@ -83,7 +83,7 @@ function ApplyPage() {
       setState("sent");
       setForm(createEmptyForm(fields));
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Could not send your application.");
+      setError(submitError instanceof Error ? submitError.message : t.apply.submitError);
       setState("error");
     }
   }
@@ -193,7 +193,7 @@ function ApplyPage() {
                   {field.label}
                   {field.required ? " *" : ""}
                 </span>
-                <ApplicationFieldInput field={field} value={form[field.field_key] ?? ""} onChange={updateField} />
+                <ApplicationFieldInput field={field} value={form[field.field_key] ?? ""} onChange={updateField} t={t} />
                 {field.help_text ? <p className="mt-2 text-xs text-foreground/55">{field.help_text}</p> : null}
               </label>
             ))}
@@ -206,7 +206,7 @@ function ApplyPage() {
                   {field.label}
                   {field.required ? " *" : ""}
                 </span>
-                <ApplicationFieldInput field={field} value={form[field.field_key] ?? ""} onChange={updateField} />
+                <ApplicationFieldInput field={field} value={form[field.field_key] ?? ""} onChange={updateField} t={t} />
                 {field.help_text ? <p className="mt-2 text-xs text-foreground/55">{field.help_text}</p> : null}
               </label>
             ))}
@@ -220,12 +220,12 @@ function ApplyPage() {
               disabled={state === "sending"}
               className="rounded-full bg-foreground px-8 py-3 font-mono text-[11px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {state === "sending" ? "Sending..." : `${t.apply.submit} →`}
+              {state === "sending" ? t.apply.sending : `${t.apply.submit} →`}
             </button>
           </div>
           {state === "sent" ? (
             <div className="mt-6 rounded-2xl border border-green-300 bg-green-50 px-5 py-4 text-sm text-green-700">
-              Application sent. Love Potion HQ will review it soon.
+              {t.apply.sent}
             </div>
           ) : null}
           {state === "error" ? (
@@ -245,10 +245,12 @@ function ApplicationFieldInput({
   field,
   value,
   onChange,
+  t,
 }: {
   field: ApplicationFormField;
   value: string;
   onChange: (fieldKey: string, value: string) => void;
+  t: ReturnType<typeof useT>["t"];
 }) {
   const commonClass =
     "mt-2 w-full border border-foreground/30 bg-background/70 px-5 py-3 font-mono text-sm placeholder:text-foreground/40 focus:border-[var(--brand-magenta)] focus:outline-none";
@@ -274,7 +276,7 @@ function ApplicationFieldInput({
         required={field.required}
         className={`${commonClass} rounded-full`}
       >
-        <option value="">Choose...</option>
+        <option value="">{t.apply.choose}</option>
         {field.options.map((option) => (
           <option key={option} value={option}>
             {option}
@@ -294,7 +296,7 @@ function ApplicationFieldInput({
           required={field.required}
           className="h-4 w-4 accent-[var(--brand-magenta)]"
         />
-        <span className="text-sm text-foreground/70">{field.placeholder || "Yes"}</span>
+        <span className="text-sm text-foreground/70">{field.placeholder || t.apply.yes}</span>
       </span>
     );
   }

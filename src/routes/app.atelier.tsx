@@ -222,11 +222,11 @@ function AtelierPage() {
     : null;
 
   function daysUntil(dateValue: string | null | undefined, fallback?: string) {
-    if (!dateValue) return fallback ?? "soon";
+    if (!dateValue) return fallback ?? tr("not scheduled");
     const now = new Date();
     const target = new Date(dateValue);
     const diff = Math.max(0, Math.ceil((target.getTime() - now.getTime()) / 86_400_000));
-    return `${diff} days`;
+    return `${diff} ${tr("days")}`;
   }
 
   function bloggerName(blogger: BloggerPulse) {
@@ -263,8 +263,8 @@ function AtelierPage() {
   }
 
   function prettyDate(dateValue: string | null | undefined) {
-    if (!dateValue) return "not yet";
-    return new Date(dateValue).toLocaleDateString();
+    if (!dateValue) return tr("not yet");
+    return new Date(dateValue).toLocaleDateString(language === "es" ? "es" : "en");
   }
 
   const isSuperAdmin = currentProfile?.role === "super_admin";
@@ -296,9 +296,9 @@ function AtelierPage() {
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
             LOVE POTION OWNER'S ATELIER
           </div>
-          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">The atelier.</h1>
+          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">{tr("The atelier.")}</h1>
         </div>
-        <HandwrittenNote>run the house</HandwrittenNote>
+        <HandwrittenNote>{tr("run the house")}</HandwrittenNote>
       </header>
 
       <section className="mt-10 grid gap-4 md:grid-cols-6">
@@ -314,8 +314,8 @@ function AtelierPage() {
 
       {statsErrors.length > 0 ? (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
-          Could not load {statsErrors.length} atelier stat{statsErrors.length === 1 ? "" : "s"}:{" "}
-          {statsErrors.map((error) => error.label).join(", ")}. See the console for the full Supabase error.
+          {tr("Could not load atelier stats:")} {statsErrors.map((error) => error.label).join(", ")}.{" "}
+          {tr("See the console for the full Supabase error.")}
         </div>
       ) : null}
 
@@ -326,7 +326,7 @@ function AtelierPage() {
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
                 {tr("Delivery desk")}
               </div>
-              <HandwrittenNote>keep the magic moving</HandwrittenNote>
+              <HandwrittenNote>{tr("keep the magic moving")}</HandwrittenNote>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {[
@@ -359,7 +359,7 @@ function AtelierPage() {
 
           {deliveryDesk.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-dashed border-foreground/10 bg-foreground/[0.03] p-10 text-center">
-              <div className="font-hand text-3xl text-[var(--brand-magenta)]">no delivery claims yet</div>
+              <div className="font-hand text-3xl text-[var(--brand-magenta)]">{tr("no delivery claims yet")}</div>
               <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/45">
                 {tr("Claimed products will appear here.")}
               </div>
@@ -385,7 +385,7 @@ function AtelierPage() {
                       </span>
                     </div>
                     <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/55">
-                      {claim.blogger_name} · claimed {prettyDate(claim.claimed_at)} · delivered {prettyDate(claim.delivered_at)}
+                      {claim.blogger_name} · {tr("claimed")} {prettyDate(claim.claimed_at)} · {tr("delivered")} {prettyDate(claim.delivered_at)}
                     </div>
                     {claim.delivery_response ? (
                       <div className="mt-2 line-clamp-2 text-xs text-foreground/55">{claim.delivery_response}</div>
@@ -395,7 +395,7 @@ function AtelierPage() {
                   <div className="flex items-center justify-end">
                     {claim.status === "delivered" ? (
                       <span className="rounded-full bg-emerald-100 px-4 py-3 font-mono text-[9px] uppercase tracking-[0.22em] text-emerald-700">
-                        complete
+                        {tr("complete")}
                       </span>
                     ) : (
                       <button
@@ -408,7 +408,11 @@ function AtelierPage() {
                             : "bg-foreground text-background hover:bg-[var(--brand-magenta)]",
                         )}
                       >
-                        {retryingClaimId === claim.id ? "retrying..." : claim.delivery_item_key ? "retry delivery" : "missing item key"}
+                        {retryingClaimId === claim.id
+                          ? tr("retrying...")
+                          : claim.delivery_item_key
+                            ? tr("retry delivery")
+                            : tr("missing item key")}
                       </button>
                     )}
                   </div>
@@ -423,7 +427,7 @@ function AtelierPage() {
         <GlassCard className="lg:col-span-2">
           <div className="flex items-center justify-between gap-4">
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-              Review Queue
+              {tr("Review queue")}
             </div>
             <div className="flex gap-2">
               {[
@@ -486,7 +490,8 @@ function AtelierPage() {
                     <div className="min-w-0">
                       <div className="truncate font-display text-2xl">{item.product_name}</div>
                       <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.25em] text-foreground/55">
-                        {item.blogger_name} · {item.links_count} links · {new Date(item.submitted_at).toLocaleDateString()}
+                        {item.blogger_name} · {item.links_count} {tr("links")} ·{" "}
+                        {new Date(item.submitted_at).toLocaleDateString(language === "es" ? "es" : "en")}
                       </div>
                     </div>
                   </div>
@@ -495,7 +500,7 @@ function AtelierPage() {
                       {item.status.replace("_", " ")}
                     </span>
                     <span className="rounded-full border border-foreground/15 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/55">
-                      review
+                      {tr("review")}
                     </span>
                   </div>
                 </button>
@@ -506,7 +511,7 @@ function AtelierPage() {
 
         <GlassCard>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            Rules in effect
+            {tr("Rules in effect")}
           </div>
           <dl className="mt-8 space-y-6">
             {[
@@ -526,7 +531,7 @@ function AtelierPage() {
 
         <GlassCard tone="pink" className="lg:col-span-1">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">
-            Upcoming archive
+            {tr("Upcoming archive")}
           </div>
           <ul className="mt-6 space-y-4">
             {archiveRows.length > 0 ? (
@@ -537,7 +542,7 @@ function AtelierPage() {
                 >
                   <span>{p.name}</span>
                   <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-                    {p.auto_archive_at ? `in ${daysUntil(p.auto_archive_at)}` : "not scheduled"}
+                    {p.auto_archive_at ? `${tr("in")} ${daysUntil(p.auto_archive_at)}` : tr("not scheduled")}
                   </span>
                 </li>
               ))
@@ -589,7 +594,7 @@ function AtelierPage() {
                 onClick={() => setSelectedReviewId(null)}
                 className="rounded-full bg-foreground/10 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] hover:bg-foreground hover:text-background"
               >
-                close
+                {tr("close")}
               </button>
             </div>
 
@@ -606,7 +611,7 @@ function AtelierPage() {
                 )}
                 <div className="mt-5">
                   <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-                    Review dossier
+                    {tr("Review dossier")}
                   </div>
                   <h2 className="mt-2 font-display text-4xl leading-none">{selectedReview.product_name}</h2>
                   <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.25em] text-foreground/55">

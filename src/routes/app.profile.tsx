@@ -11,16 +11,11 @@ import {
   type AuthProfile,
 } from "@/integrations/supabase/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { STATUS_NOTE_DURATION_OPTIONS, STATUS_NOTE_MAX, buildStatusNoteExpiry, type StatusNoteDuration } from "@/lib/status-note";
+import { useLang } from "@/i18n/dict";
+import { translateAppPhrase } from "@/i18n/app-text";
+import { STATUS_NOTE_MAX, buildStatusNoteExpiry, getStatusNoteDurationOptions, type StatusNoteDuration } from "@/lib/status-note";
 
 type Status = "available" | "vacation" | "busy" | "offline";
-
-const STATUS_LABEL: Record<Status, string> = {
-  available: "Active",
-  vacation: "On vacation",
-  busy: "Busy",
-  offline: "Offline",
-};
 
 const STATUS_COLOR: Record<Status, string> = {
   available: "bg-[var(--brand-rose)]",
@@ -48,6 +43,14 @@ export const Route = createFileRoute("/app/profile")({
 });
 
 function ProfilePage() {
+  const uiLang = useLang();
+  const tr = (value: string) => translateAppPhrase(value, uiLang);
+  const statusLabel: Record<Status, string> = {
+    available: tr("Active"),
+    vacation: tr("On vacation"),
+    busy: tr("Busy"),
+    offline: tr("Offline"),
+  };
   const initialData = Route.useLoaderData();
   const initialProfile = initialData.profile;
   const [profile, setProfile] = useState<AuthProfile | null>(initialProfile);
@@ -142,11 +145,11 @@ function ProfilePage() {
       window.dispatchEvent(new CustomEvent("profile-updated", { detail: updated }));
       setPhoto(getSafeAvatarUrl(updated.avatar_url));
       setPhotoFile(null);
-      setSaveMessage("Profile saved.");
+      setSaveMessage(tr("Profile saved."));
       window.setTimeout(() => setSaveMessage(""), 2600);
     } catch (error) {
       console.error("[Profile] save failed", error);
-      setSaveMessage(error instanceof Error ? error.message : "Could not save profile.");
+      setSaveMessage(error instanceof Error ? error.message : tr("Could not save profile."));
     } finally {
       setIsSaving(false);
     }
@@ -165,11 +168,11 @@ function ProfilePage() {
       const freshProfile = (await getCurrentProfile(updated.id)) ?? updated;
       setProfile(freshProfile);
       window.dispatchEvent(new CustomEvent("profile-updated", { detail: freshProfile }));
-      setNoteSaveMessage("Note saved.");
+      setNoteSaveMessage(tr("Note saved."));
       window.setTimeout(() => setNoteSaveMessage(""), 2200);
     } catch (error) {
       console.error("[Profile] note save failed", error);
-      setNoteSaveMessage(error instanceof Error ? error.message : "Could not save note.");
+      setNoteSaveMessage(error instanceof Error ? error.message : tr("Could not save note."));
     } finally {
       setIsSavingNote(false);
     }
@@ -179,17 +182,17 @@ function ProfilePage() {
     setPasswordMessage("");
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordMessage("Fill all password fields.");
+      setPasswordMessage(tr("Fill all password fields."));
       return;
     }
 
     if (newPassword.length < 8) {
-      setPasswordMessage("New password must be at least 8 characters.");
+      setPasswordMessage(tr("New password must be at least 8 characters."));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordMessage("New password and confirmation do not match.");
+      setPasswordMessage(tr("New password and confirmation do not match."));
       return;
     }
 
@@ -199,11 +202,11 @@ function ProfilePage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setPasswordMessage("Password updated.");
+      setPasswordMessage(tr("Password updated."));
       window.setTimeout(() => setPasswordMessage(""), 2600);
     } catch (error) {
       console.error("[Profile] password update failed", error);
-      setPasswordMessage(error instanceof Error ? error.message : "Could not update password.");
+      setPasswordMessage(error instanceof Error ? error.message : tr("Could not update password."));
     } finally {
       setIsUpdatingPassword(false);
     }
@@ -213,7 +216,7 @@ function ProfilePage() {
     return (
       <div className="px-6 py-10 md:px-12">
         <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-          loading profile...
+          {tr("loading profile...")}
         </div>
       </div>
     );
@@ -226,20 +229,20 @@ function ProfilePage() {
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
             STUDIO · PROFILE
           </div>
-          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">About you.</h1>
+          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">{tr("About you.")}</h1>
         </div>
-        <HandwrittenNote>set the scene</HandwrittenNote>
+        <HandwrittenNote>{tr("set the scene")}</HandwrittenNote>
       </header>
 
       <div className="mt-10 grid gap-6 md:grid-cols-12">
         <GlassCard className="self-start overflow-hidden p-0 md:col-span-4">
-          <AvatarPreview photo={photo} note={note} status={status} />
+          <AvatarPreview photo={photo} note={note} status={status} statusLabel={statusLabel[status]} />
           <div className="relative p-5 pr-12">
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-              Live preview
+              {tr("Live preview")}
             </div>
             <div className="mt-1 font-display text-2xl">{displayName || profile?.email || "Blogger"}</div>
-            <p className="mt-1 text-sm text-foreground/70">This is how others see you.</p>
+            <p className="mt-1 text-sm text-foreground/70">{tr("This is how others see you.")}</p>
             <div className="pointer-events-none absolute bottom-5 right-3 select-none font-display text-3xl leading-none tracking-tight text-foreground/[0.08] [writing-mode:vertical-rl] [text-orientation:mixed]">
               love potion.
             </div>
@@ -249,12 +252,12 @@ function ProfilePage() {
         <div className="grid gap-6 md:col-span-8">
           <GlassCard tone="pink" className="p-6">
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">
-              Identity
+              {tr("Identity")}
             </div>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <Field label="Display name" value={displayName} onChange={setDisplayName} />
-              <Field label="SL avatar" value={avatarName} onChange={setAvatarName} disabled />
-              <Field label="SL avatar UUID" value={avatarUuid} onChange={setAvatarUuid} />
+              <Field label={tr("Display name")} value={displayName} onChange={setDisplayName} />
+              <Field label={tr("SL avatar")} value={avatarName} onChange={setAvatarName} disabled />
+              <Field label={tr("SL avatar UUID")} value={avatarUuid} onChange={setAvatarUuid} />
               <label className="block">
                 <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
                   Language
@@ -268,10 +271,10 @@ function ProfilePage() {
                   <option value="es">ES</option>
                 </select>
               </label>
-              <Field label="Flickr" value={flickr} onChange={setFlickr} />
-              <Field label="Instagram" value={instagram} onChange={setInstagram} />
-              <Field label="Facebook" value={facebook} onChange={setFacebook} />
-              <Field label="Blog URL" value={blogUrl} onChange={setBlogUrl} />
+              <Field label={tr("Flickr")} value={flickr} onChange={setFlickr} />
+              <Field label={tr("Instagram")} value={instagram} onChange={setInstagram} />
+              <Field label={tr("Facebook")} value={facebook} onChange={setFacebook} />
+              <Field label={tr("Blog URL")} value={blogUrl} onChange={setBlogUrl} />
             </div>
             <div className="mt-6 flex items-center gap-4">
               <img
@@ -280,7 +283,7 @@ function ProfilePage() {
                 className="h-16 w-16 rounded-full object-cover ring-2 ring-[var(--brand-magenta)]/50"
               />
               <label className="cursor-pointer rounded-full border border-foreground/30 bg-background/70 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.3em] hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]">
-                Change photo
+                {tr("Change photo")}
                 <input type="file" accept="image/*" className="hidden" onChange={onPickPhoto} />
               </label>
             </div>
@@ -289,7 +292,7 @@ function ProfilePage() {
                 <span
                   className={cn(
                     "rounded-full px-3 py-1 text-xs font-medium",
-                    saveMessage === "Profile saved."
+                    saveMessage === tr("Profile saved.")
                       ? "bg-green-100 text-green-700"
                       : "bg-rose-100 text-rose-700",
                   )}
@@ -303,7 +306,7 @@ function ProfilePage() {
                 disabled={isSaving || !hasProfileChanges}
                 className="rounded-full bg-[var(--brand-magenta)] px-5 py-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white shadow-lg shadow-[var(--brand-magenta)]/15 hover:opacity-90 disabled:opacity-60"
               >
-                {isSaving ? "Saving..." : "Save profile"}
+                {isSaving ? tr("Saving...") : tr("Save profile")}
               </button>
             </div>
           </GlassCard>
@@ -311,10 +314,10 @@ function ProfilePage() {
           <GlassCard className="p-6">
             <div className="flex items-baseline justify-between">
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-                Custom note
+                {tr("Custom note")}
               </div>
               <span className="font-mono text-[10px] text-foreground/50">
-                {note.length}/{STATUS_NOTE_MAX} · <span>max 2 lines</span>
+                {note.length}/{STATUS_NOTE_MAX} · <span>{tr("max 2 lines")}</span>
               </span>
             </div>
             <textarea
@@ -329,7 +332,7 @@ function ProfilePage() {
               onChange={(event) => setNoteDuration(event.target.value as StatusNoteDuration)}
               className="mt-3 w-full rounded-full border border-foreground/20 bg-background/70 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-foreground/70 focus:border-[var(--brand-magenta)] focus:outline-none"
             >
-              {STATUS_NOTE_DURATION_OPTIONS.map((option) => (
+              {getStatusNoteDurationOptions(uiLang).map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -337,14 +340,14 @@ function ProfilePage() {
             </select>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
               <p className="font-hand text-base text-[var(--brand-magenta)]">
-                shown over your avatar, like instagram notes. choose a timer or leave it open-ended.
+                {tr("shown over your avatar, like instagram notes")}. {tr("choose a timer or leave it open-ended.")}
               </p>
               <div className="flex items-center gap-3">
                 {noteSaveMessage ? (
                   <span
                     className={cn(
                       "rounded-full px-3 py-1 text-xs font-medium",
-                      noteSaveMessage === "Note saved."
+                      noteSaveMessage === tr("Note saved.")
                         ? "bg-green-100 text-green-700"
                         : "bg-rose-100 text-rose-700",
                     )}
@@ -358,7 +361,7 @@ function ProfilePage() {
                   disabled={isSavingNote}
                   className="rounded-full bg-[var(--brand-magenta)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white shadow-lg shadow-[var(--brand-magenta)]/15 hover:opacity-90 disabled:opacity-60"
                 >
-                  {isSavingNote ? "Saving..." : "Save note"}
+                  {isSavingNote ? tr("Saving...") : tr("Save note")}
                 </button>
               </div>
             </div>
@@ -366,7 +369,7 @@ function ProfilePage() {
 
           <GlassCard className="p-6">
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-              Status
+              {tr("Status")}
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {(["available", "vacation", "busy", "offline"] as Status[]).map((item) => {
@@ -384,7 +387,7 @@ function ProfilePage() {
                   >
                     <div className="flex items-center gap-2">
                       <span className={cn("h-2 w-2 rounded-full", STATUS_COLOR[item])} />
-                      <span className="font-display text-lg">{STATUS_LABEL[item]}</span>
+                      <span className="font-display text-lg">{statusLabel[item]}</span>
                     </div>
                   </button>
                 );
@@ -394,19 +397,19 @@ function ProfilePage() {
 
           <GlassCard className="p-6">
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-              Password
+              {tr("Password")}
             </div>
             <div className="mt-4 grid gap-4 md:grid-cols-3">
-              <Field label="Current" type="password" value={currentPassword} onChange={setCurrentPassword} />
-              <Field label="New" type="password" value={newPassword} onChange={setNewPassword} />
-              <Field label="Confirm new" type="password" value={confirmPassword} onChange={setConfirmPassword} />
+              <Field label={tr("Current")} type="password" value={currentPassword} onChange={setCurrentPassword} />
+              <Field label={tr("New")} type="password" value={newPassword} onChange={setNewPassword} />
+              <Field label={tr("Confirm new")} type="password" value={confirmPassword} onChange={setConfirmPassword} />
             </div>
             <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
               {passwordMessage ? (
                 <span
                   className={cn(
                     "rounded-full px-3 py-1 text-xs font-medium",
-                    passwordMessage === "Password updated."
+                    passwordMessage === tr("Password updated.")
                       ? "bg-green-100 text-green-700"
                       : "bg-rose-100 text-rose-700",
                   )}
@@ -420,7 +423,7 @@ function ProfilePage() {
                 disabled={isUpdatingPassword}
                 className="rounded-full bg-foreground px-6 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)] disabled:cursor-wait disabled:opacity-60"
               >
-                {isUpdatingPassword ? "Updating..." : "Update password"}
+                {isUpdatingPassword ? tr("Updating...") : tr("Update password")}
               </button>
             </div>
           </GlassCard>
@@ -436,7 +439,17 @@ function getSafeAvatarUrl(value?: string | null) {
   return value;
 }
 
-function AvatarPreview({ photo, note, status }: { photo: string; note: string; status: Status }) {
+function AvatarPreview({
+  photo,
+  note,
+  status,
+  statusLabel,
+}: {
+  photo: string;
+  note: string;
+  status: Status;
+  statusLabel: string;
+}) {
   const lines = note.split("\n").slice(0, 2);
   return (
     <div className="relative aspect-[4/5] overflow-hidden rounded-2xl">
@@ -445,7 +458,7 @@ function AvatarPreview({ photo, note, status }: { photo: string; note: string; s
       <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full bg-black/45 px-3 py-1 backdrop-blur-md">
         <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_COLOR[status])} />
         <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-white">
-          {STATUS_LABEL[status]}
+          {statusLabel}
         </span>
       </div>
       {note && (
