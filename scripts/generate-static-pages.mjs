@@ -31,7 +31,10 @@ async function writeRuntimeEnv() {
     VITE_SUPABASE_ANON_KEY: cleanPublicEnv(process.env.VITE_SUPABASE_ANON_KEY),
   };
   const json = JSON.stringify(payload).replace(/</g, "\\u003c");
-  await writeFile(path.join(clientDir, "env.js"), `window.__LOVE_POTION_ENV__=${json};\n`);
+  await writeFile(
+    path.join(clientDir, "env.js"),
+    `window.__LOVE_POTION_ENV__=${json};\nconsole.log('[env.js] executed at', performance.now());\n`,
+  );
 }
 
 function cleanPublicEnv(value) {
