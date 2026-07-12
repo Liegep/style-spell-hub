@@ -101,7 +101,7 @@ function AtelierPage() {
       if (profile.status === "fulfilled") setCurrentProfile(profile.value);
       else console.error("[Atelier] Failed to load current profile", profile.reason);
 
-      console.log("[Atelier] about to check mounted:", isMounted, "nextStats status:", nextStats.status);
+      console.log("[Atelier] nextStats VALUE:", JSON.stringify(nextStats));
       if (nextStats.status === "fulfilled") {
         const products = nextProducts.status === "fulfilled" ? nextProducts.value : [];
         setLiveStats(mergeProductCounts(nextStats.value, products));
@@ -151,6 +151,10 @@ function AtelierPage() {
       document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [reviewFilter]);
+
+  useEffect(() => {
+    console.log("[Atelier] liveStats CHANGED to:", JSON.stringify(liveStats));
+  }, [liveStats]);
 
   async function handleRetryDelivery(claimId: string) {
     setDeliveryNotice("");
