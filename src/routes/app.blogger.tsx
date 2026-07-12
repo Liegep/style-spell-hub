@@ -1366,23 +1366,50 @@ function InboxTab({
       {mail.map((message) => {
         const replyOpen = openReplyId === message.id;
         const canReply = message.scope === "personal" && Boolean(message.sender_id);
+        const isNew = !message.read_at;
 
         return (
-        <GlassCard key={message.id} className="p-6">
+        <GlassCard
+          key={message.id}
+          className={cn(
+            "p-6 transition-colors",
+            isNew
+              ? "border-[var(--brand-pink)]/70 bg-background/75 shadow-[0_20px_55px_rgba(219,24,97,0.12)]"
+              : "border-foreground/10 bg-foreground/[0.035] text-foreground/72 shadow-none",
+          )}
+        >
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+              <div
+                className={cn(
+                  "font-mono text-[10px] uppercase tracking-[0.3em]",
+                  isNew ? "text-foreground/60" : "text-foreground/40",
+                )}
+              >
                 {message.scope === "broadcast" ? (language === "es" ? "GENERAL" : "BROADCAST") : language === "es" ? "PERSONAL" : "PERSONAL"} ·{" "}
                 {message.sender_name || "Love Potion HQ"}
+                {isNew ? " · NEW" : ""}
               </div>
-              <div className="mt-2 font-display text-2xl">{message.subject}</div>
+              <div className={cn("mt-2 font-display text-2xl", isNew ? "text-foreground" : "text-foreground/70")}>
+                {message.subject}
+              </div>
             </div>
-            <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
+            <span
+              className={cn(
+                "shrink-0 font-mono text-[10px] uppercase tracking-[0.3em]",
+                isNew ? "text-foreground/50" : "text-foreground/35",
+              )}
+            >
               {new Date(message.created_at).toLocaleDateString()}
             </span>
           </div>
           {message.body ? (
-            <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-foreground/75">
+            <p
+              className={cn(
+                "mt-4 whitespace-pre-wrap text-sm leading-relaxed",
+                isNew ? "text-foreground/75" : "text-foreground/52",
+              )}
+            >
               {message.body}
             </p>
           ) : null}
@@ -1394,7 +1421,9 @@ function InboxTab({
                   "rounded-full px-5 py-2 font-mono text-[10px] uppercase tracking-[0.3em] transition",
                   replyOpen
                     ? "bg-foreground text-background"
-                    : "bg-[var(--brand-magenta)] text-white shadow-[0_12px_30px_rgba(219,24,97,0.20)] hover:bg-foreground",
+                    : isNew
+                      ? "bg-[var(--brand-magenta)] text-white shadow-[0_12px_30px_rgba(219,24,97,0.20)] hover:bg-foreground"
+                      : "bg-foreground/10 text-foreground/55 hover:bg-foreground/18",
                 )}
               >
                 {replyOpen ? "Close reply" : "Reply"}
