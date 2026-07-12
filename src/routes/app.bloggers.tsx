@@ -551,7 +551,7 @@ function BloggerDossierModal({
             </div>
           </GlassCard>
 
-          <div className="grid gap-6">
+          <div className="grid content-start gap-6">
             <div className="grid max-w-3xl items-start gap-4 sm:grid-cols-4">
               <MiniStat label={tr("Claims")} value={claims.length} />
               <MiniStat label={tr("Delivered")} value={deliveredCount} tone="pink" />
