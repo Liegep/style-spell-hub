@@ -724,6 +724,11 @@ function Compose({
     () => conversations.find((thread) => thread.key === replyModalThreadKey) ?? null,
     [conversations, replyModalThreadKey],
   );
+  const receivedThreads = useMemo(
+    () => conversations.filter((thread) => thread.messages.some((message) => message.direction === "in")),
+    [conversations],
+  );
+  const visibleReceivedThreads = showAllReceived ? receivedThreads : receivedThreads.slice(0, 5);
 
   async function onMarkRead(messageId: string) {
     setMarkingReadId(messageId);
@@ -994,97 +999,86 @@ function Compose({
           RECEIVED · RECENT
         </div>
         <ul className="mt-4 space-y-3">
-          {visibleReceived.map((message) => {
-            const unread = !message.read_at;
-            return (
-            <li
-              key={message.id}
-              className={cn(
-                "rounded-2xl border p-3 transition-colors",
-                unread
-                  ? "border-[var(--brand-magenta)]/25 bg-[var(--brand-pink)]/70 shadow-[0_18px_45px_rgba(219,24,97,0.10)]"
-                  : "border-foreground/10 bg-background/60",
-              )}
-            >
-              <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/50">
-                {message.sender_name || "blogger"} · {new Date(message.created_at).toLocaleDateString()}
-                {unread ? " · NEW" : ""}
-              </div>
-              <div className="mt-1 font-display text-base">{message.subject}</div>
-              {message.body ? (
-                <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-foreground/65">{message.body}</p>
-              ) : null}
-              {unread ? (
-                <button
-                  onClick={() => void onMarkRead(message.id)}
-                  disabled={markingReadId === message.id}
-                  className="mt-3 rounded-full bg-foreground px-3 py-1 font-mono text-[9px] uppercase tracking-[0.24em] text-background disabled:opacity-60"
-                >
-                  {markingReadId === message.id ? "marking..." : "mark read"}
-                </button>
-              ) : null}
-            </li>
-            );
-          })}
-          {received.length === 0 ? (
-            <li className="font-hand text-2xl text-[var(--brand-magenta)]">no replies yet</li>
-          ) : null}
-        </ul>
-        {received.length > 5 ? (
-          <button
-            onClick={() => setShowAllReceived((current) => !current)}
-            className="mt-3 rounded-full border border-foreground/20 px-4 py-2 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/60 hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]"
-          >
-            {showAllReceived ? "show less" : `view all (${received.length})`}
-          </button>
-        ) : null}
-        <div className="mt-6 border-t border-foreground/10 pt-5 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-          CONVERSATION HISTORY
-        </div>
-        <ul className="mt-4 space-y-3">
-          {conversations.slice(0, 5).map((thread) => {
+          {visibleReceivedThreads.map((thread) => {
             const open = openThreadKey === thread.key;
             const unreadCount = thread.messages.filter((message) => message.unread).length;
+            const latestIncoming = thread.messages.find((message) => message.direction === "in");
+            if (!latestIncoming) return null;
+
             return (
-              <li key={thread.key} className="rounded-2xl border border-foreground/10 bg-background/50 p-3">
-                <button
-                  onClick={() => setOpenThreadKey((current) => (current === thread.key ? null : thread.key))}
-                  className="flex w-full items-start justify-between gap-3 text-left"
-                >
-                  <span>
-                    <span className="block font-display text-base">{thread.name}</span>
-                    <span className="mt-1 block font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/50">
-                      {thread.messages.length} messages · {new Date(thread.latestAt).toLocaleDateString()}
-                    </span>
-                  </span>
-                  <span
-                    className={cn(
-                      "shrink-0 rounded-full px-2 py-1 font-mono text-[8px] uppercase tracking-[0.2em]",
-                      unreadCount ? "bg-[var(--brand-magenta)] text-white" : "bg-foreground/10 text-foreground/55",
-                    )}
+              <li
+                key={thread.key}
+                className={cn(
+                  "rounded-2xl border p-3 transition-colors",
+                  unreadCount
+                    ? "border-[var(--brand-magenta)]/25 bg-[var(--brand-pink)]/70 shadow-[0_18px_45px_rgba(219,24,97,0.10)]"
+                    : "border-foreground/10 bg-background/60",
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <button
+                    onClick={() => setOpenThreadKey((current) => (current === thread.key ? null : thread.key))}
+                    className="flex-1 text-left"
                   >
-                    {unreadCount ? `${unreadCount} new` : open ? "close" : "open"}
-                  </span>
-                </button>
+                    <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/50">
+                      {thread.name} · {new Date(thread.latestAt).toLocaleDateString()}
+                      {unreadCount ? ` · ${unreadCount} NEW` : ""}
+                    </div>
+                    <div className="mt-1 font-display text-base">{latestIncoming.subject}</div>
+                    {latestIncoming.body ? (
+                      <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-foreground/65">
+                        {latestIncoming.body}
+                      </p>
+                    ) : null}
+                  </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      onClick={() => setReplyModalThreadKey(thread.key)}
+                      className="rounded-full bg-[var(--brand-magenta)] px-3 py-2 font-mono text-[9px] uppercase tracking-[0.24em] text-white hover:bg-foreground"
+                    >
+                      reply
+                    </button>
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-1 font-mono text-[8px] uppercase tracking-[0.2em]",
+                        unreadCount ? "bg-[var(--brand-magenta)] text-white" : "bg-foreground/10 text-foreground/55",
+                      )}
+                    >
+                      {open ? "close" : "open"}
+                    </span>
+                  </div>
+                </div>
                 {open ? (
                   <div className="mt-3 space-y-2">
-                    {thread.messages.slice(0, 6).map((message) => (
+                    {thread.messages.map((message) => (
                       <div
                         key={message.id}
                         className={cn(
                           "rounded-xl px-3 py-2 text-xs",
                           message.direction === "in"
-                            ? "bg-[var(--brand-pink)]/55"
+                            ? "bg-background/80"
                             : "bg-foreground/5 text-foreground/70",
                         )}
                       >
-                        <div className="font-mono text-[8px] uppercase tracking-[0.24em] text-foreground/45">
-                          {message.direction === "in" ? "blogger" : "you"} ·{" "}
-                          {new Date(message.created_at).toLocaleDateString()}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="font-mono text-[8px] uppercase tracking-[0.24em] text-foreground/45">
+                            {message.direction === "in" ? "blogger" : "you"} ·{" "}
+                            {new Date(message.created_at).toLocaleDateString()}
+                            {message.unread ? " · new" : ""}
+                          </div>
+                          {message.direction === "in" && message.unread ? (
+                            <button
+                              onClick={() => void onMarkRead(message.id)}
+                              disabled={markingReadId === message.id}
+                              className="rounded-full bg-foreground px-3 py-1 font-mono text-[8px] uppercase tracking-[0.2em] text-background disabled:opacity-60"
+                            >
+                              {markingReadId === message.id ? "marking..." : "mark read"}
+                            </button>
+                          ) : null}
                         </div>
                         <div className="mt-1 font-display text-sm">{message.subject}</div>
                         {message.body ? (
-                          <p className="mt-1 line-clamp-3 text-foreground/65">{message.body}</p>
+                          <p className="mt-1 whitespace-pre-wrap text-foreground/65">{message.body}</p>
                         ) : null}
                       </div>
                     ))}
@@ -1097,7 +1091,7 @@ function Compose({
                             : "text-[var(--brand-magenta)]",
                         )}
                       >
-                        {threadFeedback[thread.key] || "Open a reply box without scrolling through the full thread."}
+                        {threadFeedback[thread.key] || "Reply from here and keep the whole conversation together."}
                       </span>
                       <button
                         onClick={() => setReplyModalThreadKey(thread.key)}
@@ -1111,10 +1105,18 @@ function Compose({
               </li>
             );
           })}
-          {conversations.length === 0 ? (
-            <li className="font-hand text-2xl text-[var(--brand-magenta)]">no conversations yet</li>
+          {receivedThreads.length === 0 ? (
+            <li className="font-hand text-2xl text-[var(--brand-magenta)]">no replies yet</li>
           ) : null}
         </ul>
+        {receivedThreads.length > 5 ? (
+          <button
+            onClick={() => setShowAllReceived((current) => !current)}
+            className="mt-3 rounded-full border border-foreground/20 px-4 py-2 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/60 hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]"
+          >
+            {showAllReceived ? "show less" : `view all (${receivedThreads.length})`}
+          </button>
+        ) : null}
 
         <Dialog
           open={Boolean(replyModalThread)}
