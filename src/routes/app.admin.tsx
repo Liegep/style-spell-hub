@@ -13,7 +13,6 @@ import {
   listMessageRecipients,
   listRecentSentMessages,
   notifySecondLifeQuietly,
-  sendInternalReply,
   sendInternalMessage,
   sendSecondLifeNotification,
   type InboxMessage,
@@ -853,12 +852,12 @@ function Compose({
       const profile = await getCurrentProfile();
       if (!profile?.id) throw new Error("Sender profile not found.");
 
-      const sent = await sendInternalReply({
+      const sent = await sendInternalMessage({
         senderId: profile.id,
+        scope: "personal",
         recipientId: thread.key,
         subject: subjectLine,
         body: replyBody,
-        actionUrl: "/app/blogger?section=inbox",
       });
 
       void notifySecondLifeQuietly(
