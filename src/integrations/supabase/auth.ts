@@ -47,13 +47,48 @@ const PROFILE_SELECT = [
   "blog_url",
 ].join(",");
 
+const PROFILE_SELECT_LEGACY = [
+  "id",
+  "email",
+  "display_name",
+  "full_name",
+  "sl_avatar_name",
+  "sl_avatar_uuid",
+  "avatar_url",
+  "role",
+  "account_status",
+  "availability_status",
+  "status_message",
+  "language_preference",
+  "flickr_url",
+  "instagram_url",
+  "facebook_url",
+  "blog_url",
+].join(",");
+
+function isMissingStatusMessageTimerColumn(error: unknown) {
+  const message =
+    error && typeof error === "object" && "message" in error && typeof (error as { message?: unknown }).message === "string"
+      ? (error as { message: string }).message
+      : "";
+  return /status_message_expires_at|status_message_duration/i.test(message);
+}
+
+function withLegacyStatusNoteFields<T extends { status_message: string | null }>(row: T) {
+  return {
+    ...row,
+    status_message_expires_at: null,
+    status_message_duration: null,
+  } as T & Pick<Profile, "status_message_expires_at" | "status_message_duration">;
+}
+
 export function getRoleHome(role: AppRole) {
   if (role === "blogger") return "/app/blogger";
   return "/app/atelier";
 }
 
 async function clearExpiredStatusMessage(profile: AuthProfile) {
-  const { data, error } = await supabase
+  const fullUpdate = await supabase
     .from("profiles")
     .update({
       status_message: null,
@@ -64,8 +99,23 @@ async function clearExpiredStatusMessage(profile: AuthProfile) {
     .select(PROFILE_SELECT)
     .single<AuthProfile>();
 
-  if (error) throw describeProfileSaveError(error);
-  return data;
+  if (!fullUpdate.error) return fullUpdate.data;
+
+  if (!isMissingStatusMessageTimerColumn(fullUpdate.error)) {
+    throw describeProfileSaveError(fullUpdate.error);
+  }
+
+  const legacyUpdate = await supabase
+    .from("profiles")
+    .update({
+      status_message: null,
+    })
+    .eq("id", profile.id)
+    .select(PROFILE_SELECT_LEGACY)
+    .single<Omit<AuthProfile, "status_message_expires_at" | "status_message_duration">>();
+
+  if (legacyUpdate.error) throw describeProfileSaveError(legacyUpdate.error);
+  return withLegacyStatusNoteFields(legacyUpdate.data);
 }
 
 async function resolveEmailFromAvatarName(avatarName: string) {
@@ -154,21 +204,32 @@ export async function getCurrentProfile(userId?: string) {
   const id = userId ?? (await supabase.auth.getUser()).data.user?.id;
   if (!id) return null;
 
-  const { data, error } = await supabase
+  const query = await supabase
     .from("profiles")
     .select(PROFILE_SELECT)
     .eq("id", id)
     .maybeSingle<AuthProfile>();
 
-  if (error) throw describeProfileSaveError(error);
-  if (!data) return null;
+  if (query.error && isMissingStatusMessageTimerColumn(query.error)) {
+    const legacyQuery = await supabase
+      .from("profiles")
+      .select(PROFILE_SELECT_LEGACY)
+      .eq("id", id)
+      .maybeSingle<Omit<AuthProfile, "status_message_expires_at" | "status_message_duration">>();
 
-  const normalized = normalizeStatusNote(data);
+    if (legacyQuery.error) throw describeProfileSaveError(legacyQuery.error);
+    return legacyQuery.data ? withLegacyStatusNoteFields(legacyQuery.data) : null;
+  }
+
+  if (query.error) throw describeProfileSaveError(query.error);
+  if (!query.data) return null;
+
+  const normalized = normalizeStatusNote(query.data);
   if (
-    normalized.status_message === data.status_message &&
-    normalized.status_message_expires_at === data.status_message_expires_at
+    normalized.status_message === query.data.status_message &&
+    normalized.status_message_expires_at === query.data.status_message_expires_at
   ) {
-    return data;
+    return query.data;
   }
   return clearExpiredStatusMessage(normalized);
 }
@@ -181,7 +242,7 @@ export async function leaveBloggerProgram(reason?: string) {
   const userId = (await supabase.auth.getUser()).data.user?.id;
   if (!userId) throw new Error("No authenticated user.");
 
-  const { data, error } = await supabase
+  const updateResult = await supabase
     .from("profiles")
     .update({
       account_status: "left",
@@ -196,7 +257,29 @@ export async function leaveBloggerProgram(reason?: string) {
     .select(PROFILE_SELECT)
     .single<AuthProfile>();
 
+  let data = updateResult.data;
+  let error = updateResult.error;
+
+  if (error && isMissingStatusMessageTimerColumn(error)) {
+    const legacyUpdate = await supabase
+      .from("profiles")
+      .update({
+        account_status: "left",
+        availability_status: "offline",
+        status_message: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId)
+      .eq("role", "blogger")
+      .select(PROFILE_SELECT_LEGACY)
+      .single<Omit<AuthProfile, "status_message_expires_at" | "status_message_duration">>();
+
+    data = legacyUpdate.data ? withLegacyStatusNoteFields(legacyUpdate.data) : null;
+    error = legacyUpdate.error;
+  }
+
   if (error) throw describeProfileSaveError(error);
+  if (!data) throw new Error("Could not update profile.");
 
   if (data.account_status !== "left") {
     throw new Error("The database blocked the leave action. Run the blogger self-leave SQL update, then try again.");
@@ -334,13 +417,32 @@ export async function updateCurrentProfile(
   const userId = (await supabase.auth.getUser()).data.user?.id;
   if (!userId) throw new Error("No authenticated user.");
 
-  const { data, error } = await supabase
+  const updateResult = await supabase
     .from("profiles")
     .update(patch)
     .eq("id", userId)
     .select(PROFILE_SELECT)
     .single<AuthProfile>();
 
-  if (error) throw error;
-  return data;
+  if (!updateResult.error) return updateResult.data;
+
+  if (!isMissingStatusMessageTimerColumn(updateResult.error)) {
+    throw updateResult.error;
+  }
+
+  const {
+    status_message_expires_at: _statusMessageExpiresAt,
+    status_message_duration: _statusMessageDuration,
+    ...legacyPatch
+  } = patch;
+
+  const legacyUpdate = await supabase
+    .from("profiles")
+    .update(legacyPatch)
+    .eq("id", userId)
+    .select(PROFILE_SELECT_LEGACY)
+    .single<Omit<AuthProfile, "status_message_expires_at" | "status_message_duration">>();
+
+  if (legacyUpdate.error) throw legacyUpdate.error;
+  return withLegacyStatusNoteFields(legacyUpdate.data);
 }

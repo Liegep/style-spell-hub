@@ -10,6 +10,14 @@ import type {
   SubmissionStatus,
 } from "@/integrations/supabase/database.types";
 
+function isMissingStatusMessageTimerColumn(error: unknown) {
+  const message =
+    error && typeof error === "object" && "message" in error && typeof (error as { message?: unknown }).message === "string"
+      ? (error as { message: string }).message
+      : "";
+  return /status_message_expires_at|status_message_duration/i.test(message);
+}
+
 export type AtelierStats = {
   activeBloggers: number;
   inactiveBloggers: number;
@@ -84,6 +92,17 @@ export type ReviewQueueItem = Pick<
     note: string | null;
     sort_order: number;
   }>;
+};
+
+type ReviewQueueBlogger = {
+  id: string;
+  display_name: string | null;
+  full_name: string | null;
+  email: string;
+  avatar_url: string | null;
+  status_message: string | null;
+  status_message_expires_at: string | null;
+  availability_status: AvailabilityStatus | null;
 };
 
 export type DeliveryDeskItem = Pick<
@@ -230,15 +249,30 @@ export async function getUpcomingArchives() {
 }
 
 export async function getBloggerPulse() {
-  const { data, error } = await supabase
+  const query = await supabase
     .from("profiles")
     .select("id,display_name,full_name,email,account_status,availability_status,status_message,status_message_expires_at")
     .eq("role", "blogger")
     .order("updated_at", { ascending: false })
     .limit(4);
 
-  if (error) throw error;
-  return (data ?? []) as BloggerPulse[];
+  if (query.error && isMissingStatusMessageTimerColumn(query.error)) {
+    const legacyQuery = await supabase
+      .from("profiles")
+      .select("id,display_name,full_name,email,account_status,availability_status,status_message")
+      .eq("role", "blogger")
+      .order("updated_at", { ascending: false })
+      .limit(4);
+
+    if (legacyQuery.error) throw legacyQuery.error;
+    return ((legacyQuery.data ?? []) as Omit<BloggerPulse, "status_message_expires_at">[]).map((row) => ({
+      ...row,
+      status_message_expires_at: null,
+    })) as BloggerPulse[];
+  }
+
+  if (query.error) throw query.error;
+  return (query.data ?? []) as BloggerPulse[];
 }
 
 export async function getProductSummaries() {
@@ -329,7 +363,7 @@ export async function getReviewQueue(status: SubmissionStatus | "all" = "all") {
   const bloggerIds = [...new Set(visibleRows.map((row) => row.blogger_id))];
   const submissionIds = visibleRows.map((row) => row.id);
 
-  const [{ data: products }, { data: bloggers }, { data: links, error: linksError }] = await Promise.all([
+  const [{ data: products }, bloggersResult, { data: links, error: linksError }] = await Promise.all([
     supabase
       .from("product_releases")
       .select("id,name,editorial_image_url,image_url")
@@ -346,6 +380,22 @@ export async function getReviewQueue(status: SubmissionStatus | "all" = "all") {
   ]);
 
   if (linksError) throw linksError;
+
+  let bloggers = bloggersResult.data;
+  if (bloggersResult.error && isMissingStatusMessageTimerColumn(bloggersResult.error)) {
+    const legacyBloggers = await supabase
+      .from("profiles")
+      .select("id,display_name,full_name,email,avatar_url,status_message,availability_status")
+      .in("id", bloggerIds);
+
+    if (legacyBloggers.error) throw legacyBloggers.error;
+    bloggers = ((legacyBloggers.data ?? []) as Array<Omit<ReviewQueueBlogger, "status_message_expires_at">>).map((row) => ({
+        ...row,
+        status_message_expires_at: null,
+      })) as ReviewQueueBlogger[];
+  } else if (bloggersResult.error) {
+    throw bloggersResult.error;
+  }
 
   const productMap = new Map((products ?? []).map((product) => [product.id, product]));
   const bloggerMap = new Map((bloggers ?? []).map((blogger) => [blogger.id, blogger]));
