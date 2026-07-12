@@ -73,6 +73,21 @@ function ProfilePage() {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState("");
 
+  const hasProfileChanges =
+    (displayName.trim() || "") !== (initialProfile?.display_name || initialProfile?.full_name || "") ||
+    avatarUuid.trim() !== (initialProfile?.sl_avatar_uuid || "") ||
+    language !== (initialProfile?.language_preference || "en") ||
+    flickr.trim() !== (initialProfile?.flickr_url || "") ||
+    instagram.trim() !== (initialProfile?.instagram_url || "") ||
+    facebook.trim() !== (initialProfile?.facebook_url || "") ||
+    blogUrl.trim() !== (initialProfile?.blog_url || "") ||
+    status !== ((initialProfile?.availability_status as Status) || "available") ||
+    Boolean(photoFile);
+
+  const hasNoteChanges =
+    note !== (initialProfile?.status_message || "") ||
+    noteDuration !== (initialProfile?.status_message_duration ?? "none");
+
   const onPickPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -353,6 +368,7 @@ function ProfilePage() {
             </div>
           </GlassCard>
 
+          {(hasProfileChanges || saveMessage) ? (
           <div className="flex items-center justify-end gap-3">
             {saveMessage ? (
               <span
@@ -366,17 +382,15 @@ function ProfilePage() {
                 {saveMessage}
               </span>
             ) : null}
-            <button className="rounded-full border border-foreground/30 px-5 py-2 font-mono text-[10px] uppercase tracking-[0.3em] hover:bg-foreground/5">
-              Discard
-            </button>
             <button
               onClick={() => void onSaveProfile()}
-              disabled={isSaving}
+              disabled={isSaving || (!hasProfileChanges && hasNoteChanges)}
               className="rounded-full bg-[var(--brand-magenta)] px-6 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-white hover:opacity-90 disabled:opacity-60"
             >
               {isSaving ? "Saving..." : "Save profile →"}
             </button>
           </div>
+          ) : null}
         </div>
       </div>
     </div>
