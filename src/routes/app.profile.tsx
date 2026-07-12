@@ -86,10 +86,6 @@ function ProfilePage() {
     status !== ((initialProfile?.availability_status as Status) || "available") ||
     Boolean(photoFile);
 
-  const hasNoteChanges =
-    note !== (initialProfile?.status_message || "") ||
-    noteDuration !== (initialProfile?.status_message_duration ?? "none");
-
   const onPickPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -166,8 +162,9 @@ function ProfilePage() {
         status_message_expires_at: note.trim() ? buildStatusNoteExpiry(noteDuration) : null,
         status_message_duration: note.trim() && noteDuration !== "none" ? noteDuration : null,
       });
-      setProfile(updated);
-      window.dispatchEvent(new CustomEvent("profile-updated", { detail: updated }));
+      const freshProfile = (await getCurrentProfile(updated.id)) ?? updated;
+      setProfile(freshProfile);
+      window.dispatchEvent(new CustomEvent("profile-updated", { detail: freshProfile }));
       setNoteSaveMessage("Note saved.");
       window.setTimeout(() => setNoteSaveMessage(""), 2200);
     } catch (error) {
@@ -286,6 +283,28 @@ function ProfilePage() {
                 Change photo
                 <input type="file" accept="image/*" className="hidden" onChange={onPickPhoto} />
               </label>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
+              {saveMessage ? (
+                <span
+                  className={cn(
+                    "rounded-full px-3 py-1 text-xs font-medium",
+                    saveMessage === "Profile saved."
+                      ? "bg-green-100 text-green-700"
+                      : "bg-rose-100 text-rose-700",
+                  )}
+                >
+                  {saveMessage}
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => void onSaveProfile()}
+                disabled={isSaving || !hasProfileChanges}
+                className="rounded-full bg-[var(--brand-magenta)] px-5 py-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white shadow-lg shadow-[var(--brand-magenta)]/15 hover:opacity-90 disabled:opacity-60"
+              >
+                {isSaving ? "Saving..." : "Save profile"}
+              </button>
             </div>
           </GlassCard>
 
@@ -406,29 +425,6 @@ function ProfilePage() {
             </div>
           </GlassCard>
 
-          {(hasProfileChanges || saveMessage) ? (
-          <div className="flex items-center justify-end gap-3">
-            {saveMessage ? (
-              <span
-                className={cn(
-                  "rounded-full px-3 py-1 text-xs font-medium",
-                  saveMessage === "Profile saved."
-                    ? "bg-green-100 text-green-700"
-                    : "bg-rose-100 text-rose-700",
-                )}
-              >
-                {saveMessage}
-              </span>
-            ) : null}
-            <button
-              onClick={() => void onSaveProfile()}
-              disabled={isSaving || (!hasProfileChanges && hasNoteChanges)}
-              className="rounded-full bg-[var(--brand-magenta)] px-6 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-white hover:opacity-90 disabled:opacity-60"
-            >
-              {isSaving ? "Saving..." : "Save profile →"}
-            </button>
-          </div>
-          ) : null}
         </div>
       </div>
     </div>
