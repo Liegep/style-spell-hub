@@ -21,17 +21,6 @@ const routes = [
   "/es/login",
   "/en/apply",
   "/es/apply",
-  "/app",
-  "/app/atelier",
-  "/app/blogger",
-  "/app/bloggers",
-  "/app/applications",
-  "/app/admin",
-  "/app/files-links",
-  "/app/content-studio",
-  "/app/managers",
-  "/app/audit-log",
-  "/app/profile",
 ];
 
 const server = await import(pathToFileURL(serverEntry).href).then((module) => module.default);

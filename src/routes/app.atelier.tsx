@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import bloggerAvatar from "@/assets/blogger-avatar.jpg";
@@ -20,7 +20,6 @@ import {
 } from "@/integrations/supabase/dashboard";
 import { cn } from "@/lib/utils";
 import { getCurrentProfile, type AuthProfile } from "@/integrations/supabase/auth";
-import { supabase } from "@/integrations/supabase/client";
 import { notifySecondLifeQuietly } from "@/integrations/supabase/messages";
 import type { ClaimStatus, SubmissionStatus } from "@/integrations/supabase/database.types";
 import { useLang } from "@/i18n/dict";
@@ -38,21 +37,6 @@ const emptyAtelierStats: AtelierStats = {
   archiveSoon: 0,
   subscribers: 0,
   statsErrors: [],
-};
-
-type AtelierDebugPanelData = {
-  userId: string | null;
-  userError: unknown;
-  myProfile: unknown;
-  myProfileError: unknown;
-  rawCounts: Record<
-    string,
-    {
-      dataLength: number | null;
-      data: unknown;
-      error: unknown;
-    }
-  >;
 };
 
 function mergeProductCounts(stats: AtelierStats, products: ProductSummary[]) {
@@ -74,8 +58,6 @@ function mergeProductCounts(stats: AtelierStats, products: ProductSummary[]) {
 }
 
 function AtelierPage() {
-  const renderCount = useRef(0);
-  renderCount.current += 1;
   const language = useLang();
   const tr = (value: string) => translateAppPhrase(value, language);
   const [liveStats, setLiveStats] = useState<AtelierStats>(emptyAtelierStats);
@@ -94,35 +76,21 @@ function AtelierPage() {
   const [retryingClaimId, setRetryingClaimId] = useState<string | null>(null);
   const [deliveryNotice, setDeliveryNotice] = useState("");
   const [dataState, setDataState] = useState<"loading" | "live" | "fallback">("loading");
-  const [debugPanelData, setDebugPanelData] = useState<AtelierDebugPanelData | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     let refreshTimer: number | undefined;
 
     async function loadDashboard() {
-      function timed<T>(label: string, task: () => Promise<T>) {
-        const t0 = performance.now();
-        console.log(`[Atelier] ${label} started`);
-        return Promise.resolve()
-          .then(task)
-          .finally(() => {
-            console.log(`[Atelier] ${label} finished in`, performance.now() - t0, "ms");
-          });
-      }
-
-      console.log("[Atelier] loadDashboard: allSettled started");
       const [profile, nextStats, nextProducts, nextBloggers, nextArchives, nextQueue, nextDeliveryDesk] = await Promise.allSettled([
-        timed("getCurrentProfile", getCurrentProfile),
-        timed("getAtelierStats", getAtelierStats),
-        timed("getProductSummaries", getProductSummaries),
-        timed("getBloggerPulse", getBloggerPulse),
-        timed("getUpcomingArchives", getUpcomingArchives),
-        timed("getReviewQueue", () => getReviewQueue(reviewFilter)),
-        timed("getDeliveryDeskClaims", getDeliveryDeskClaims),
+        getCurrentProfile(),
+        getAtelierStats(),
+        getProductSummaries(),
+        getBloggerPulse(),
+        getUpcomingArchives(),
+        getReviewQueue(reviewFilter),
+        getDeliveryDeskClaims(),
       ]);
-      console.log("[Atelier] loadDashboard: allSettled finished");
-      console.log("[Atelier] nextStats raw result:", JSON.stringify(nextStats));
 
       if (!isMounted) return;
 
@@ -131,9 +99,7 @@ function AtelierPage() {
 
       if (nextStats.status === "fulfilled") {
         const products = nextProducts.status === "fulfilled" ? nextProducts.value : [];
-        const nextLiveStats = mergeProductCounts(nextStats.value, products);
-        console.log("[Atelier] calling setLiveStats with:", JSON.stringify(nextLiveStats));
-        setLiveStats(nextLiveStats);
+        setLiveStats(mergeProductCounts(nextStats.value, products));
       }
       else console.error("[Atelier] Failed to load stats", nextStats.reason);
 
@@ -180,83 +146,6 @@ function AtelierPage() {
     };
   }, [reviewFilter]);
 
-  useEffect(() => {
-    console.log("[Atelier] liveStats state updated:", JSON.stringify(liveStats));
-  }, [liveStats]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadDebugPanel() {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      const userId = userData.user?.id ?? null;
-      const profileResult = userId
-        ? await supabase.from("profiles").select("id, role, account_status, email").eq("id", userId).single()
-        : { data: null, error: null };
-
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const inThirtyDays = new Date(now);
-      inThirtyDays.setDate(inThirtyDays.getDate() + 30);
-
-      const [
-        activeBloggers,
-        inactiveBloggers,
-        postsThisMonth,
-        liveProducts,
-        archiveSoonProducts,
-        activeSubscribers,
-      ] = await Promise.all([
-        supabase.from("profiles").select("id").eq("role", "blogger").eq("account_status", "active").range(0, 999),
-        supabase.from("profiles").select("id").eq("role", "blogger").neq("account_status", "active").range(0, 999),
-        supabase.from("blog_submissions").select("id").gte("submitted_at", startOfMonth).range(0, 999),
-        supabase.from("product_releases").select("id").eq("status", "available").range(0, 999),
-        supabase
-          .from("product_releases")
-          .select("id")
-          .eq("status", "available")
-          .not("auto_archive_at", "is", null)
-          .lte("auto_archive_at", inThirtyDays.toISOString())
-          .range(0, 999),
-        supabase
-          .from("newsletter_subscribers")
-          .select("id")
-          .eq("is_active", true)
-          .is("unsubscribed_at", null)
-          .range(0, 999),
-      ]);
-
-      if (!isMounted) return;
-
-      const toDebugResult = (result: { data: unknown[] | null; error: unknown }) => ({
-        dataLength: result.data?.length ?? null,
-        data: result.data,
-        error: result.error,
-      });
-
-      setDebugPanelData({
-        userId,
-        userError,
-        myProfile: profileResult.data,
-        myProfileError: profileResult.error,
-        rawCounts: {
-          activeBloggers: toDebugResult(activeBloggers),
-          inactiveBloggers: toDebugResult(inactiveBloggers),
-          postsThisMonth: toDebugResult(postsThisMonth),
-          liveProducts: toDebugResult(liveProducts),
-          archiveSoonProducts: toDebugResult(archiveSoonProducts),
-          activeSubscribers: toDebugResult(activeSubscribers),
-        },
-      });
-    }
-
-    void loadDebugPanel();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
   async function handleRetryDelivery(claimId: string) {
     setDeliveryNotice("");
     setRetryingClaimId(claimId);
@@ -270,9 +159,7 @@ function AtelierPage() {
       ]);
 
       setDeliveryDesk(refreshed);
-      const nextLiveStats = mergeProductCounts(refreshedStats, refreshedProducts);
-      console.log("[Atelier] calling setLiveStats with:", JSON.stringify(nextLiveStats));
-      setLiveStats(nextLiveStats);
+      setLiveStats(mergeProductCounts(refreshedStats, refreshedProducts));
       setDeliveryNotice(result.message ?? "Delivery retried.");
     } catch (error) {
       setDeliveryNotice(error instanceof Error ? error.message : "Could not retry delivery.");
@@ -447,22 +334,10 @@ function AtelierPage() {
         <HandwrittenNote>run the house</HandwrittenNote>
       </header>
 
-      <pre className="mt-6 max-h-[70vh] overflow-auto rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs leading-relaxed text-amber-950">
-        {JSON.stringify(debugPanelData ?? { loading: true }, null, 2)}
-      </pre>
-
-      <pre className="mt-4 overflow-auto rounded-xl bg-yellow-100 p-2 text-xs text-foreground">
-        LIVE (render): {JSON.stringify(liveStats)}
-      </pre>
-      <div className="mt-2 rounded-xl bg-yellow-100 p-2 text-xs text-foreground">
-        Render count: {renderCount.current}
-      </div>
-
       <section className="mt-10 grid gap-4 md:grid-cols-6">
         {metrics.map((it) => (
           <GlassCard key={it.l} tone={it.tone} className="p-5">
             <div className="font-display text-4xl">{it.n}</div>
-            <div className="text-[8px] text-red-500">{JSON.stringify(it)}</div>
             <div className="mt-2 font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/60">
               {it.l}
             </div>
