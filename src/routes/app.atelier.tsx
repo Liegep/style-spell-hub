@@ -78,6 +78,11 @@ function AtelierPage() {
   const [retryingClaimId, setRetryingClaimId] = useState<string | null>(null);
   const [deliveryNotice, setDeliveryNotice] = useState("");
   const [dataState, setDataState] = useState<"loading" | "live" | "fallback">("loading");
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     console.log("[Atelier] effect fired, mounted starts as true");
@@ -349,7 +354,7 @@ function AtelierPage() {
       <section className="mt-10 grid gap-4 md:grid-cols-6">
         {metrics.map((it, index) => (
           <GlassCard key={it.l} tone={it.tone} className="p-5">
-            <div className="font-display text-4xl">{it.n}</div>
+            <div className="font-display text-4xl">{hasMounted ? it.n : "···"}</div>
             {index === 0 ? (
               <>
                 <div className="text-[8px] text-red-500">instance: {instanceId}</div>
