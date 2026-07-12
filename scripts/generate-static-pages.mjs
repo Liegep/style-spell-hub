@@ -33,7 +33,7 @@ async function writeRuntimeEnv() {
   const json = JSON.stringify(payload).replace(/</g, "\\u003c");
   await writeFile(
     path.join(clientDir, "env.js"),
-    `window.__LOVE_POTION_ENV__=${json};\nconsole.log('[env.js] executed at', performance.now());\n`,
+    `window.__LOVE_POTION_ENV__=${json};\n`,
   );
 }
 

@@ -121,7 +121,7 @@ function serveRuntimeEnv(response) {
     "content-type": "application/javascript; charset=utf-8",
     "cache-control": "no-store",
   });
-  response.end(`window.__LOVE_POTION_ENV__=${json};\nconsole.log('[env.js] executed at', performance.now());`);
+  response.end(`window.__LOVE_POTION_ENV__=${json};\n`);
 }
 
 async function sendFetchResponse(response, fetchResponse) {

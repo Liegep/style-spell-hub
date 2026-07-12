@@ -11,14 +11,6 @@ declare global {
 
 const runtimeEnv = typeof window !== "undefined" ? window.__LOVE_POTION_ENV__ : undefined;
 const supabaseUrl = cleanEnvValue(runtimeEnv?.VITE_SUPABASE_URL || (import.meta.env.VITE_SUPABASE_URL as string | undefined));
-console.log(
-  "[Supabase Client] URL resolved as:",
-  supabaseUrl,
-  "| env present:",
-  typeof window !== "undefined" ? !!window.__LOVE_POTION_ENV__?.VITE_SUPABASE_URL : "n/a",
-  "| timestamp:",
-  performance.now(),
-);
 const supabaseAnonKey = cleanEnvValue(
   runtimeEnv?.VITE_SUPABASE_ANON_KEY || (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined),
 );

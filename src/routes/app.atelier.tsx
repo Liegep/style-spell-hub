@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { flushSync } from "react-dom";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import bloggerAvatar from "@/assets/blogger-avatar.jpg";
@@ -8,15 +7,12 @@ import {
   getAtelierStats,
   getBloggerPulse,
   getDeliveryDeskClaims,
-  getProductSummaries,
   getReviewQueue,
   getUpcomingArchives,
   reviewSubmission,
   retryDeliveryClaim,
-  type AtelierStats,
   type BloggerPulse,
   type DeliveryDeskItem,
-  type ProductSummary,
   type ReviewQueueItem,
 } from "@/integrations/supabase/dashboard";
 import { cn } from "@/lib/utils";
@@ -27,42 +23,15 @@ import { useLang } from "@/i18n/dict";
 import { translateAppPhrase } from "@/i18n/app-text";
 
 export const Route = createFileRoute("/app/atelier")({
+  ssr: false,
+  loader: async () => getAtelierStats(),
   component: AtelierPage,
 });
-
-const emptyAtelierStats: AtelierStats = {
-  activeBloggers: 0,
-  inactiveBloggers: 0,
-  postsThisMonth: 0,
-  productsLive: 0,
-  archiveSoon: 0,
-  subscribers: 0,
-  statsErrors: [],
-};
-
-function mergeProductCounts(stats: AtelierStats, products: ProductSummary[]) {
-  const now = new Date();
-  const inThirtyDays = new Date(now);
-  inThirtyDays.setDate(inThirtyDays.getDate() + 30);
-  const liveProducts = products.filter((product) => product.status === "available");
-  const archiveSoon = liveProducts.filter((product) => {
-    if (!product.auto_archive_at) return false;
-    const archiveDate = new Date(product.auto_archive_at);
-    return archiveDate >= now && archiveDate <= inThirtyDays;
-  });
-
-  return {
-    ...stats,
-    productsLive: Math.max(stats.productsLive, liveProducts.length),
-    archiveSoon: Math.max(stats.archiveSoon, archiveSoon.length),
-  };
-}
 
 function AtelierPage() {
   const language = useLang();
   const tr = (value: string) => translateAppPhrase(value, language);
-  const instanceId = useState(() => Math.random().toString(36).slice(2, 8))[0];
-  const [liveStats, setLiveStats] = useState<AtelierStats>(emptyAtelierStats);
+  const stats = Route.useLoaderData();
   const [liveBloggers, setLiveBloggers] = useState<BloggerPulse[]>([]);
   const [upcomingArchives, setUpcomingArchives] = useState<{ id: string; name: string; auto_archive_at: string | null }[]>([]);
   const [reviewQueue, setReviewQueue] = useState<ReviewQueueItem[]>([]);
@@ -78,22 +47,14 @@ function AtelierPage() {
   const [retryingClaimId, setRetryingClaimId] = useState<string | null>(null);
   const [deliveryNotice, setDeliveryNotice] = useState("");
   const [dataState, setDataState] = useState<"loading" | "live" | "fallback">("loading");
-  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-  useEffect(() => {
-    console.log("[Atelier] effect fired, mounted starts as true");
     let isMounted = true;
     let refreshTimer: number | undefined;
 
     async function loadDashboard() {
-      const [profile, nextStats, nextProducts, nextBloggers, nextArchives, nextQueue, nextDeliveryDesk] = await Promise.allSettled([
+      const [profile, nextBloggers, nextArchives, nextQueue, nextDeliveryDesk] = await Promise.allSettled([
         getCurrentProfile(),
-        getAtelierStats(),
-        getProductSummaries(),
         getBloggerPulse(),
         getUpcomingArchives(),
         getReviewQueue(reviewFilter),
@@ -101,21 +62,11 @@ function AtelierPage() {
       ]);
 
       if (!isMounted) {
-        console.log("[Atelier] BAILED because mounted is false, discarding real data:", nextStats.value);
         return;
       }
 
       if (profile.status === "fulfilled") setCurrentProfile(profile.value);
       else console.error("[Atelier] Failed to load current profile", profile.reason);
-
-      console.log("[Atelier] nextStats VALUE:", JSON.stringify(nextStats));
-      if (nextStats.status === "fulfilled") {
-        const products = nextProducts.status === "fulfilled" ? nextProducts.value : [];
-        flushSync(() => setLiveStats(mergeProductCounts(nextStats.value, products)));
-      }
-      else console.error("[Atelier] Failed to load stats", nextStats.reason);
-
-      if (nextProducts.status === "rejected") console.error("[Atelier] Failed to load product summaries", nextProducts.reason);
 
       if (nextBloggers.status === "fulfilled") setLiveBloggers(nextBloggers.value);
       else console.error("[Atelier] Failed to load blogger pulse", nextBloggers.reason);
@@ -130,7 +81,7 @@ function AtelierPage() {
       else console.error("[Atelier] Failed to load delivery desk", nextDeliveryDesk.reason);
 
       setDataState(
-        [profile, nextStats, nextProducts, nextBloggers, nextArchives, nextQueue, nextDeliveryDesk].some(
+        [profile, nextBloggers, nextArchives, nextQueue, nextDeliveryDesk].some(
           (result) => result.status === "fulfilled",
         )
           ? "live"
@@ -151,7 +102,6 @@ function AtelierPage() {
     document.addEventListener("visibilitychange", refreshWhenVisible);
 
     return () => {
-      console.log("[Atelier] effect cleanup called, mounted set to false");
       isMounted = false;
       if (refreshTimer) window.clearInterval(refreshTimer);
       window.removeEventListener("focus", refreshWhenVisible);
@@ -159,24 +109,15 @@ function AtelierPage() {
     };
   }, [reviewFilter]);
 
-  useEffect(() => {
-    console.log("[Atelier] instance", instanceId, "liveStats CHANGED to:", JSON.stringify(liveStats));
-  }, [instanceId, liveStats]);
-
   async function handleRetryDelivery(claimId: string) {
     setDeliveryNotice("");
     setRetryingClaimId(claimId);
 
     try {
       const result = await retryDeliveryClaim(claimId);
-      const [refreshed, refreshedStats, refreshedProducts] = await Promise.all([
-        getDeliveryDeskClaims(),
-        getAtelierStats(),
-        getProductSummaries(),
-      ]);
+      const refreshed = await getDeliveryDeskClaims();
 
       setDeliveryDesk(refreshed);
-      setLiveStats(mergeProductCounts(refreshedStats, refreshedProducts));
       setDeliveryNotice(result.message ?? "Delivery retried.");
     } catch (error) {
       setDeliveryNotice(error instanceof Error ? error.message : "Could not retry delivery.");
@@ -257,14 +198,14 @@ function AtelierPage() {
   }
 
   const metrics = [
-    { n: liveStats.activeBloggers, l: tr("Active bloggers"), tone: "pink" as const },
-    { n: liveStats.inactiveBloggers, l: tr("Inactive"), tone: "light" as const },
-    { n: liveStats.postsThisMonth, l: tr("Posts this month"), tone: "light" as const },
-    { n: liveStats.productsLive, l: tr("Products live"), tone: "light" as const },
-    { n: liveStats.archiveSoon, l: tr("Archive soon"), tone: "pink" as const },
-    { n: liveStats.subscribers, l: tr("Subscribers"), tone: "light" as const },
+    { n: stats.activeBloggers, l: tr("Active bloggers"), tone: "pink" as const },
+    { n: stats.inactiveBloggers, l: tr("Inactive"), tone: "light" as const },
+    { n: stats.postsThisMonth, l: tr("Posts this month"), tone: "light" as const },
+    { n: stats.productsLive, l: tr("Products live"), tone: "light" as const },
+    { n: stats.archiveSoon, l: tr("Archive soon"), tone: "pink" as const },
+    { n: stats.subscribers, l: tr("Subscribers"), tone: "light" as const },
   ];
-  const statsErrors = liveStats.statsErrors ?? [];
+  const statsErrors = stats.statsErrors ?? [];
   const archiveRows = upcomingArchives;
   const bloggerRows = liveBloggers;
   const selectedReview = selectedReviewId
@@ -352,17 +293,9 @@ function AtelierPage() {
       </header>
 
       <section className="mt-10 grid gap-4 md:grid-cols-6">
-        {metrics.map((it, index) => (
+        {metrics.map((it) => (
           <GlassCard key={it.l} tone={it.tone} className="p-5">
-            <div className="font-display text-4xl">{hasMounted ? it.n : "···"}</div>
-            {index === 0 ? (
-              <>
-                <div className="text-[8px] text-red-500">instance: {instanceId}</div>
-                <div className="text-[10px] text-blue-600 font-bold">
-                  it.n={String(it.n)} | liveStats.activeBloggers={String(liveStats.activeBloggers)}
-                </div>
-              </>
-            ) : null}
+            <div className="font-display text-4xl">{it.n}</div>
             <div className="mt-2 font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/60">
               {it.l}
             </div>
