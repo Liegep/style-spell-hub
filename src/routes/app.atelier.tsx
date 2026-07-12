@@ -350,7 +350,12 @@ function AtelierPage() {
           <GlassCard key={it.l} tone={it.tone} className="p-5">
             <div className="font-display text-4xl">{it.n}</div>
             {index === 0 ? (
-              <div className="text-[8px] text-red-500">instance: {instanceId}</div>
+              <>
+                <div className="text-[8px] text-red-500">instance: {instanceId}</div>
+                <div className="text-[10px] text-blue-600 font-bold">
+                  it.n={String(it.n)} | liveStats.activeBloggers={String(liveStats.activeBloggers)}
+                </div>
+              </>
             ) : null}
             <div className="mt-2 font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/60">
               {it.l}
