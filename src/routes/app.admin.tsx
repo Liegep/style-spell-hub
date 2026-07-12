@@ -3,6 +3,12 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent 
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { products, stats } from "@/mocks/data";
 import { cn } from "@/lib/utils";
 import { getCurrentProfile } from "@/integrations/supabase/auth";
@@ -642,6 +648,7 @@ function Compose({
   const [threadReplyBody, setThreadReplyBody] = useState<Record<string, string>>({});
   const [threadSendingKey, setThreadSendingKey] = useState<string | null>(null);
   const [threadFeedback, setThreadFeedback] = useState<Record<string, string>>({});
+  const [replyModalThreadKey, setReplyModalThreadKey] = useState<string | null>(null);
   const [slState, setSlState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [slFeedback, setSlFeedback] = useState("");
 
@@ -712,6 +719,11 @@ function Compose({
       }))
       .sort((a, b) => Date.parse(b.latestAt) - Date.parse(a.latestAt));
   }, [received, recent]);
+
+  const replyModalThread = useMemo(
+    () => conversations.find((thread) => thread.key === replyModalThreadKey) ?? null,
+    [conversations, replyModalThreadKey],
+  );
 
   async function onMarkRead(messageId: string) {
     setMarkingReadId(messageId);
@@ -873,6 +885,7 @@ function Compose({
       setRecent((current) => [{ ...sent, recipient_name: thread.name }, ...current].slice(0, 30));
       setThreadReplyBody((current) => ({ ...current, [thread.key]: "" }));
       setThreadFeedback((current) => ({ ...current, [thread.key]: "Reply sent." }));
+      setReplyModalThreadKey(null);
     } catch (error) {
       console.error("[Compose] failed to reply in thread", error);
       setThreadFeedback((current) => ({
@@ -1075,40 +1088,23 @@ function Compose({
                         ) : null}
                       </div>
                     ))}
-                    <div className="rounded-xl border border-[var(--brand-magenta)]/15 bg-background/60 p-3">
-                      <label className="block">
-                        <span className="font-mono text-[8px] uppercase tracking-[0.24em] text-foreground/45">
-                          quick reply
-                        </span>
-                        <textarea
-                          value={threadReplyBody[thread.key] ?? ""}
-                          onChange={(event) =>
-                            setThreadReplyBody((current) => ({ ...current, [thread.key]: event.target.value }))
-                          }
-                          rows={3}
-                          placeholder={`Reply to ${thread.name}...`}
-                          className="mt-2 w-full rounded-xl border border-foreground/15 bg-background px-3 py-2 text-xs outline-none focus:border-[var(--brand-magenta)]"
-                        />
-                      </label>
-                      <div className="mt-2 flex items-center justify-between gap-3">
-                        <span
-                          className={cn(
-                            "text-xs",
-                            threadFeedback[thread.key] === "Reply sent."
-                              ? "text-emerald-700"
-                              : "text-[var(--brand-magenta)]",
-                          )}
-                        >
-                          {threadFeedback[thread.key]}
-                        </span>
-                        <button
-                          onClick={() => void onThreadReply(thread)}
-                          disabled={threadSendingKey === thread.key}
-                          className="rounded-full bg-[var(--brand-magenta)] px-4 py-2 font-mono text-[9px] uppercase tracking-[0.24em] text-white disabled:opacity-60"
-                        >
-                          {threadSendingKey === thread.key ? "sending..." : "reply"}
-                        </button>
-                      </div>
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--brand-magenta)]/15 bg-background/60 p-3">
+                      <span
+                        className={cn(
+                          "text-xs",
+                          threadFeedback[thread.key] === "Reply sent."
+                            ? "text-emerald-700"
+                            : "text-[var(--brand-magenta)]",
+                        )}
+                      >
+                        {threadFeedback[thread.key] || "Open a reply box without scrolling through the full thread."}
+                      </span>
+                      <button
+                        onClick={() => setReplyModalThreadKey(thread.key)}
+                        className="rounded-full bg-[var(--brand-magenta)] px-4 py-2 font-mono text-[9px] uppercase tracking-[0.24em] text-white hover:bg-foreground"
+                      >
+                        reply
+                      </button>
                     </div>
                   </div>
                 ) : null}
@@ -1119,6 +1115,87 @@ function Compose({
             <li className="font-hand text-2xl text-[var(--brand-magenta)]">no conversations yet</li>
           ) : null}
         </ul>
+
+        <Dialog
+          open={Boolean(replyModalThread)}
+          onOpenChange={(open) => {
+            if (!open) setReplyModalThreadKey(null);
+          }}
+        >
+          <DialogContent className="max-w-2xl rounded-3xl border-[var(--brand-pink)] bg-background p-8">
+            {replyModalThread ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+                    Reply to {replyModalThread.name}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="mt-2 space-y-4">
+                  <div className="rounded-2xl border border-foreground/10 bg-background/60 p-4">
+                    <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/45">
+                      recent messages
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {replyModalThread.messages.slice(0, 3).map((message) => (
+                        <div
+                          key={message.id}
+                          className={cn(
+                            "rounded-xl px-3 py-2 text-xs",
+                            message.direction === "in"
+                              ? "bg-[var(--brand-pink)]/55"
+                              : "bg-foreground/5 text-foreground/70",
+                          )}
+                        >
+                          <div className="font-mono text-[8px] uppercase tracking-[0.24em] text-foreground/45">
+                            {message.direction === "in" ? "blogger" : "you"} ·{" "}
+                            {new Date(message.created_at).toLocaleDateString()}
+                          </div>
+                          <div className="mt-1 font-display text-sm">{message.subject}</div>
+                          {message.body ? (
+                            <p className="mt-1 whitespace-pre-wrap text-foreground/65">{message.body}</p>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <label className="block">
+                    <span className="font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/45">
+                      your reply
+                    </span>
+                    <textarea
+                      value={threadReplyBody[replyModalThread.key] ?? ""}
+                      onChange={(event) =>
+                        setThreadReplyBody((current) => ({ ...current, [replyModalThread.key]: event.target.value }))
+                      }
+                      rows={6}
+                      placeholder={`Reply to ${replyModalThread.name}...`}
+                      className="mt-2 w-full rounded-2xl border border-foreground/15 bg-background px-4 py-3 text-sm outline-none focus:border-[var(--brand-magenta)]"
+                    />
+                  </label>
+                  <div className="flex items-center justify-between gap-3">
+                    <span
+                      className={cn(
+                        "text-sm",
+                        threadFeedback[replyModalThread.key] === "Reply sent."
+                          ? "text-emerald-700"
+                          : "text-[var(--brand-magenta)]",
+                      )}
+                    >
+                      {threadFeedback[replyModalThread.key]}
+                    </span>
+                    <button
+                      onClick={() => void onThreadReply(replyModalThread)}
+                      disabled={threadSendingKey === replyModalThread.key}
+                      className="rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.28em] text-white hover:bg-foreground disabled:opacity-60"
+                    >
+                      {threadSendingKey === replyModalThread.key ? "sending..." : "send reply"}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : null}
+          </DialogContent>
+        </Dialog>
       </GlassCard>
     </div>
   );

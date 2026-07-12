@@ -177,15 +177,6 @@ export async function sendInternalMessage(input: {
       actionUrl: "/app/blogger?section=inbox",
       metadata: { source: "internal_message", scope: input.scope },
     }).catch((error) => console.warn("[Messages] could not create broadcast notification", error));
-  } else if (message.recipient_id) {
-    void createInAppNotification({
-      recipientId: message.recipient_id,
-      type: "new_message",
-      title: message.subject,
-      body: message.body || "New personal message from Love Potion HQ.",
-      actionUrl: "/app/blogger?section=inbox",
-      metadata: { source: "internal_message", scope: input.scope },
-    }).catch((error) => console.warn("[Messages] could not create personal notification", error));
   }
 
   return {
