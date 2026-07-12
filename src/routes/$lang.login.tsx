@@ -108,7 +108,7 @@ function LoginPage() {
         </div>
         <div className="absolute bottom-10 left-10">
           <h2 className="font-display text-6xl leading-[0.9] text-white drop-shadow">
-            STEP <br/> INSIDE.
+            {t.login.editorialTitle}
           </h2>
           <p className="font-hand mt-4 text-4xl text-white">{t.slogan}</p>
         </div>

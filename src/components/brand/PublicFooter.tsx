@@ -25,7 +25,7 @@ export function PublicFooter() {
         </div>
       </div>
       <div className="mt-10 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/40">
-        © MMXXVI · LOVE POTION · ALL SPELLS RESERVED
+        © MMXXVI · LOVE POTION · {t.footer.rights}
       </div>
     </footer>
   );

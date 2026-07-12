@@ -13,10 +13,12 @@ function NewsletterPage() {
   const { t, lang } = useT();
   const newsletterAssetUrl = useSiteAssetUrl("newsletter_preview", release2);
   const content = useSiteContent(lang, {
+    newsletter_kickerLabel: t.newsletter.kickerLabel,
     newsletter_title: t.newsletter.title,
     newsletter_kicker: t.newsletter.kicker,
     newsletter_placeholder: t.newsletter.placeholder,
     newsletter_cta: t.newsletter.cta,
+    newsletter_note: t.newsletter.note,
     newsletter_preview: t.newsletter.preview,
     newsletter_sample_title: t.newsletter.sampleTitle,
     newsletter_sample_body: t.newsletter.sampleBody,
@@ -25,7 +27,7 @@ function NewsletterPage() {
     <main className="px-6 pt-16 md:px-12">
       <div className="mx-auto max-w-[1300px]">
         <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-          SUBSCRIBE · Nº 03
+          {content.newsletter_kickerLabel ?? t.newsletter.kickerLabel}
         </div>
         <h1 className="mt-3 font-display text-6xl leading-[0.9] md:text-[7rem]">
           {content.newsletter_title}
@@ -47,7 +49,7 @@ function NewsletterPage() {
               {content.newsletter_cta} →
             </button>
             <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-              Free · in-world delivery · unsubscribe anytime
+              {content.newsletter_note ?? t.newsletter.note}
             </p>
           </GlassCard>
 

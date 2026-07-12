@@ -28,6 +28,9 @@ export const dict = {
       scroll: "Scroll",
     },
     socials: { flickr: "Flickr", mp: "SL Marketplace", fb: "Facebook", primfeed: "Primfeed" },
+    footer: {
+      rights: "All spells reserved",
+    },
     about: {
       title: "About the house",
       kicker: "Manifesto",
@@ -57,6 +60,7 @@ export const dict = {
         "We deliver in-world, instantly. Try a demo before you cast — every potion has one.",
     },
     newsletter: {
+      kickerLabel: "Subscribe · Nº 03",
       title: "Newsletter",
       kicker: "Texts that arrive with a photo, straight to your inbox in Second Life.",
       placeholder: "Your SL avatar name",
@@ -64,6 +68,7 @@ export const dict = {
       preview: "Preview of how a release arrives",
       sampleTitle: "Velvet 04 has arrived",
       sampleBody: "A new gown, four colors, fitted for every body. Try the demo at the mainstore.",
+      note: "Free · in-world delivery · unsubscribe anytime",
     },
     apply: {
       title: "Apply to blog",
@@ -96,9 +101,16 @@ export const dict = {
       hours: "Hours you spend in-world weekly",
       submit: "Send my application",
       note: "We answer within 7 days.",
+      choose: "Choose...",
+      yes: "Yes",
+      sending: "Sending...",
+      sent: "Application sent. Love Potion HQ will review it soon.",
+      missingField: "Please fill",
+      submitError: "Could not send your application.",
     },
     login: {
       title: "Step inside",
+      editorialTitle: "STEP INSIDE.",
       access: "Secure atelier access",
       kicker: "Select your role",
       blogger: "Blogger",
@@ -146,6 +158,9 @@ export const dict = {
       scroll: "Desliza",
     },
     socials: { flickr: "Flickr", mp: "Marketplace SL", fb: "Facebook", primfeed: "Primfeed" },
+    footer: {
+      rights: "Todos los hechizos reservados",
+    },
     about: {
       title: "Sobre la casa",
       kicker: "Manifiesto",
@@ -175,6 +190,7 @@ export const dict = {
         "Entregamos in-world, al instante. Prueba un demo antes de lanzar el hechizo — toda poción tiene uno.",
     },
     newsletter: {
+      kickerLabel: "Suscríbete · Nº 03",
       title: "Newsletter",
       kicker: "Textos que llegan con una foto, directo a tu inbox en Second Life.",
       placeholder: "Tu nombre de avatar SL",
@@ -182,6 +198,7 @@ export const dict = {
       preview: "Vista previa de cómo llega un lanzamiento",
       sampleTitle: "Velvet 04 ha llegado",
       sampleBody: "Un nuevo vestido, cuatro colores, ajustado a cada cuerpo. Prueba el demo en la tienda.",
+      note: "Gratis · entrega in-world · cancela cuando quieras",
     },
     apply: {
       title: "Aplicar para bloguear",
@@ -214,9 +231,16 @@ export const dict = {
       hours: "Horas semanales en SL",
       submit: "Enviar mi aplicación",
       note: "Respondemos en 7 días.",
+      choose: "Elige...",
+      yes: "Sí",
+      sending: "Enviando...",
+      sent: "Aplicación enviada. Love Potion HQ la revisará pronto.",
+      missingField: "Completa",
+      submitError: "No se pudo enviar tu aplicación.",
     },
     login: {
       title: "Entra a la casa",
+      editorialTitle: "ENTRA.",
       access: "Acceso seguro al atelier",
       kicker: "Elige tu rol",
       blogger: "Blogger",
