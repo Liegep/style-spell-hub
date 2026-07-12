@@ -78,6 +78,7 @@ function AtelierPage() {
   const [dataState, setDataState] = useState<"loading" | "live" | "fallback">("loading");
 
   useEffect(() => {
+    console.log("[Atelier] effect fired, mounted starts as true");
     let isMounted = true;
     let refreshTimer: number | undefined;
 
@@ -92,11 +93,15 @@ function AtelierPage() {
         getDeliveryDeskClaims(),
       ]);
 
-      if (!isMounted) return;
+      if (!isMounted) {
+        console.log("[Atelier] BAILED because mounted is false, discarding real data:", nextStats.value);
+        return;
+      }
 
       if (profile.status === "fulfilled") setCurrentProfile(profile.value);
       else console.error("[Atelier] Failed to load current profile", profile.reason);
 
+      console.log("[Atelier] about to check mounted:", isMounted, "nextStats status:", nextStats.status);
       if (nextStats.status === "fulfilled") {
         const products = nextProducts.status === "fulfilled" ? nextProducts.value : [];
         setLiveStats(mergeProductCounts(nextStats.value, products));
@@ -139,6 +144,7 @@ function AtelierPage() {
     document.addEventListener("visibilitychange", refreshWhenVisible);
 
     return () => {
+      console.log("[Atelier] effect cleanup called, mounted set to false");
       isMounted = false;
       if (refreshTimer) window.clearInterval(refreshTimer);
       window.removeEventListener("focus", refreshWhenVisible);
