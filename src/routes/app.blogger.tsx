@@ -2783,6 +2783,7 @@ function ProfileTab(props: {
       const existingAvatar = profile.avatar_url?.startsWith("blob:") ? null : profile.avatar_url;
       const updated = await updateCurrentProfile({
         display_name: displayName.trim() || null,
+        full_name: displayName.trim() || null,
         status_message: note.trim() || null,
         status_message_expires_at: note.trim() ? buildStatusNoteExpiry(noteDuration) : null,
         status_message_duration: note.trim() && noteDuration !== "none" ? noteDuration : null,
@@ -2790,9 +2791,10 @@ function ProfileTab(props: {
         language_preference: language,
         avatar_url: uploadedAvatar ?? existingAvatar,
       });
-      onProfileUpdated(updated);
-      window.dispatchEvent(new CustomEvent("profile-updated", { detail: updated }));
-      setPhoto(getSafeAvatarUrl(updated.avatar_url));
+      const freshProfile = (await getCurrentProfile(updated.id)) ?? updated;
+      onProfileUpdated(freshProfile);
+      window.dispatchEvent(new CustomEvent("profile-updated", { detail: freshProfile }));
+      setPhoto(getSafeAvatarUrl(freshProfile.avatar_url));
       setPhotoFile(null);
       setSaveMessage(tr("Profile saved."));
       window.setTimeout(() => setSaveMessage(""), 2600);
