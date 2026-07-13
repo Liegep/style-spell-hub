@@ -461,7 +461,7 @@ function AtelierPage() {
                       </button>
                     ) : claim.status === "delivered" ? (
                       <span className="rounded-full bg-emerald-100 px-4 py-3 font-mono text-[9px] uppercase tracking-[0.22em] text-emerald-700">
-                        {tr("complete")}
+                        {tr("reviewed")}
                       </span>
                     ) : (
                       <button
