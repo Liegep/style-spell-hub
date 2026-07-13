@@ -233,7 +233,7 @@ function Landing() {
           <ScrollReveal
             variant="fade-up"
             delay={340}
-            className="relative z-30 mt-[4vw] flex flex-col items-start gap-6 px-2 md:flex-row md:items-end md:justify-between md:px-6"
+            className="relative z-30 mt-6 flex flex-col items-start gap-6 px-2 md:-mt-[7vw] md:flex-row md:items-end md:justify-between md:px-6"
           >
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
