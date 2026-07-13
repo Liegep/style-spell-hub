@@ -1021,6 +1021,8 @@ function PostsTab({
   submissions: BloggerSubmissionSummary[];
   onOpenProduct: (product: Product) => void;
 }) {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const rows = submissions
     .map((submission) => ({
       submission,
@@ -1031,7 +1033,7 @@ function PostsTab({
   if (rows.length === 0) {
     return (
       <GlassCard tone="pink" className="p-8">
-        <div className="font-hand text-3xl text-[var(--brand-magenta)]">no submitted posts yet</div>
+        <div className="font-hand text-3xl text-[var(--brand-magenta)]">{tr("no submitted posts yet")}</div>
       </GlassCard>
     );
   }
@@ -1056,7 +1058,7 @@ function PostsTab({
             </div>
             {row.submission.review_comment ? (
               <div className="mt-2 rounded-xl border border-foreground/10 bg-foreground/[0.03] px-3 py-2 text-xs text-foreground/75">
-                Review note: {row.submission.review_comment}
+                {tr("Review note:")} {row.submission.review_comment}
               </div>
             ) : null}
           </div>
@@ -1068,6 +1070,8 @@ function PostsTab({
 }
 
 function GoodiesTab({ resources }: { resources: SharedResource[] }) {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const links = resources.filter((item) => item.kind === "link");
   const images = resources.filter((item) => item.kind === "image");
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
@@ -1095,7 +1099,7 @@ function GoodiesTab({ resources }: { resources: SharedResource[] }) {
     <div className="grid gap-6 lg:grid-cols-2">
       <GlassCard className="p-6">
         <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-          <span>Useful links</span> ({links.length})
+          <span>{tr("Useful links")}</span> ({links.length})
         </div>
         <div className="mt-4 space-y-3">
           {links.map((item) => (
@@ -1109,7 +1113,7 @@ function GoodiesTab({ resources }: { resources: SharedResource[] }) {
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 rounded-full border border-foreground/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] hover:bg-foreground hover:text-background"
                 >
-                  <span>Open link</span>
+                  <span>{tr("Open link")}</span>
                 </a>
                 <button
                   type="button"
@@ -1117,14 +1121,14 @@ function GoodiesTab({ resources }: { resources: SharedResource[] }) {
                   className="inline-flex items-center gap-2 rounded-full border border-foreground/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] hover:bg-foreground hover:text-background"
                 >
                   {copiedUrl === item.url ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copiedUrl === item.url ? "Copied" : "Copy"}
+                  {copiedUrl === item.url ? tr("Copied") : tr("Copy")}
                 </button>
               </div>
             </div>
           ))}
           {links.length === 0 ? (
             <div className="rounded-xl border border-dashed border-foreground/15 p-6 text-center font-hand text-2xl text-[var(--brand-magenta)]">
-              no links yet
+              {tr("no links yet")}
             </div>
           ) : null}
         </div>
@@ -1132,7 +1136,7 @@ function GoodiesTab({ resources }: { resources: SharedResource[] }) {
 
       <GlassCard className="p-6">
         <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-          <span>Brand textures & files</span> ({images.length})
+          <span>{tr("Brand textures & files")}</span> ({images.length})
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {images.map((item) => (
@@ -1147,20 +1151,20 @@ function GoodiesTab({ resources }: { resources: SharedResource[] }) {
                   className="inline-flex items-center gap-2 rounded-full border border-foreground/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] hover:bg-foreground hover:text-background"
                 >
                   <Download className="h-3.5 w-3.5" />
-                  <span>Download</span>
+                  <span>{tr("Download")}</span>
                 </a>
                 <a
                   href={item.url}
                   className="inline-flex items-center gap-2 rounded-full border border-foreground/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] hover:bg-foreground hover:text-background"
                 >
-                  <span>Open</span>
+                  <span>{tr("Open")}</span>
                 </a>
               </div>
             </div>
           ))}
           {images.length === 0 ? (
             <div className="rounded-xl border border-dashed border-foreground/15 p-6 text-center font-hand text-2xl text-[var(--brand-magenta)] sm:col-span-2">
-              no files yet
+              {tr("no files yet")}
             </div>
           ) : null}
         </div>
@@ -1194,6 +1198,7 @@ function InboxTab({
   onUnreadChange: (count: number) => void;
 }) {
   const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const [mail, setMail] = useState<InboxMessage[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
@@ -1241,7 +1246,7 @@ function InboxTab({
       } catch (error) {
         console.error("[Blogger Mailbox] failed to load", error);
         if (!mounted) return;
-        setError(error instanceof Error ? error.message : language === "es" ? "No se pudo cargar el buzón." : "Could not load mailbox.");
+        setError(error instanceof Error ? error.message : tr("Could not load mailbox."));
         setState("error");
       }
     }
@@ -1256,7 +1261,7 @@ function InboxTab({
     if (!profileId || !message.sender_id) return;
     const body = replyDrafts[message.id]?.trim();
     if (!body) {
-      setReplyErrors((current) => ({ ...current, [message.id]: language === "es" ? "Escribe una respuesta primero." : "Write a reply first." }));
+      setReplyErrors((current) => ({ ...current, [message.id]: tr("Write a reply first.") }));
       setReplyState((current) => ({ ...current, [message.id]: "error" }));
       return;
     }
@@ -1282,7 +1287,7 @@ function InboxTab({
       console.error("[Blogger Mailbox] reply failed", error);
       setReplyErrors((current) => ({
         ...current,
-        [message.id]: error instanceof Error ? error.message : "Could not send reply.",
+        [message.id]: error instanceof Error ? error.message : tr("Could not send reply."),
       }));
       setReplyState((current) => ({ ...current, [message.id]: "error" }));
     }
@@ -1504,7 +1509,7 @@ function InboxTab({
                       : "bg-foreground/10 text-foreground/55 hover:bg-foreground/18",
                 )}
               >
-                {replyOpen ? "Close reply" : "Reply"}
+                {replyOpen ? tr("Close reply") : tr("Reply")}
               </button>
               {replyState[message.id] === "sent" || replyState[message.id] === "error" ? (
                 <span
@@ -1516,8 +1521,8 @@ function InboxTab({
                   )}
                 >
                   {replyState[message.id] === "sent"
-                    ? "Reply sent."
-                    : replyErrors[message.id] || "Could not send reply."}
+                    ? tr("Reply sent.")
+                    : replyErrors[message.id] || tr("Could not send reply.")}
                 </span>
               ) : null}
             </div>
@@ -1525,7 +1530,7 @@ function InboxTab({
           {canReply && replyOpen ? (
             <div className="mt-5 rounded-2xl border border-foreground/10 bg-background/60 p-4">
               <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/50">
-                <span>Reply to</span> {message.sender_name || "Love Potion HQ"}
+                <span>{tr("Reply to")}</span> {message.sender_name || "Love Potion HQ"}
               </div>
               <textarea
                 value={replyDrafts[message.id] ?? ""}
@@ -1533,7 +1538,7 @@ function InboxTab({
                   setReplyDrafts((current) => ({ ...current, [message.id]: event.target.value }))
                 }
                 rows={3}
-                placeholder="Write back to Love Potion HQ..."
+                placeholder={tr("Write back to Love Potion HQ...")}
                 className="mt-3 w-full resize-none rounded-2xl border border-foreground/20 bg-background px-4 py-3 text-sm focus:border-[var(--brand-magenta)] focus:outline-none"
               />
               <div className="mt-3 flex items-center justify-end gap-3">
@@ -1542,7 +1547,7 @@ function InboxTab({
                   disabled={replyState[message.id] === "sending"}
                   className="rounded-full bg-foreground px-5 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)] disabled:opacity-60"
                 >
-                  {replyState[message.id] === "sending" ? "Sending..." : "Reply →"}
+                  {replyState[message.id] === "sending" ? tr("Sending...") : tr("Reply →")}
                 </button>
               </div>
             </div>
@@ -1646,6 +1651,7 @@ function ProductSubmissionModal({
   onSubmit: (submission: BloggerSubmissionSummary) => void;
 }) {
   const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const [links, setLinks] = useState<PortfolioLink[]>([
     { id: 1, platform: "Flickr", url: "", note: "" },
   ]);
@@ -2143,11 +2149,11 @@ function ProductSubmissionModal({
                 value={bloggerNote}
                 onChange={(event) => setBloggerNote(event.target.value)}
                 rows={2}
-                placeholder="Optional note for Love Potion HQ..."
+                placeholder={tr("Optional note for Love Potion HQ...")}
                 className="mt-3 w-full rounded-xl border border-foreground/10 bg-background/70 px-4 py-3 text-sm outline-none focus:border-[var(--brand-magenta)]"
               />
               <p className="mt-2 text-xs text-foreground/45">
-                This note is sent together with your links when you press Submit portfolio.
+                {tr("This note is sent together with your links when you press Submit portfolio.")}
               </p>
             </div>
 
@@ -2210,41 +2216,41 @@ function ProductSubmissionModal({
                 {accountLocked
                   ? lockedClaimLabel
                   : claimState === "claiming"
-                    ? "Claiming..."
+                    ? tr("Claiming...")
 	                    : claimState === "delivered"
-	                      ? "Claimed"
+	                      ? tr("Claimed")
 	                      : claimState === "failed"
-	                        ? "Retry delivery"
+	                        ? tr("Retry delivery")
 	                      : claimState === "claimed"
-	                        ? "Retry delivery"
-                      : "Claim product"}
+	                        ? tr("Retry delivery")
+                      : tr("Claim product")}
               </button>
               <button
                 onClick={addLink}
                 className="flex flex-1 items-center justify-center gap-2 rounded-full border border-foreground/25 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.25em] hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]"
               >
                 <Plus className="h-4 w-4" />
-                Add another link
+                {tr("Add another link")}
               </button>
               <button
                 onClick={submitPortfolio}
                 disabled={!canSubmit || !profileId || accountLocked || status === "saving" || !isDelivered}
-                title={accountLocked ? accountLockMessage : !isDelivered ? "Claim and receive the product before submitting links." : undefined}
+                title={accountLocked ? accountLockMessage : !isDelivered ? tr("Claim and receive the product before submitting links.") : undefined}
                 className="flex flex-1 items-center justify-center gap-2 rounded-full bg-foreground px-5 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-background hover:bg-[var(--brand-magenta)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Send className="h-4 w-4" />
-                {accountLocked ? lockedSubmitLabel : status === "saving" ? "Submitting..." : "Submit portfolio"}
+                {accountLocked ? lockedSubmitLabel : status === "saving" ? tr("Submitting...") : tr("Submit portfolio")}
               </button>
             </div>
             {!hasClaimRecord ? (
               <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-foreground/55">
-                Step 1: claim product · Step 2: submit links
+                {tr("Step 1: claim product · Step 2: submit links")}
               </p>
 	    ) : !isDelivered ? (
 	      <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-amber-700">
 	        {claimState === "failed"
-	          ? "Delivery failed · retry delivery before submitting links"
-	          : "Delivery pending · retry delivery before submitting links"}
+	          ? tr("Delivery failed · retry delivery before submitting links")
+	          : tr("Delivery pending · retry delivery before submitting links")}
 	      </p>
 	    ) : null}
           </div>
