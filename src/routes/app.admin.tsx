@@ -234,6 +234,11 @@ function AdminDash() {
         );
       }
 
+      if (detail?.id) {
+        window.setTimeout(() => void loadReviewQueue(), 900);
+        return;
+      }
+
       void loadReviewQueue();
     };
     window.addEventListener("profile-updated", handleReviewQueueRefresh);

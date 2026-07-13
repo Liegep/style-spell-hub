@@ -262,15 +262,17 @@ function AppLayout() {
         );
       }
 
-      void getCurrentProfile(custom.detail?.id)
-        .then((freshProfile) => {
-          if (!isMounted || !freshProfile) return;
-          setProfile(freshProfile);
-        })
-        .catch((error) => {
-          if (!isMounted) return;
-          console.error("[Sidebar] failed to refresh profile after update", error);
-        });
+      window.setTimeout(() => {
+        void getCurrentProfile(custom.detail?.id)
+          .then((freshProfile) => {
+            if (!isMounted || !freshProfile) return;
+            setProfile(freshProfile);
+          })
+          .catch((error) => {
+            if (!isMounted) return;
+            console.error("[Sidebar] failed to refresh profile after update", error);
+          });
+      }, 900);
     };
     window.addEventListener("profile-updated", onProfileUpdated as EventListener);
 

@@ -125,6 +125,11 @@ function AtelierPage() {
         );
       }
 
+      if (detail?.id) {
+        window.setTimeout(() => void loadDashboard(), 900);
+        return;
+      }
+
       void loadDashboard();
     };
 
