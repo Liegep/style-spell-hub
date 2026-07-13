@@ -37,6 +37,11 @@ import { countPersonalUnread, listInboxMessages, listPersonalInboxMessages } fro
 import { getVisibleStatusMessage } from "@/lib/status-note";
 
 export const Route = createFileRoute("/app")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    section: typeof search.section === "string" ? search.section : undefined,
+    tour: typeof search.tour === "string" ? search.tour : undefined,
+    uiLang: search.uiLang === "es" ? "es" : search.uiLang === "en" ? "en" : undefined,
+  }),
   component: AppLayout,
 });
 
@@ -92,6 +97,13 @@ function AppLayout() {
     : profile?.language_preference === "es"
       ? "es"
       : "en") as "en" | "es";
+  const redirectLang = (searchLang === "es" || searchLang === "en"
+    ? searchLang
+    : storedLang === "es" || storedLang === "en"
+      ? storedLang
+      : profile?.language_preference === "es"
+        ? "es"
+        : "en") as "en" | "es";
   const currentSection = (loc.search as { section?: string } | undefined)?.section;
   const currentTour = (loc.search as { tour?: string } | undefined)?.tour;
 
@@ -163,7 +175,7 @@ function AppLayout() {
       const { data } = await supabase.auth.getSession();
 
       if (!data.session) {
-        await navigate({ to: "/$lang/login", params: { lang: routeLang } });
+        window.location.replace(`/${redirectLang}/login`);
         return;
       }
 
@@ -175,7 +187,7 @@ function AppLayout() {
           setAuthError("Authenticated user has no profile row.");
         } else if (currentProfile.role !== "blogger" && currentProfile.account_status !== "active") {
           await signOut();
-          await navigate({ to: "/$lang/login", params: { lang: routeLang } });
+          window.location.replace(`/${redirectLang}/login`);
         } else {
           setProfile(currentProfile);
           const savedLang = window.localStorage.getItem("love-potion-ui-lang");
@@ -212,7 +224,7 @@ function AppLayout() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (isSigningOutRef.current) return;
       if (!session) {
-        void navigate({ to: "/$lang/login", params: { lang: routeLang } });
+        window.location.replace(`/${redirectLang}/login`);
       }
     });
 
@@ -227,7 +239,7 @@ function AppLayout() {
       subscription.unsubscribe();
       window.removeEventListener("profile-updated", onProfileUpdated as EventListener);
     };
-  }, [loc.pathname, navigate, routeLang, searchLang]);
+  }, [loc.pathname, navigate, redirectLang, searchLang]);
 
   useEffect(() => {
     if (!profile || profile.role === "blogger") {
@@ -302,7 +314,7 @@ function AppLayout() {
   }, [profile]);
 
   async function handleSignOut() {
-    const lang = profile?.language_preference ?? routeLang ?? "en";
+    const lang = profile?.language_preference === "es" ? "es" : redirectLang;
     isSigningOutRef.current = true;
     try {
       await signOut();
@@ -359,7 +371,7 @@ function AppLayout() {
       <AppTextTranslator language={appLanguage} />
       <div className="flex">
         <aside className="relative sticky top-0 hidden h-screen w-72 shrink-0 overflow-y-auto border-r border-foreground/10 p-6 md:flex md:flex-col">
-          <Link to="/$lang" params={{ lang: profile?.language_preference ?? routeLang }} className="block">
+          <Link to="/$lang" params={{ lang: profile?.language_preference === "es" ? "es" : redirectLang }} className="block">
             <div className="flex items-end gap-2">
               <img src={logoIcon} alt="Love Potion icon" className="h-7 w-7 object-contain" />
               <div className="font-display text-2xl leading-none">
