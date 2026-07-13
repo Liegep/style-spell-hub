@@ -1,6 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowRight, Check, ChevronDown, Copy, Download, Plus, Send, Trash2, X } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  Copy,
+  Download,
+  Plus,
+  Send,
+  Trash2,
+  X,
+} from "lucide-react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
@@ -17,7 +27,13 @@ import {
 import bloggerAvatar from "@/assets/blogger-avatar.jpg";
 import { useLang, type Lang } from "@/i18n/dict";
 import { translateAppPhrase } from "@/i18n/app-text";
-import { getCurrentProfile, leaveBloggerProgram, signOut, updateCurrentPassword, updateCurrentProfile } from "@/integrations/supabase/auth";
+import {
+  getCurrentProfile,
+  leaveBloggerProgram,
+  signOut,
+  updateCurrentPassword,
+  updateCurrentProfile,
+} from "@/integrations/supabase/auth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   claimProductForBlogger,
@@ -70,7 +86,10 @@ type PortfolioLink = {
 };
 type ProductClaimState = "idle" | "claiming" | "claimed" | "delivered" | "failed" | "error";
 
-function getProductClaimState(claim?: BloggerProductClaimSummary, submission?: BloggerSubmissionSummary): ProductClaimState {
+function getProductClaimState(
+  claim?: BloggerProductClaimSummary,
+  submission?: BloggerSubmissionSummary,
+): ProductClaimState {
   if (submission || claim?.status === "delivered") return "delivered";
   if (claim?.status === "failed") return "failed";
   if (claim) return "claimed";
@@ -102,13 +121,14 @@ export const Route = createFileRoute("/app/blogger")({
         };
       }
 
-      const [liveProducts, liveSubmissions, liveClaims, sharedGoodies, inboxMessages] = await Promise.all([
-        listAvailableProductsForBlogger(),
-        listSubmissionSummariesForBlogger(profile.id),
-        listProductClaimsForBlogger(profile.id).catch(() => [] as BloggerProductClaimSummary[]),
-        listSharedResources(),
-        listInboxMessages(profile.id),
-      ]);
+      const [liveProducts, liveSubmissions, liveClaims, sharedGoodies, inboxMessages] =
+        await Promise.all([
+          listAvailableProductsForBlogger(),
+          listSubmissionSummariesForBlogger(profile.id),
+          listProductClaimsForBlogger(profile.id).catch(() => [] as BloggerProductClaimSummary[]),
+          listSharedResources(),
+          listInboxMessages(profile.id),
+        ]);
 
       return {
         claims: liveClaims,
@@ -176,7 +196,8 @@ function BloggerDash() {
       },
     } as never);
   const closeTour = () => {
-    if (profileId) window.localStorage.setItem(`${BLOGGER_TOUR_SEEN_KEY_PREFIX}${profileId}`, "true");
+    if (profileId)
+      window.localStorage.setItem(`${BLOGGER_TOUR_SEEN_KEY_PREFIX}${profileId}`, "true");
     void navigate({
       search: (prev) => {
         const { tour: _tour, ...rest } = prev as Record<string, unknown>;
@@ -188,8 +209,12 @@ function BloggerDash() {
   // Profile state (lifted so overlay note appears across Overview too)
   const [photo, setPhoto] = useState<string>(getSafeAvatarUrl(initialData.profile?.avatar_url));
   const [overlayNote, setOverlayNote] = useState<string>(initialData.profile?.status_message || "");
-  const [overlayNoteDuration, setOverlayNoteDuration] = useState<StatusNoteDuration>(initialData.profile?.status_message_duration ?? "none");
-  const [status, setStatus] = useState<Status>(mapAvailabilityToStatus(initialData.profile?.availability_status));
+  const [overlayNoteDuration, setOverlayNoteDuration] = useState<StatusNoteDuration>(
+    initialData.profile?.status_message_duration ?? "none",
+  );
+  const [status, setStatus] = useState<Status>(
+    mapAvailabilityToStatus(initialData.profile?.availability_status),
+  );
   const [profileId] = useState<string | null>(initialData.profile?.id ?? null);
   const [profile, setProfile] = useState<AuthProfile | null>(initialData.profile);
   const [productRows, setProductRows] = useState<Product[]>(
@@ -197,14 +222,20 @@ function BloggerDash() {
       ? initialData.products.map((product) => mapProductForUi(product, language))
       : products.map((product) => mapMockProductForUi(product, language)),
   );
-  const [submissions, setSubmissions] = useState<BloggerSubmissionSummary[]>(initialData.submissions);
+  const [submissions, setSubmissions] = useState<BloggerSubmissionSummary[]>(
+    initialData.submissions,
+  );
   const [claims, setClaims] = useState<BloggerProductClaimSummary[]>(initialData.claims);
   const [loadState] = useState<"loading" | "ready" | "fallback">(initialData.loadState);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [quickNoteState, setQuickNoteState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [quickNoteState, setQuickNoteState] = useState<"idle" | "saving" | "saved" | "error">(
+    "idle",
+  );
   const [goodies] = useState<SharedResource[]>(initialData.goodies);
   const [mailUnreadCount, setMailUnreadCount] = useState(initialData.inboxUnreadCount);
-  const [hasLeftProgram, setHasLeftProgram] = useState(initialData.profile?.account_status === "left");
+  const [hasLeftProgram, setHasLeftProgram] = useState(
+    initialData.profile?.account_status === "left",
+  );
 
   const displayName = profile?.display_name || profile?.full_name || profile?.email || "Blogger";
   const isAccountBlocked = profile?.account_status === "blocked";
@@ -482,7 +513,11 @@ function BloggerDash() {
 
 function mapProductForUi(product: BloggerProduct, language: Lang = "en"): Product {
   const image = product.editorial_image_url ?? product.image_url ?? "";
-  const releaseDate = product.release_date ? formatPrettyDate(product.release_date, language) : language === "es" ? "recientemente" : "recently";
+  const releaseDate = product.release_date
+    ? formatPrettyDate(product.release_date, language)
+    : language === "es"
+      ? "recientemente"
+      : "recently";
   const deadlineDate = formatClaimWindow(product.blogging_deadline_days, language);
 
   return {
@@ -494,8 +529,11 @@ function mapProductForUi(product: BloggerProduct, language: Lang = "en"): Produc
     expires: deadlineDate.toLowerCase(),
     deadline: deadlineDate,
     bloggingDeadlineDays: product.blogging_deadline_days,
-    location: product.second_life_link ?? (language === "es" ? "Sin ubicación" : "No location provided"),
-    recommendation: product.blogging_recommendations ?? (language === "es" ? "Aún no hay recomendaciones." : "No recommendations yet."),
+    location:
+      product.second_life_link ?? (language === "es" ? "Sin ubicación" : "No location provided"),
+    recommendation:
+      product.blogging_recommendations ??
+      (language === "es" ? "Aún no hay recomendaciones." : "No recommendations yet."),
     vendorPoster: product.vendor_poster_url,
     shortDescription: product.short_description,
     hasDemo: Boolean(product.demo_item_key),
@@ -525,7 +563,11 @@ function formatClaimWindow(days: number | null, language: Lang = "en") {
   return language === "es" ? `${days} días después de reclamar` : `${days} days after claim`;
 }
 
-function formatClaimDeadline(claim: BloggerProductClaimSummary | undefined, product: Product, language: Lang = "en") {
+function formatClaimDeadline(
+  claim: BloggerProductClaimSummary | undefined,
+  product: Product,
+  language: Lang = "en",
+) {
   if (!claim?.due_at) {
     return {
       deadline: product.deadline,
@@ -585,8 +627,10 @@ function getStatusLabel(status: Status, language: Lang) {
 function getCommentStatus(profile?: SubmissionCommentProfile | null, language: Lang = "en") {
   const note = getVisibleStatusMessage(profile)?.trim();
   if (note) return note;
-  if (profile?.availability_status === "available") return translateAppPhrase("Available", language);
-  if (profile?.availability_status === "vacation") return translateAppPhrase("On vacation", language);
+  if (profile?.availability_status === "available")
+    return translateAppPhrase("Available", language);
+  if (profile?.availability_status === "vacation")
+    return translateAppPhrase("On vacation", language);
   if (profile?.availability_status === "busy") return translateAppPhrase("Busy", language);
   if (profile?.availability_status === "offline") return translateAppPhrase("Offline", language);
   return "Love Potion";
@@ -741,7 +785,9 @@ function Overview({
       submission,
       product: products.find((product) => product.id === submission.product_id),
     }))
-    .filter((item): item is { submission: BloggerSubmissionSummary; product: Product } => Boolean(item.product))
+    .filter((item): item is { submission: BloggerSubmissionSummary; product: Product } =>
+      Boolean(item.product),
+    )
     .slice(0, 4);
 
   return (
@@ -858,7 +904,9 @@ function Overview({
         </GlassCard>
 
         <GlassCard className="sm:col-span-2">
-          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">{tr("Submitted posts")}</div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+            {tr("Submitted posts")}
+          </div>
           {submittedItems.length === 0 ? (
             <p className="mt-3 text-sm text-foreground/60">{tr("No submissions yet.")}</p>
           ) : (
@@ -880,7 +928,9 @@ function Overview({
                       className="h-12 w-12 rounded-lg object-cover"
                     />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate font-display text-lg leading-tight">{item.product.name}</div>
+                      <div className="truncate font-display text-lg leading-tight">
+                        {item.product.name}
+                      </div>
                       <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-foreground/55">
                         {new Date(item.submission.submitted_at).toLocaleDateString()}
                       </div>
@@ -930,7 +980,9 @@ function ProductsTab({
   if (loading) {
     return (
       <GlassCard tone="pink" className="p-8">
-        <div className="font-hand text-3xl text-[var(--brand-magenta)]">{tr("loading products...")}</div>
+        <div className="font-hand text-3xl text-[var(--brand-magenta)]">
+          {tr("loading products...")}
+        </div>
       </GlassCard>
     );
   }
@@ -946,68 +998,69 @@ function ProductsTab({
             ? tr("Delivered")
             : claim?.status === "failed"
               ? tr("Delivery failed")
-            : claim
-              ? tr("Delivery pending")
-              : null;
+              : claim
+                ? tr("Delivery pending")
+                : null;
         return (
-        <GlassCard key={p.id} className="overflow-hidden p-0">
-          <img
-            src={p.img}
-            alt={p.name}
-            loading="lazy"
-            className="aspect-[4/5] w-full object-cover"
-          />
-          <div className="p-5">
-            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-              {p.added}
+          <GlassCard key={p.id} className="overflow-hidden p-0">
+            <img
+              src={p.img}
+              alt={p.name}
+              loading="lazy"
+              className="aspect-[4/5] w-full object-cover"
+            />
+            <div className="p-5">
+              <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+                {p.added}
+              </div>
+              <h3 className="mt-1 font-display text-2xl">{p.name}</h3>
+              {p.shortDescription ? (
+                <p className="mt-1 text-sm italic text-foreground/70">“{p.shortDescription}”</p>
+              ) : null}
+              <div className="mt-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--brand-magenta)]">
+                <span>{tr("Deadline")}</span> · {claimDeadline.deadline}
+              </div>
+              {submission ? (
+                <div className="mt-2 inline-flex rounded-full bg-foreground/10 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/80">
+                  {statusLabel(submission.status)}
+                </div>
+              ) : null}
+              {claimBadge && !submission ? (
+                <div
+                  className={cn(
+                    "mt-3 inline-flex items-center gap-2 rounded-full border px-4 py-2 font-mono text-[9px] uppercase tracking-[0.25em] shadow-sm",
+                    claim.status === "delivered"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700 shadow-emerald-100"
+                      : claim.status === "failed"
+                        ? "border-rose-200 bg-rose-50 text-rose-700 shadow-rose-100"
+                        : "border-amber-200 bg-amber-50 text-amber-700 shadow-amber-100",
+                  )}
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  {claimBadge}
+                </div>
+              ) : null}
+              {locked && !submission && !claim ? (
+                <div className="mt-2 inline-flex rounded-full bg-rose-100 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-rose-700">
+                  {tr("Account paused")}
+                </div>
+              ) : null}
+              <button
+                onClick={() => onOpenProduct(p)}
+                className="mt-4 w-full rounded-full bg-foreground px-4 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)]"
+              >
+                {submission
+                  ? tr("View submission →")
+                  : claim?.status === "delivered"
+                    ? tr("Open delivered dossier →")
+                    : claim
+                      ? tr("Retry delivery →")
+                      : tr("Open dossier →")}
+              </button>
             </div>
-            <h3 className="mt-1 font-display text-2xl">{p.name}</h3>
-            {p.shortDescription ? (
-              <p className="mt-1 text-sm italic text-foreground/70">“{p.shortDescription}”</p>
-            ) : null}
-            <div className="mt-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--brand-magenta)]">
-              <span>{tr("Deadline")}</span> · {claimDeadline.deadline}
-            </div>
-            {submission ? (
-              <div className="mt-2 inline-flex rounded-full bg-foreground/10 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/80">
-                {statusLabel(submission.status)}
-              </div>
-            ) : null}
-            {claimBadge && !submission ? (
-              <div
-                className={cn(
-                  "mt-3 inline-flex items-center gap-2 rounded-full border px-4 py-2 font-mono text-[9px] uppercase tracking-[0.25em] shadow-sm",
-	                  claim.status === "delivered"
-	                    ? "border-emerald-200 bg-emerald-50 text-emerald-700 shadow-emerald-100"
-	                    : claim.status === "failed"
-	                      ? "border-rose-200 bg-rose-50 text-rose-700 shadow-rose-100"
-	                      : "border-amber-200 bg-amber-50 text-amber-700 shadow-amber-100",
-	                )}
-	              >
-	                <Check className="h-3.5 w-3.5" />
-                {claimBadge}
-              </div>
-            ) : null}
-            {locked && !submission && !claim ? (
-              <div className="mt-2 inline-flex rounded-full bg-rose-100 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-rose-700">
-                {tr("Account paused")}
-              </div>
-            ) : null}
-            <button
-              onClick={() => onOpenProduct(p)}
-              className="mt-4 w-full rounded-full bg-foreground px-4 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)]"
-            >
-              {submission
-                ? tr("View submission →")
-                : claim?.status === "delivered"
-                  ? tr("Open delivered dossier →")
-                  : claim
-                    ? tr("Retry delivery →")
-                    : tr("Open dossier →")}
-            </button>
-          </div>
-        </GlassCard>
-      )})}
+          </GlassCard>
+        );
+      })}
     </div>
   );
 }
@@ -1028,12 +1081,16 @@ function PostsTab({
       submission,
       product: products.find((product) => product.id === submission.product_id),
     }))
-    .filter((item): item is { submission: BloggerSubmissionSummary; product: Product } => Boolean(item.product));
+    .filter((item): item is { submission: BloggerSubmissionSummary; product: Product } =>
+      Boolean(item.product),
+    );
 
   if (rows.length === 0) {
     return (
       <GlassCard tone="pink" className="p-8">
-        <div className="font-hand text-3xl text-[var(--brand-magenta)]">{tr("no submitted posts yet")}</div>
+        <div className="font-hand text-3xl text-[var(--brand-magenta)]">
+          {tr("no submitted posts yet")}
+        </div>
       </GlassCard>
     );
   }
@@ -1046,23 +1103,27 @@ function PostsTab({
           onClick={() => onOpenProduct(row.product)}
           className={cn("text-left transition", index === 0 ? "" : "opacity-70 grayscale-[0.25]")}
         >
-        <GlassCard className="overflow-hidden p-0">
-          <img src={row.product.img} alt={row.product.name} className="aspect-square w-full object-cover" />
-          <div className="p-4">
-            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-              {new Date(row.submission.submitted_at).toLocaleDateString()}
-            </div>
-            <div className="mt-1 font-display text-lg leading-tight">{row.product.name}</div>
-            <div className="mt-2 inline-flex rounded-full bg-foreground/10 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.22em]">
-              {statusLabel(row.submission.status)}
-            </div>
-            {row.submission.review_comment ? (
-              <div className="mt-2 rounded-xl border border-foreground/10 bg-foreground/[0.03] px-3 py-2 text-xs text-foreground/75">
-                {tr("Review note:")} {row.submission.review_comment}
+          <GlassCard className="overflow-hidden p-0">
+            <img
+              src={row.product.img}
+              alt={row.product.name}
+              className="aspect-square w-full object-cover"
+            />
+            <div className="p-4">
+              <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+                {new Date(row.submission.submitted_at).toLocaleDateString()}
               </div>
-            ) : null}
-          </div>
-        </GlassCard>
+              <div className="mt-1 font-display text-lg leading-tight">{row.product.name}</div>
+              <div className="mt-2 inline-flex rounded-full bg-foreground/10 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.22em]">
+                {statusLabel(row.submission.status)}
+              </div>
+              {row.submission.review_comment ? (
+                <div className="mt-2 rounded-xl border border-foreground/10 bg-foreground/[0.03] px-3 py-2 text-xs text-foreground/75">
+                  {tr("Review note:")} {row.submission.review_comment}
+                </div>
+              ) : null}
+            </div>
+          </GlassCard>
         </button>
       ))}
     </div>
@@ -1103,9 +1164,14 @@ function GoodiesTab({ resources }: { resources: SharedResource[] }) {
         </div>
         <div className="mt-4 space-y-3">
           {links.map((item) => (
-            <div key={item.id} className="rounded-xl border border-foreground/12 bg-background/60 p-4">
+            <div
+              key={item.id}
+              className="rounded-xl border border-foreground/12 bg-background/60 p-4"
+            >
               <div className="font-display text-2xl">{item.title}</div>
-              {item.description ? <p className="mt-1 text-sm text-foreground/65">{item.description}</p> : null}
+              {item.description ? (
+                <p className="mt-1 text-sm text-foreground/65">{item.description}</p>
+              ) : null}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <a
                   href={item.url}
@@ -1120,7 +1186,11 @@ function GoodiesTab({ resources }: { resources: SharedResource[] }) {
                   onClick={() => void copyLink(item.url)}
                   className="inline-flex items-center gap-2 rounded-full border border-foreground/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] hover:bg-foreground hover:text-background"
                 >
-                  {copiedUrl === item.url ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copiedUrl === item.url ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
                   {copiedUrl === item.url ? tr("Copied") : tr("Copy")}
                 </button>
               </div>
@@ -1140,10 +1210,19 @@ function GoodiesTab({ resources }: { resources: SharedResource[] }) {
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {images.map((item) => (
-            <div key={item.id} className="rounded-xl border border-foreground/12 bg-background/60 p-3">
-              <img src={item.url} alt={item.title} className="aspect-[4/3] w-full rounded-lg object-cover" />
+            <div
+              key={item.id}
+              className="rounded-xl border border-foreground/12 bg-background/60 p-3"
+            >
+              <img
+                src={item.url}
+                alt={item.title}
+                className="aspect-[4/3] w-full rounded-lg object-cover"
+              />
               <div className="mt-2 font-display text-lg">{item.title}</div>
-              {item.description ? <p className="text-sm text-foreground/65">{item.description}</p> : null}
+              {item.description ? (
+                <p className="text-sm text-foreground/65">{item.description}</p>
+              ) : null}
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <a
                   href={getDownloadUrl(item.url, getDownloadFilename(item.url, item.title))}
@@ -1174,7 +1253,10 @@ function GoodiesTab({ resources }: { resources: SharedResource[] }) {
 }
 
 function getDownloadFilename(url: string, title: string) {
-  const safe = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const safe = title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-");
   const cleanUrl = url.split("?")[0];
   const extFromUrl = cleanUrl.includes(".") ? cleanUrl.split(".").pop() : "png";
   return `${safe || "file"}.${extFromUrl || "png"}`;
@@ -1203,7 +1285,9 @@ function InboxTab({
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
-  const [replyState, setReplyState] = useState<Record<string, "idle" | "sending" | "sent" | "error">>({});
+  const [replyState, setReplyState] = useState<
+    Record<string, "idle" | "sending" | "sent" | "error">
+  >({});
   const [replyErrors, setReplyErrors] = useState<Record<string, string>>({});
   const [openReplyId, setOpenReplyId] = useState<string | null>(null);
   const [staffComposerOpen, setStaffComposerOpen] = useState(false);
@@ -1352,9 +1436,7 @@ function InboxTab({
 
   if (state === "error") {
     return (
-      <GlassCard className="p-8 text-center text-sm text-[var(--brand-magenta)]">
-        {error}
-      </GlassCard>
+      <GlassCard className="p-8 text-center text-sm text-[var(--brand-magenta)]">{error}</GlassCard>
     );
   }
 
@@ -1452,113 +1534,130 @@ function InboxTab({
         const isNew = !message.read_at;
 
         return (
-        <GlassCard
-          key={message.id}
-          className={cn(
-            "p-6 transition-colors",
-            isNew
-              ? "border-[var(--brand-pink)]/70 bg-background/75 shadow-[0_20px_55px_rgba(219,24,97,0.12)]"
-              : "border-foreground/10 bg-foreground/[0.035] text-foreground/72 shadow-none",
-          )}
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div
-                className={cn(
-                  "font-mono text-[10px] uppercase tracking-[0.3em]",
-                  isNew ? "text-foreground/60" : "text-foreground/40",
-                )}
-              >
-                {message.scope === "broadcast" ? (language === "es" ? "GENERAL" : "BROADCAST") : language === "es" ? "PERSONAL" : "PERSONAL"} ·{" "}
-                {message.sender_name || "Love Potion HQ"}
-                {isNew ? " · NEW" : ""}
-              </div>
-              <div className={cn("mt-2 font-display text-2xl", isNew ? "text-foreground" : "text-foreground/70")}>
-                {message.subject}
-              </div>
-            </div>
-            <span
-              className={cn(
-                "shrink-0 font-mono text-[10px] uppercase tracking-[0.3em]",
-                isNew ? "text-foreground/50" : "text-foreground/35",
-              )}
-            >
-              {new Date(message.created_at).toLocaleDateString()}
-            </span>
-          </div>
-          {message.body ? (
-            <p
-              className={cn(
-                "mt-4 whitespace-pre-wrap text-sm leading-relaxed",
-                isNew ? "text-foreground/75" : "text-foreground/52",
-              )}
-            >
-              {message.body}
-            </p>
-          ) : null}
-          {canReply ? (
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              <button
-                onClick={() => setOpenReplyId((current) => (current === message.id ? null : message.id))}
-                className={cn(
-                  "rounded-full px-5 py-2 font-mono text-[10px] uppercase tracking-[0.3em] transition",
-                  replyOpen
-                    ? "bg-foreground text-background"
-                    : isNew
-                      ? "bg-[var(--brand-magenta)] text-white shadow-[0_12px_30px_rgba(219,24,97,0.20)] hover:bg-foreground"
-                      : "bg-foreground/10 text-foreground/55 hover:bg-foreground/18",
-                )}
-              >
-                {replyOpen ? tr("Close reply") : tr("Reply")}
-              </button>
-              {replyState[message.id] === "sent" || replyState[message.id] === "error" ? (
-                <span
+          <GlassCard
+            key={message.id}
+            className={cn(
+              "p-6 transition-colors",
+              isNew
+                ? "border-[var(--brand-pink)]/70 bg-background/75 shadow-[0_20px_55px_rgba(219,24,97,0.12)]"
+                : "border-foreground/10 bg-foreground/[0.035] text-foreground/72 shadow-none",
+            )}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div
                   className={cn(
-                    "rounded-full px-3 py-1 text-xs font-medium",
-                    replyState[message.id] === "sent"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-rose-100 text-rose-700",
+                    "font-mono text-[10px] uppercase tracking-[0.3em]",
+                    isNew ? "text-foreground/60" : "text-foreground/40",
                   )}
                 >
-                  {replyState[message.id] === "sent"
-                    ? tr("Reply sent.")
-                    : replyErrors[message.id] || tr("Could not send reply.")}
-                </span>
-              ) : null}
-            </div>
-          ) : null}
-          {canReply && replyOpen ? (
-            <div className="mt-5 rounded-2xl border border-foreground/10 bg-background/60 p-4">
-              <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/50">
-                <span>{tr("Reply to")}</span> {message.sender_name || "Love Potion HQ"}
-              </div>
-              <textarea
-                value={replyDrafts[message.id] ?? ""}
-                onChange={(event) =>
-                  setReplyDrafts((current) => ({ ...current, [message.id]: event.target.value }))
-                }
-                rows={3}
-                placeholder={tr("Write back to Love Potion HQ...")}
-                className="mt-3 w-full resize-none rounded-2xl border border-foreground/20 bg-background px-4 py-3 text-sm focus:border-[var(--brand-magenta)] focus:outline-none"
-              />
-              <div className="mt-3 flex items-center justify-end gap-3">
-                <button
-                  onClick={() => void onReply(message)}
-                  disabled={replyState[message.id] === "sending"}
-                  className="rounded-full bg-foreground px-5 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)] disabled:opacity-60"
+                  {message.scope === "broadcast"
+                    ? language === "es"
+                      ? "GENERAL"
+                      : "BROADCAST"
+                    : language === "es"
+                      ? "PERSONAL"
+                      : "PERSONAL"}{" "}
+                  · {message.sender_name || "Love Potion HQ"}
+                  {isNew ? " · NEW" : ""}
+                </div>
+                <div
+                  className={cn(
+                    "mt-2 font-display text-2xl",
+                    isNew ? "text-foreground" : "text-foreground/70",
+                  )}
                 >
-                  {replyState[message.id] === "sending" ? tr("Sending...") : tr("Reply →")}
-                </button>
+                  {message.subject}
+                </div>
               </div>
+              <span
+                className={cn(
+                  "shrink-0 font-mono text-[10px] uppercase tracking-[0.3em]",
+                  isNew ? "text-foreground/50" : "text-foreground/35",
+                )}
+              >
+                {new Date(message.created_at).toLocaleDateString()}
+              </span>
             </div>
-          ) : null}
-        </GlassCard>
+            {message.body ? (
+              <p
+                className={cn(
+                  "mt-4 whitespace-pre-wrap text-sm leading-relaxed",
+                  isNew ? "text-foreground/75" : "text-foreground/52",
+                )}
+              >
+                {message.body}
+              </p>
+            ) : null}
+            {canReply ? (
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() =>
+                    setOpenReplyId((current) => (current === message.id ? null : message.id))
+                  }
+                  className={cn(
+                    "rounded-full px-5 py-2 font-mono text-[10px] uppercase tracking-[0.3em] transition",
+                    replyOpen
+                      ? "bg-foreground text-background"
+                      : isNew
+                        ? "bg-[var(--brand-magenta)] text-white shadow-[0_12px_30px_rgba(219,24,97,0.20)] hover:bg-foreground"
+                        : "bg-foreground/10 text-foreground/55 hover:bg-foreground/18",
+                  )}
+                >
+                  {replyOpen ? tr("Close reply") : tr("Reply")}
+                </button>
+                {replyState[message.id] === "sent" || replyState[message.id] === "error" ? (
+                  <span
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-medium",
+                      replyState[message.id] === "sent"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-rose-100 text-rose-700",
+                    )}
+                  >
+                    {replyState[message.id] === "sent"
+                      ? tr("Reply sent.")
+                      : replyErrors[message.id] || tr("Could not send reply.")}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+            {canReply && replyOpen ? (
+              <div className="mt-5 rounded-2xl border border-foreground/10 bg-background/60 p-4">
+                <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/50">
+                  <span>{tr("Reply to")}</span> {message.sender_name || "Love Potion HQ"}
+                </div>
+                <textarea
+                  value={replyDrafts[message.id] ?? ""}
+                  onChange={(event) =>
+                    setReplyDrafts((current) => ({ ...current, [message.id]: event.target.value }))
+                  }
+                  rows={3}
+                  placeholder={tr("Write back to Love Potion HQ...")}
+                  className="mt-3 w-full resize-none rounded-2xl border border-foreground/20 bg-background px-4 py-3 text-sm focus:border-[var(--brand-magenta)] focus:outline-none"
+                />
+                <div className="mt-3 flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => void onReply(message)}
+                    disabled={replyState[message.id] === "sending"}
+                    className="rounded-full bg-foreground px-5 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)] disabled:opacity-60"
+                  >
+                    {replyState[message.id] === "sending" ? tr("Sending...") : tr("Reply →")}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </GlassCard>
         );
       })}
       {mail.length === 0 ? (
         <GlassCard className="p-8 text-center">
-          <div className="font-hand text-3xl text-[var(--brand-magenta)]">{tr("no messages yet")}</div>
-          <p className="mt-2 text-sm text-foreground/55">{tr("Love Potion HQ has not sent anything here.")}</p>
+          <div className="font-hand text-3xl text-[var(--brand-magenta)]">
+            {tr("no messages yet")}
+          </div>
+          <p className="mt-2 text-sm text-foreground/55">
+            {tr("Love Potion HQ has not sent anything here.")}
+          </p>
         </GlassCard>
       ) : null}
     </div>
@@ -1584,7 +1683,9 @@ function LinksTab({
         </div>
         <h3 className="mt-2 font-display text-3xl">{tr("Choose the product first.")}</h3>
         <p className="mt-2 max-w-2xl text-sm text-foreground/70">
-          {tr("Each submission stays attached to the right product, with deadline, location, official poster, and store instructions in the same modal.")}
+          {tr(
+            "Each submission stays attached to the right product, with deadline, location, official poster, and store instructions in the same modal.",
+          )}
         </p>
       </GlassCard>
 
@@ -1602,11 +1703,11 @@ function LinksTab({
                 alt={product.name}
                 className="aspect-[4/5] w-full rounded-xl object-cover sm:w-[110px]"
               />
-          <div>
-            <div className="font-display text-2xl">{product.name}</div>
-            <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/50">
-              <span>{tr("Deadline")}</span> · {product.deadline}
-            </div>
+              <div>
+                <div className="font-display text-2xl">{product.name}</div>
+                <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/50">
+                  <span>{tr("Deadline")}</span> · {product.deadline}
+                </div>
                 {submitted && (
                   <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-green-500/10 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-green-700">
                     <Check className="h-3 w-3" />
@@ -1662,7 +1763,9 @@ function ProductSubmissionModal({
   const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [loadingExisting, setLoadingExisting] = useState(false);
-  const [claimState, setClaimState] = useState<ProductClaimState>(getProductClaimState(claim, submission));
+  const [claimState, setClaimState] = useState<ProductClaimState>(
+    getProductClaimState(claim, submission),
+  );
   const [demoState, setDemoState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [latestReviewerNote, setLatestReviewerNote] = useState<string | null>(
     submissionHistory.find((row) => Boolean(row.review_comment?.trim()))?.review_comment ?? null,
@@ -1675,20 +1778,35 @@ function ProductSubmissionModal({
     claimState === "failed" ||
     Boolean(submission) ||
     Boolean(claim);
-  const isDelivered = claimState === "delivered" || Boolean(submission) || claim?.status === "delivered";
+  const isDelivered =
+    claimState === "delivered" || Boolean(submission) || claim?.status === "delivered";
   const modalDeadline = formatClaimDeadline(claim, product, language);
   const accountLockMessage =
     accountStatus === "blocked"
-      ? tr("Your account is paused by the monthly rule. Love Potion HQ needs to reactivate it before you can claim products or submit links.")
+      ? tr(
+          "Your account is paused by the monthly rule. Love Potion HQ needs to reactivate it before you can claim products or submit links.",
+        )
       : accountStatus === "pending"
-        ? tr("Your account is waiting for approval. Claims and submissions unlock when Love Potion HQ activates your profile.")
+        ? tr(
+            "Your account is waiting for approval. Claims and submissions unlock when Love Potion HQ activates your profile.",
+          )
         : accountStatus === "left"
-          ? tr("You left the blogger program. Claims and submissions are closed unless Love Potion HQ reactivates your profile.")
+          ? tr(
+              "You left the blogger program. Claims and submissions are closed unless Love Potion HQ reactivates your profile.",
+            )
           : "";
   const lockedClaimLabel =
-    accountStatus === "blocked" ? tr("Account paused") : accountStatus === "left" ? tr("Program left") : tr("Awaiting approval");
+    accountStatus === "blocked"
+      ? tr("Account paused")
+      : accountStatus === "left"
+        ? tr("Program left")
+        : tr("Awaiting approval");
   const lockedSubmitLabel =
-    accountStatus === "blocked" ? tr("Reactivate first") : accountStatus === "left" ? tr("Program left") : tr("Approval needed");
+    accountStatus === "blocked"
+      ? tr("Reactivate first")
+      : accountStatus === "left"
+        ? tr("Program left")
+        : tr("Approval needed");
 
   useEffect(() => {
     setClaimState(getProductClaimState(claim, submission));
@@ -1908,7 +2026,9 @@ function ProductSubmissionModal({
         claim.deliveryNotice ??
           (claim.status === "delivered"
             ? tr("Product delivered in Second Life. You can now submit your links.")
-            : tr("Claim saved. Second Life delivery is still pending, so try delivery again before submitting links.")),
+            : tr(
+                "Claim saved. Second Life delivery is still pending, so try delivery again before submitting links.",
+              )),
       );
     } catch (error) {
       setClaimState("error");
@@ -2138,9 +2258,9 @@ function ProductSubmissionModal({
             </div>
 
             <div className="mt-4 rounded-2xl border border-foreground/10 bg-white/45 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/50">
-                {tr("Message attached to this submission")}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/50">
+                  {tr("Message attached to this submission")}
                 </div>
                 <span className="rounded-full bg-[var(--brand-pink)] px-3 py-1 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--brand-magenta)]">
                   {tr("sent with portfolio")}
@@ -2183,13 +2303,13 @@ function ProductSubmissionModal({
               <div
                 className={cn(
                   "mt-4 rounded-xl px-4 py-3 text-sm",
-	                  status === "error" || claimState === "error"
-	                    ? "border border-[var(--brand-magenta)]/30 bg-[var(--brand-pink)]/45 text-[var(--brand-magenta)]"
-	                    : claimState === "failed"
-	                      ? "border border-rose-200 bg-rose-50 text-rose-700"
-	                    : claimState === "claimed"
-	                      ? "border border-amber-200 bg-amber-50 text-amber-700"
-                    : "border border-green-200 bg-green-50 text-green-700",
+                  status === "error" || claimState === "error"
+                    ? "border border-[var(--brand-magenta)]/30 bg-[var(--brand-pink)]/45 text-[var(--brand-magenta)]"
+                    : claimState === "failed"
+                      ? "border border-rose-200 bg-rose-50 text-rose-700"
+                      : claimState === "claimed"
+                        ? "border border-amber-200 bg-amber-50 text-amber-700"
+                        : "border border-green-200 bg-green-50 text-green-700",
                 )}
               >
                 {message}
@@ -2199,18 +2319,25 @@ function ProductSubmissionModal({
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={claimProduct}
-                disabled={!profileId || accountLocked || claimState === "claiming" || claimState === "delivered"}
+                disabled={
+                  !profileId ||
+                  accountLocked ||
+                  claimState === "claiming" ||
+                  claimState === "delivered"
+                }
                 title={accountLocked ? accountLockMessage : undefined}
                 className={cn(
                   "flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-3 font-mono text-[10px] uppercase tracking-[0.25em] transition disabled:cursor-not-allowed",
-	                  claimState === "delivered"
-	                    ? "border border-foreground/10 bg-foreground/10 text-foreground/45"
-	                    : claimState === "failed"
-	                      ? "border border-[var(--brand-magenta)] bg-[var(--brand-pink)]/60 text-[var(--brand-magenta)] shadow-lg shadow-[var(--brand-pink)]/40 hover:bg-[var(--brand-magenta)] hover:text-white"
-	                    : claimState === "claimed"
-	                      ? "border border-amber-200 bg-amber-50 text-amber-700 shadow-lg shadow-amber-100 hover:border-[var(--brand-magenta)] hover:bg-[var(--brand-magenta)] hover:text-white"
-                      : "border border-[var(--brand-magenta)] bg-[var(--brand-magenta)] text-white shadow-lg shadow-[var(--brand-magenta)]/20 hover:border-foreground hover:bg-foreground",
-                  accountLocked ? "border-foreground/15 bg-foreground/10 text-foreground/40 shadow-none" : "",
+                  claimState === "delivered"
+                    ? "border border-foreground/10 bg-foreground/10 text-foreground/45"
+                    : claimState === "failed"
+                      ? "border border-[var(--brand-magenta)] bg-[var(--brand-pink)]/60 text-[var(--brand-magenta)] shadow-lg shadow-[var(--brand-pink)]/40 hover:bg-[var(--brand-magenta)] hover:text-white"
+                      : claimState === "claimed"
+                        ? "border border-amber-200 bg-amber-50 text-amber-700 shadow-lg shadow-amber-100 hover:border-[var(--brand-magenta)] hover:bg-[var(--brand-magenta)] hover:text-white"
+                        : "border border-[var(--brand-magenta)] bg-[var(--brand-magenta)] text-white shadow-lg shadow-[var(--brand-magenta)]/20 hover:border-foreground hover:bg-foreground",
+                  accountLocked
+                    ? "border-foreground/15 bg-foreground/10 text-foreground/40 shadow-none"
+                    : "",
                   claimState === "claiming" ? "opacity-80" : "",
                 )}
               >
@@ -2218,13 +2345,13 @@ function ProductSubmissionModal({
                   ? lockedClaimLabel
                   : claimState === "claiming"
                     ? tr("Claiming...")
-	                    : claimState === "delivered"
-	                      ? tr("Claimed")
-	                      : claimState === "failed"
-	                        ? tr("Retry delivery")
-	                      : claimState === "claimed"
-	                        ? tr("Retry delivery")
-                      : tr("Claim product")}
+                    : claimState === "delivered"
+                      ? tr("Claimed")
+                      : claimState === "failed"
+                        ? tr("Retry delivery")
+                        : claimState === "claimed"
+                          ? tr("Retry delivery")
+                          : tr("Claim product")}
               </button>
               <button
                 onClick={addLink}
@@ -2235,25 +2362,37 @@ function ProductSubmissionModal({
               </button>
               <button
                 onClick={submitPortfolio}
-                disabled={!canSubmit || !profileId || accountLocked || status === "saving" || !isDelivered}
-                title={accountLocked ? accountLockMessage : !isDelivered ? tr("Claim and receive the product before submitting links.") : undefined}
+                disabled={
+                  !canSubmit || !profileId || accountLocked || status === "saving" || !isDelivered
+                }
+                title={
+                  accountLocked
+                    ? accountLockMessage
+                    : !isDelivered
+                      ? tr("Claim and receive the product before submitting links.")
+                      : undefined
+                }
                 className="flex flex-1 items-center justify-center gap-2 rounded-full bg-foreground px-5 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-background hover:bg-[var(--brand-magenta)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Send className="h-4 w-4" />
-                {accountLocked ? lockedSubmitLabel : status === "saving" ? tr("Submitting...") : tr("Submit portfolio")}
+                {accountLocked
+                  ? lockedSubmitLabel
+                  : status === "saving"
+                    ? tr("Submitting...")
+                    : tr("Submit portfolio")}
               </button>
             </div>
             {!hasClaimRecord ? (
               <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-foreground/55">
                 {tr("Step 1: claim product · Step 2: submit links")}
               </p>
-	    ) : !isDelivered ? (
-	      <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-amber-700">
-	        {claimState === "failed"
-	          ? tr("Delivery failed · retry delivery before submitting links")
-	          : tr("Delivery pending · retry delivery before submitting links")}
-	      </p>
-	    ) : null}
+            ) : !isDelivered ? (
+              <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-amber-700">
+                {claimState === "failed"
+                  ? tr("Delivery failed · retry delivery before submitting links")
+                  : tr("Delivery pending · retry delivery before submitting links")}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -2414,7 +2553,10 @@ function BloggerVirtualTour({ onDone }: { onDone: () => void }) {
       ) : null}
 
       <div className="fixed inset-x-4 bottom-5 z-50 md:hidden">
-        <GlassCard tone="pink" className="tour-soft-bounce p-5 shadow-2xl shadow-[var(--brand-magenta)]/20">
+        <GlassCard
+          tone="pink"
+          className="tour-soft-bounce p-5 shadow-2xl shadow-[var(--brand-magenta)]/20"
+        >
           <VirtualTourCard
             currentStep={currentStep}
             isFirst={stepIndex === 0}
@@ -2470,13 +2612,17 @@ function VirtualTourCard({
         <span className="rounded-full bg-[var(--brand-magenta)] px-3 py-1 font-mono text-[8px] uppercase tracking-[0.25em] text-white">
           {currentStep.target}
         </span>
-        <span className="font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/45">{progress}</span>
+        <span className="font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/45">
+          {progress}
+        </span>
       </div>
       <div className="mt-4 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--brand-magenta)]">
         <ArrowRight className="h-4 w-4" />
         {currentStep.direction}
       </div>
-      <h3 className="mt-3 font-display text-3xl leading-none text-[var(--ink)]">{currentStep.title}</h3>
+      <h3 className="mt-3 font-display text-3xl leading-none text-[var(--ink)]">
+        {currentStep.title}
+      </h3>
       <p className="mt-3 text-sm leading-7 text-foreground/65">{currentStep.body}</p>
       <div className="mt-5 flex items-center justify-between gap-3">
         <button
@@ -2492,7 +2638,13 @@ function VirtualTourCard({
           onClick={isLast ? onDone : onNext}
           className="rounded-full bg-foreground px-5 py-2 font-mono text-[9px] uppercase tracking-[0.22em] text-background hover:bg-[var(--brand-magenta)] disabled:cursor-not-allowed disabled:opacity-35"
         >
-          {isLast ? (language === "es" ? "Listo" : "Done") : language === "es" ? "Siguiente" : "Next"}
+          {isLast
+            ? language === "es"
+              ? "Listo"
+              : "Done"
+            : language === "es"
+              ? "Siguiente"
+              : "Next"}
         </button>
       </div>
     </div>
@@ -2524,7 +2676,8 @@ function LeftProgramSuccess({ language }: { language: "en" | "es" }) {
           Voce deixou a loja Love Potion com sucesso!
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-foreground/65">
-          Seu historico continua salvo para a equipe, e a Love Potion HQ foi avisada. Voce pode fechar esta pagina ou sair da conta agora.
+          Seu historico continua salvo para a equipe, e a Love Potion HQ foi avisada. Voce pode
+          fechar esta pagina ou sair da conta agora.
         </p>
         <button
           type="button"
@@ -2554,7 +2707,19 @@ function ProfileTab(props: {
   onLeftProgram: (profile: AuthProfile) => void;
   onProfileUpdated: (profile: AuthProfile) => void;
 }) {
-  const { photo, setPhoto, note, setNote, status, setStatus, noteDuration, setNoteDuration, profile, onLeftProgram, onProfileUpdated } = props;
+  const {
+    photo,
+    setPhoto,
+    note,
+    setNote,
+    status,
+    setStatus,
+    noteDuration,
+    setNoteDuration,
+    profile,
+    onLeftProgram,
+    onProfileUpdated,
+  } = props;
   const uiLanguage = useLang();
   const tr = (value: string) => translateAppPhrase(value, uiLanguage);
   const [displayName, setDisplayName] = useState("");
@@ -2568,7 +2733,9 @@ function ProfileTab(props: {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState("");
   const [leaveReason, setLeaveReason] = useState("");
-  const [leaveState, setLeaveState] = useState<"idle" | "confirming" | "leaving" | "left" | "error">("idle");
+  const [leaveState, setLeaveState] = useState<
+    "idle" | "confirming" | "leaving" | "left" | "error"
+  >("idle");
   const [leaveMessage, setLeaveMessage] = useState("");
 
   const slAvatar = profile?.sl_avatar_name || profile?.full_name || profile?.display_name || "";
@@ -2699,7 +2866,9 @@ function ProfileTab(props: {
     } catch (error) {
       console.error("[Blogger Profile] leave program failed", error);
       setLeaveState("error");
-      setLeaveMessage(error instanceof Error ? error.message : tr("Could not leave the blogger program."));
+      setLeaveMessage(
+        error instanceof Error ? error.message : tr("Could not leave the blogger program."),
+      );
     }
   }
 
@@ -2728,8 +2897,31 @@ function ProfileTab(props: {
       <div className="md:col-span-8 grid gap-6">
         {/* Identity + photo */}
         <GlassCard tone="pink" className="p-6">
-          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">
-            {tr("Identity")}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">
+              {tr("Identity")}
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              {saveMessage ? (
+                <span
+                  className={cn(
+                    "rounded-full px-3 py-1 text-xs font-medium",
+                    saveMessage === tr("Profile saved.")
+                      ? "bg-green-100 text-green-700"
+                      : "bg-rose-100 text-rose-700",
+                  )}
+                >
+                  {saveMessage}
+                </span>
+              ) : null}
+              <button
+                onClick={() => void onSaveProfile()}
+                disabled={isSaving}
+                className="rounded-full bg-[var(--brand-magenta)] px-6 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-white hover:opacity-90 disabled:opacity-60"
+              >
+                {isSaving ? tr("Saving...") : tr("Save profile →")}
+              </button>
+            </div>
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <Field label={tr("Display name")} value={displayName} onChange={setDisplayName} />
@@ -2793,7 +2985,8 @@ function ProfileTab(props: {
           </select>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <p className="font-hand text-base text-[var(--brand-magenta)]">
-              {tr("shown over your avatar, like instagram notes")} {tr("choose a timer or leave it open-ended.")}
+              {tr("shown over your avatar, like instagram notes")}{" "}
+              {tr("choose a timer or leave it open-ended.")}
             </p>
             <button
               type="button"
@@ -2811,8 +3004,8 @@ function ProfileTab(props: {
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
             {tr("STATUS")}
           </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-4">
-              {statuses.map((s) => {
+          <div className="mt-4 grid gap-3 sm:grid-cols-4">
+            {statuses.map((s) => {
               const active = status === s.id;
               return (
                 <button
@@ -2835,8 +3028,8 @@ function ProfileTab(props: {
                 </button>
               );
             })}
-            </div>
-          </GlassCard>
+          </div>
+        </GlassCard>
 
         {/* Password */}
         <GlassCard className="p-6">
@@ -2890,7 +3083,9 @@ function ProfileTab(props: {
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
             {tr("DANGER ZONE")}
           </div>
-          <h3 className="mt-2 font-display text-3xl leading-none">{tr("Leave blogger program.")}</h3>
+          <h3 className="mt-2 font-display text-3xl leading-none">
+            {tr("Leave blogger program.")}
+          </h3>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-foreground/65">
             {tr("This marks your account as left and removes you from the active blogger program.")}
           </p>
@@ -2920,7 +3115,11 @@ function ProfileTab(props: {
             <button
               type="button"
               onClick={() => void onLeaveProgram()}
-              disabled={leaveState === "leaving" || leaveState === "left" || profile?.account_status === "left"}
+              disabled={
+                leaveState === "leaving" ||
+                leaveState === "left" ||
+                profile?.account_status === "left"
+              }
               className="rounded-full bg-[var(--brand-magenta)] px-6 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-white shadow-lg shadow-[var(--brand-magenta)]/20 hover:bg-foreground disabled:cursor-not-allowed disabled:opacity-60"
             >
               {leaveState === "leaving"
@@ -2933,30 +3132,6 @@ function ProfileTab(props: {
             </button>
           </div>
         </GlassCard>
-
-        {/* Save bar */}
-        <div className="flex items-center justify-end gap-3">
-          {saveMessage ? (
-            <span
-              className={cn(
-                "rounded-full px-3 py-1 text-xs font-medium",
-                saveMessage === tr("Profile saved.") ? "bg-green-100 text-green-700" : "bg-rose-100 text-rose-700",
-              )}
-            >
-              {saveMessage}
-            </span>
-          ) : null}
-          <button className="rounded-full border border-foreground/30 px-5 py-2 font-mono text-[10px] uppercase tracking-[0.3em] hover:bg-foreground/5">
-            {tr("Discard")}
-          </button>
-          <button
-            onClick={() => void onSaveProfile()}
-            disabled={isSaving}
-            className="rounded-full bg-[var(--brand-magenta)] px-6 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-white hover:opacity-90 disabled:opacity-60"
-          >
-            {isSaving ? tr("Saving...") : tr("Save profile →")}
-          </button>
-        </div>
       </div>
     </div>
   );
