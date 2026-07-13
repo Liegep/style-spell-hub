@@ -209,8 +209,12 @@ function AtelierPage() {
         );
       }
 
-      setReviewQueue((current) =>
-        current.map((item) =>
+      setReviewQueue((current) => {
+        if (reviewFilter === "pending") {
+          return current.filter((item) => item.id !== submissionId);
+        }
+
+        return current.map((item) =>
           item.id === submissionId
             ? {
                 ...item,
@@ -218,8 +222,8 @@ function AtelierPage() {
                 review_comment: reviewMessage[submissionId]?.trim() || item.review_comment || null,
               }
             : item,
-        ),
-      );
+        );
+      });
       setReviewSent((current) => ({ ...current, [submissionId]: status }));
       if (selectedReviewId === submissionId) {
         window.setTimeout(() => setSelectedReviewId(null), 900);

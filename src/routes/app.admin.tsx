@@ -323,8 +323,12 @@ function AdminDash() {
         );
       }
 
-      setReviewQueue((current) =>
-        current.map((item) =>
+      setReviewQueue((current) => {
+        if (reviewFilter === "pending") {
+          return current.filter((item) => item.id !== submissionId);
+        }
+
+        return current.map((item) =>
           item.id === submissionId
             ? {
                 ...item,
@@ -332,8 +336,8 @@ function AdminDash() {
                 review_comment: reviewMessage[submissionId]?.trim() || item.review_comment || null,
               }
             : item,
-        ),
-      );
+        );
+      });
       setReviewSent((current) => ({ ...current, [submissionId]: status }));
     } catch (error) {
       setReviewError(error instanceof Error ? error.message : "Could not review this submission.");

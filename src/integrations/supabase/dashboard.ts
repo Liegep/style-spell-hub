@@ -337,13 +337,11 @@ export async function getProductSummaries() {
 }
 
 export async function getReviewQueue(status: SubmissionStatus | "all" = "all") {
-  let query = supabase
+  const query = supabase
     .from("blog_submissions")
     .select("id,product_id,blogger_id,status,blogger_note,review_comment,submitted_at")
     .order("submitted_at", { ascending: false })
-    .limit(50);
-
-  if (status !== "all") query = query.eq("status", status);
+    .limit(200);
 
   const { data: submissions, error } = await query;
   if (error) throw error;
@@ -356,7 +354,9 @@ export async function getReviewQueue(status: SubmissionStatus | "all" = "all") {
     if (!latestRowsByBloggerProduct.has(key)) latestRowsByBloggerProduct.set(key, row);
   });
 
-  const visibleRows = [...latestRowsByBloggerProduct.values()];
+  const visibleRows = [...latestRowsByBloggerProduct.values()].filter((row) =>
+    status === "all" ? true : row.status === status,
+  );
   if (visibleRows.length === 0) return [] as ReviewQueueItem[];
 
   const productIds = [...new Set(visibleRows.map((row) => row.product_id))];

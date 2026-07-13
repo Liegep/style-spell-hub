@@ -104,7 +104,12 @@ export async function listSubmissionSummariesForBlogger(bloggerId: string) {
     }
   >;
 
-  return rows.map((row) => ({
+  const latestRowsByProduct = new Map<string, (typeof rows)[number]>();
+  rows.forEach((row) => {
+    if (!latestRowsByProduct.has(row.product_id)) latestRowsByProduct.set(row.product_id, row);
+  });
+
+  return [...latestRowsByProduct.values()].map((row) => ({
     id: row.id,
     product_id: row.product_id,
     status: row.status,
