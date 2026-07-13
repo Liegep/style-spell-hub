@@ -68,7 +68,10 @@ const PROFILE_SELECT_LEGACY = [
 
 function isMissingStatusMessageTimerColumn(error: unknown) {
   const message =
-    error && typeof error === "object" && "message" in error && typeof (error as { message?: unknown }).message === "string"
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as { message?: unknown }).message === "string"
       ? (error as { message: string }).message
       : "";
   return /status_message_expires_at|status_message_duration/i.test(message);
@@ -154,7 +157,10 @@ async function resolveEmailFromAvatarName(avatarName: string) {
   if (error) throw error;
   const rows =
     (data as Array<
-      Pick<Profile, "email" | "sl_avatar_name" | "sl_legacy_name" | "sl_display_name" | "display_name">
+      Pick<
+        Profile,
+        "email" | "sl_avatar_name" | "sl_legacy_name" | "sl_display_name" | "display_name"
+      >
     > | null) ?? [];
 
   const normalizedCandidates = new Set(candidates.map((value) => value.toLowerCase()));
@@ -169,7 +175,9 @@ async function resolveEmailFromAvatarName(avatarName: string) {
 
 export async function signInWithEmail(email: string, password: string) {
   if (!isSupabaseConfigured) {
-    throw new Error("Supabase is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+    throw new Error(
+      "Supabase is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.",
+    );
   }
 
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -190,7 +198,9 @@ export async function signInWithIdentifier(identifier: string, password: string)
 
   const loginEmail = value.includes("@") ? value : await resolveEmailFromAvatarName(value);
   if (!loginEmail) {
-    throw new Error("Avatar name not found. Check the spelling or ask admin to update your profile.");
+    throw new Error(
+      "Avatar name not found. Check the spelling or ask admin to update your profile.",
+    );
   }
 
   return signInWithEmail(loginEmail, password);
@@ -282,7 +292,9 @@ export async function leaveBloggerProgram(reason?: string) {
   if (!data) throw new Error("Could not update profile.");
 
   if (data.account_status !== "left") {
-    throw new Error("The database blocked the leave action. Run the blogger self-leave SQL update, then try again.");
+    throw new Error(
+      "The database blocked the leave action. Run the blogger self-leave SQL update, then try again.",
+    );
   }
 
   const displayName = data.display_name || data.full_name || data.email;
@@ -341,7 +353,10 @@ export async function signOut() {
   try {
     const { error } = await supabase.auth.signOut({ scope: "local" });
     if (error) {
-      console.warn("[Auth] Supabase sign out returned an error; clearing local session anyway.", error);
+      console.warn(
+        "[Auth] Supabase sign out returned an error; clearing local session anyway.",
+        error,
+      );
     }
   } catch (error) {
     console.warn("[Auth] Supabase sign out failed; clearing local session anyway.", error);
@@ -424,7 +439,10 @@ export async function updateCurrentProfile(
     .select(PROFILE_SELECT)
     .single<AuthProfile>();
 
-  if (!updateResult.error) return updateResult.data;
+  if (!updateResult.error) {
+    const freshProfile = await getCurrentProfile(userId);
+    return freshProfile ?? updateResult.data;
+  }
 
   if (!isMissingStatusMessageTimerColumn(updateResult.error)) {
     throw updateResult.error;
@@ -444,5 +462,6 @@ export async function updateCurrentProfile(
     .single<Omit<AuthProfile, "status_message_expires_at" | "status_message_duration">>();
 
   if (legacyUpdate.error) throw legacyUpdate.error;
-  return withLegacyStatusNoteFields(legacyUpdate.data);
+  const legacyProfile = await getCurrentProfile(userId);
+  return legacyProfile ?? withLegacyStatusNoteFields(legacyUpdate.data);
 }

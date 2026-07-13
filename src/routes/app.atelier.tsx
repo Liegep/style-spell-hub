@@ -34,7 +34,9 @@ function AtelierPage() {
   const tr = (value: string) => translateAppPhrase(value, language);
   const stats = Route.useLoaderData();
   const [liveBloggers, setLiveBloggers] = useState<BloggerPulse[]>([]);
-  const [upcomingArchives, setUpcomingArchives] = useState<{ id: string; name: string; auto_archive_at: string | null }[]>([]);
+  const [upcomingArchives, setUpcomingArchives] = useState<
+    { id: string; name: string; auto_archive_at: string | null }[]
+  >([]);
   const [reviewQueue, setReviewQueue] = useState<ReviewQueueItem[]>([]);
   const [reviewFilter, setReviewFilter] = useState<SubmissionStatus | "all">("pending");
   const [reviewingId, setReviewingId] = useState<string | null>(null);
@@ -51,16 +53,19 @@ function AtelierPage() {
 
   useEffect(() => {
     let isMounted = true;
-    let refreshTimer: number | undefined;
+    const refreshTimer = window.setInterval(() => {
+      void loadDashboard();
+    }, 30_000);
 
     async function loadDashboard() {
-      const [profile, nextBloggers, nextArchives, nextQueue, nextDeliveryDesk] = await Promise.allSettled([
-        getCurrentProfile(),
-        getBloggerPulse(),
-        getUpcomingArchives(),
-        getReviewQueue(reviewFilter),
-        getDeliveryDeskClaims(),
-      ]);
+      const [profile, nextBloggers, nextArchives, nextQueue, nextDeliveryDesk] =
+        await Promise.allSettled([
+          getCurrentProfile(),
+          getBloggerPulse(),
+          getUpcomingArchives(),
+          getReviewQueue(reviewFilter),
+          getDeliveryDeskClaims(),
+        ]);
 
       if (!isMounted) {
         return;
@@ -91,15 +96,35 @@ function AtelierPage() {
     }
 
     void loadDashboard();
-    refreshTimer = window.setInterval(() => {
-      void loadDashboard();
-    }, 30_000);
 
     const refreshWhenVisible = () => {
       if (document.visibilityState === "visible") void loadDashboard();
     };
 
-    const refreshOnProfileChange = () => {
+    const refreshOnProfileChange = (event?: Event) => {
+      const detail =
+        event instanceof CustomEvent && event.detail && typeof event.detail === "object"
+          ? (event.detail as Partial<AuthProfile>)
+          : null;
+
+      if (detail?.id) {
+        setReviewQueue((current) =>
+          current.map((item) =>
+            item.blogger_id === detail.id
+              ? {
+                  ...item,
+                  blogger_status_message: detail.status_message ?? null,
+                  blogger_status_message_expires_at: detail.status_message_expires_at ?? null,
+                  blogger_availability_status:
+                    detail.availability_status ?? item.blogger_availability_status,
+                  blogger_avatar_url: detail.avatar_url ?? item.blogger_avatar_url,
+                  blogger_name: detail.display_name ?? detail.full_name ?? item.blogger_name,
+                }
+              : item,
+          ),
+        );
+      }
+
       void loadDashboard();
     };
 
@@ -154,9 +179,17 @@ function AtelierPage() {
       const reviewNote = reviewMessage[submissionId]?.trim();
       if (reviewedItem?.blogger_id) {
         const notificationType =
-          status === "approved" ? "post_approved" : status === "rejected" ? "post_rejected" : "needs_revision";
+          status === "approved"
+            ? "post_approved"
+            : status === "rejected"
+              ? "post_rejected"
+              : "needs_revision";
         const statusText =
-          status === "approved" ? "approved" : status === "rejected" ? "rejected" : "needs revision";
+          status === "approved"
+            ? "approved"
+            : status === "rejected"
+              ? "rejected"
+              : "needs revision";
 
         void notifySecondLifeQuietly(
           {
@@ -195,7 +228,11 @@ function AtelierPage() {
 
   async function handleModalReview(status: SubmissionStatus) {
     if (!selectedReview) return;
-    const comment = (reviewMessage[selectedReview.id] ?? selectedReview.review_comment ?? "").trim();
+    const comment = (
+      reviewMessage[selectedReview.id] ??
+      selectedReview.review_comment ??
+      ""
+    ).trim();
 
     if (status !== "approved" && !comment) {
       setModalReviewWarning("Leave a short note before sending revision or rejection.");
@@ -218,7 +255,7 @@ function AtelierPage() {
   const archiveRows = upcomingArchives;
   const bloggerRows = liveBloggers;
   const selectedReview = selectedReviewId
-    ? reviewQueue.find((item) => item.id === selectedReviewId) ?? null
+    ? (reviewQueue.find((item) => item.id === selectedReviewId) ?? null)
     : null;
 
   function daysUntil(dateValue: string | null | undefined, fallback?: string) {
@@ -296,7 +333,9 @@ function AtelierPage() {
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
             LOVE POTION OWNER'S ATELIER
           </div>
-          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">{tr("The atelier.")}</h1>
+          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">
+            {tr("The atelier.")}
+          </h1>
         </div>
         <HandwrittenNote>{tr("run the house")}</HandwrittenNote>
       </header>
@@ -314,8 +353,8 @@ function AtelierPage() {
 
       {statsErrors.length > 0 ? (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
-          {tr("Could not load atelier stats:")} {statsErrors.map((error) => error.label).join(", ")}.{" "}
-          {tr("See the console for the full Supabase error.")}
+          {tr("Could not load atelier stats:")} {statsErrors.map((error) => error.label).join(", ")}
+          . {tr("See the console for the full Supabase error.")}
         </div>
       ) : null}
 
@@ -334,7 +373,10 @@ function AtelierPage() {
                 [tr("Pending"), deliveryCounts.claimed, "text-amber-700"],
                 [tr("Failed"), deliveryCounts.failed, "text-rose-700"],
               ].map(([label, count, tone]) => (
-                <div key={label} className="rounded-2xl border border-foreground/10 bg-background/70 px-4 py-3 text-center">
+                <div
+                  key={label}
+                  className="rounded-2xl border border-foreground/10 bg-background/70 px-4 py-3 text-center"
+                >
                   <div className={cn("font-display text-2xl", tone)}>{count}</div>
                   <div className="mt-1 font-mono text-[8px] uppercase tracking-[0.24em] text-foreground/45">
                     {label}
@@ -359,7 +401,9 @@ function AtelierPage() {
 
           {deliveryDesk.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-dashed border-foreground/10 bg-foreground/[0.03] p-10 text-center">
-              <div className="font-hand text-3xl text-[var(--brand-magenta)]">{tr("no delivery claims yet")}</div>
+              <div className="font-hand text-3xl text-[var(--brand-magenta)]">
+                {tr("no delivery claims yet")}
+              </div>
               <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/45">
                 {tr("Claimed products will appear here.")}
               </div>
@@ -372,7 +416,11 @@ function AtelierPage() {
                   className="grid gap-4 rounded-2xl border border-foreground/10 bg-background/70 p-4 md:grid-cols-[auto_1fr_auto]"
                 >
                   {claim.product_image ? (
-                    <img src={claim.product_image} alt={claim.product_name} className="h-16 w-16 rounded-xl object-cover" />
+                    <img
+                      src={claim.product_image}
+                      alt={claim.product_name}
+                      className="h-16 w-16 rounded-xl object-cover"
+                    />
                   ) : (
                     <div className="h-16 w-16 rounded-xl bg-foreground/10" />
                   )}
@@ -380,15 +428,23 @@ function AtelierPage() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="truncate font-display text-2xl">{claim.product_name}</div>
-                      <span className={cn("rounded-full border px-3 py-1 font-mono text-[8px] uppercase tracking-[0.22em]", claimTone(claim.status))}>
+                      <span
+                        className={cn(
+                          "rounded-full border px-3 py-1 font-mono text-[8px] uppercase tracking-[0.22em]",
+                          claimTone(claim.status),
+                        )}
+                      >
                         {claimLabel(claim.status)}
                       </span>
                     </div>
                     <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/55">
-                      {claim.blogger_name} · {tr("claimed")} {prettyDate(claim.claimed_at)} · {tr("delivered")} {prettyDate(claim.delivered_at)}
+                      {claim.blogger_name} · {tr("claimed")} {prettyDate(claim.claimed_at)} ·{" "}
+                      {tr("delivered")} {prettyDate(claim.delivered_at)}
                     </div>
                     {claim.delivery_response ? (
-                      <div className="mt-2 line-clamp-2 text-xs text-foreground/55">{claim.delivery_response}</div>
+                      <div className="mt-2 line-clamp-2 text-xs text-foreground/55">
+                        {claim.delivery_response}
+                      </div>
                     ) : null}
                   </div>
 
@@ -491,12 +547,19 @@ function AtelierPage() {
                       <div className="truncate font-display text-2xl">{item.product_name}</div>
                       <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.25em] text-foreground/55">
                         {item.blogger_name} · {item.links_count} {tr("links")} ·{" "}
-                        {new Date(item.submitted_at).toLocaleDateString(language === "es" ? "es" : "en")}
+                        {new Date(item.submitted_at).toLocaleDateString(
+                          language === "es" ? "es" : "en",
+                        )}
                       </div>
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <span className={cn("rounded-full border px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em]", statusTone(item.status))}>
+                    <span
+                      className={cn(
+                        "rounded-full border px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em]",
+                        statusTone(item.status),
+                      )}
+                    >
                       {item.status.replace("_", " ")}
                     </span>
                     <span className="rounded-full border border-foreground/15 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/55">
@@ -542,7 +605,9 @@ function AtelierPage() {
                 >
                   <span>{p.name}</span>
                   <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-                    {p.auto_archive_at ? `${tr("in")} ${daysUntil(p.auto_archive_at)}` : tr("not scheduled")}
+                    {p.auto_archive_at
+                      ? `${tr("in")} ${daysUntil(p.auto_archive_at)}`
+                      : tr("not scheduled")}
                   </span>
                 </li>
               ))
@@ -613,7 +678,9 @@ function AtelierPage() {
                   <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
                     {tr("Review dossier")}
                   </div>
-                  <h2 className="mt-2 font-display text-4xl leading-none">{selectedReview.product_name}</h2>
+                  <h2 className="mt-2 font-display text-4xl leading-none">
+                    {selectedReview.product_name}
+                  </h2>
                   <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.25em] text-foreground/55">
                     {selectedReview.blogger_name} · {selectedReview.links_count} links
                   </div>
@@ -689,7 +756,9 @@ function AtelierPage() {
                           </span>
                           <span className="mt-1 block break-all">{link.url}</span>
                           {link.note ? (
-                            <span className="mt-2 block text-xs italic text-foreground/55">{link.note}</span>
+                            <span className="mt-2 block text-xs italic text-foreground/55">
+                              {link.note}
+                            </span>
                           ) : null}
                         </span>
                         <span className="shrink-0 rounded-full bg-foreground/10 px-3 py-1 font-mono text-[8px] uppercase tracking-[0.22em] text-foreground/55">
@@ -710,7 +779,10 @@ function AtelierPage() {
                   <textarea
                     value={reviewMessage[selectedReview.id] ?? selectedReview.review_comment ?? ""}
                     onChange={(event) =>
-                      setReviewMessage((current) => ({ ...current, [selectedReview.id]: event.target.value }))
+                      setReviewMessage((current) => ({
+                        ...current,
+                        [selectedReview.id]: event.target.value,
+                      }))
                     }
                     rows={4}
                     placeholder="Write what the blogger should see..."
@@ -741,19 +813,19 @@ function AtelierPage() {
                       <button
                         onClick={() => void handleModalReview("approved")}
                         className="rounded-full bg-green-600 px-4 py-3 font-mono text-[9px] uppercase tracking-[0.22em] text-white"
-                    >
+                      >
                         Approve
                       </button>
                       <button
                         onClick={() => void handleModalReview("needs_revision")}
                         className="rounded-full bg-amber-500 px-4 py-3 font-mono text-[9px] uppercase tracking-[0.22em] text-white"
-                    >
+                      >
                         Needs revision
                       </button>
                       <button
                         onClick={() => void handleModalReview("rejected")}
                         className="rounded-full bg-rose-600 px-4 py-3 font-mono text-[9px] uppercase tracking-[0.22em] text-white"
-                    >
+                      >
                         Reject
                       </button>
                     </>
@@ -773,7 +845,11 @@ function getSafeAvatarUrl(value?: string | null) {
   return value;
 }
 
-function formatCommentStatus(value?: string | null, availability?: string | null, expiresAt?: string | null) {
+function formatCommentStatus(
+  value?: string | null,
+  availability?: string | null,
+  expiresAt?: string | null,
+) {
   const note = getVisibleStatusMessage({
     status_message: value ?? null,
     status_message_expires_at: expiresAt ?? null,
