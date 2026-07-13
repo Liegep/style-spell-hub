@@ -2194,7 +2194,7 @@ function ProductSubmissionModal({
                   ? language === "es"
                     ? "Demo enviado"
                     : tr("Demo sent")
-                  : tr("DEMO")}
+                  : "DEMO"}
             </button>
           ) : null}
         </div>
