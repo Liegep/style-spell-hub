@@ -368,10 +368,11 @@ function BloggerDash() {
         status_message_expires_at: trimmed ? buildStatusNoteExpiry(duration) : null,
         status_message_duration: trimmed && duration !== "none" ? duration : null,
       });
-      setProfile(updated);
-      setOverlayNote(updated.status_message || "");
-      setOverlayNoteDuration(updated.status_message_duration ?? "none");
-      window.dispatchEvent(new CustomEvent("profile-updated", { detail: updated }));
+      const freshProfile = (await getCurrentProfile(updated.id)) ?? updated;
+      setProfile(freshProfile);
+      setOverlayNote(freshProfile.status_message || "");
+      setOverlayNoteDuration(freshProfile.status_message_duration ?? "none");
+      window.dispatchEvent(new CustomEvent("profile-updated", { detail: freshProfile }));
       setQuickNoteState("saved");
       window.setTimeout(() => setQuickNoteState("idle"), 1800);
     } catch (error) {

@@ -13,7 +13,12 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useLang } from "@/i18n/dict";
 import { translateAppPhrase } from "@/i18n/app-text";
-import { STATUS_NOTE_MAX, buildStatusNoteExpiry, getStatusNoteDurationOptions, type StatusNoteDuration } from "@/lib/status-note";
+import {
+  STATUS_NOTE_MAX,
+  buildStatusNoteExpiry,
+  getStatusNoteDurationOptions,
+  type StatusNoteDuration,
+} from "@/lib/status-note";
 
 type Status = "available" | "vacation" | "busy" | "offline";
 
@@ -61,17 +66,25 @@ function ProfilePage() {
   const [noteSaveMessage, setNoteSaveMessage] = useState("");
   const [photo, setPhoto] = useState(getSafeAvatarUrl(initialProfile?.avatar_url));
   const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [displayName, setDisplayName] = useState(initialProfile?.display_name || initialProfile?.full_name || "");
+  const [displayName, setDisplayName] = useState(
+    initialProfile?.display_name || initialProfile?.full_name || "",
+  );
   const [avatarName, setAvatarName] = useState(initialProfile?.sl_avatar_name || "");
   const [avatarUuid, setAvatarUuid] = useState(initialProfile?.sl_avatar_uuid || "");
-  const [language, setLanguage] = useState<"en" | "es">(initialProfile?.language_preference || "en");
+  const [language, setLanguage] = useState<"en" | "es">(
+    initialProfile?.language_preference || "en",
+  );
   const [flickr, setFlickr] = useState(initialProfile?.flickr_url || "");
   const [instagram, setInstagram] = useState(initialProfile?.instagram_url || "");
   const [facebook, setFacebook] = useState(initialProfile?.facebook_url || "");
   const [blogUrl, setBlogUrl] = useState(initialProfile?.blog_url || "");
   const [note, setNote] = useState(initialProfile?.status_message || "");
-  const [noteDuration, setNoteDuration] = useState<StatusNoteDuration>(initialProfile?.status_message_duration ?? "none");
-  const [status, setStatus] = useState<Status>((initialProfile?.availability_status as Status) || "available");
+  const [noteDuration, setNoteDuration] = useState<StatusNoteDuration>(
+    initialProfile?.status_message_duration ?? "none",
+  );
+  const [status, setStatus] = useState<Status>(
+    (initialProfile?.availability_status as Status) || "available",
+  );
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -79,7 +92,8 @@ function ProfilePage() {
   const [passwordMessage, setPasswordMessage] = useState("");
 
   const hasProfileChanges =
-    (displayName.trim() || "") !== (initialProfile?.display_name || initialProfile?.full_name || "") ||
+    (displayName.trim() || "") !==
+      (initialProfile?.display_name || initialProfile?.full_name || "") ||
     avatarUuid.trim() !== (initialProfile?.sl_avatar_uuid || "") ||
     language !== (initialProfile?.language_preference || "en") ||
     flickr.trim() !== (initialProfile?.flickr_url || "") ||
@@ -141,9 +155,15 @@ function ProfilePage() {
         facebook_url: facebook.trim() || null,
         blog_url: blogUrl.trim() || null,
       });
-      setProfile(updated);
-      window.dispatchEvent(new CustomEvent("profile-updated", { detail: updated }));
-      setPhoto(getSafeAvatarUrl(updated.avatar_url));
+      const freshProfile = (await getCurrentProfile(updated.id)) ?? updated;
+      setProfile(freshProfile);
+      setDisplayName(freshProfile.display_name || freshProfile.full_name || "");
+      setNote(freshProfile.status_message || "");
+      setNoteDuration(freshProfile.status_message_duration ?? "none");
+      setLanguage(freshProfile.language_preference || "en");
+      setStatus((freshProfile.availability_status as Status) || "available");
+      window.dispatchEvent(new CustomEvent("profile-updated", { detail: freshProfile }));
+      setPhoto(getSafeAvatarUrl(freshProfile.avatar_url));
       setPhotoFile(null);
       setSaveMessage(tr("Profile saved."));
       window.setTimeout(() => setSaveMessage(""), 2600);
@@ -167,6 +187,9 @@ function ProfilePage() {
       });
       const freshProfile = (await getCurrentProfile(updated.id)) ?? updated;
       setProfile(freshProfile);
+      setNote(freshProfile.status_message || "");
+      setNoteDuration(freshProfile.status_message_duration ?? "none");
+      setStatus((freshProfile.availability_status as Status) || "available");
       window.dispatchEvent(new CustomEvent("profile-updated", { detail: freshProfile }));
       setNoteSaveMessage(tr("Note saved."));
       window.setTimeout(() => setNoteSaveMessage(""), 2200);
@@ -229,19 +252,28 @@ function ProfilePage() {
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
             STUDIO · PROFILE
           </div>
-          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">{tr("About you.")}</h1>
+          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">
+            {tr("About you.")}
+          </h1>
         </div>
         <HandwrittenNote>{tr("set the scene")}</HandwrittenNote>
       </header>
 
       <div className="mt-10 grid gap-6 md:grid-cols-12">
         <GlassCard className="self-start overflow-hidden p-0 md:col-span-4">
-          <AvatarPreview photo={photo} note={note} status={status} statusLabel={statusLabel[status]} />
+          <AvatarPreview
+            photo={photo}
+            note={note}
+            status={status}
+            statusLabel={statusLabel[status]}
+          />
           <div className="relative p-5 pr-12">
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
               {tr("Live preview")}
             </div>
-            <div className="mt-1 font-display text-2xl">{displayName || profile?.email || "Blogger"}</div>
+            <div className="mt-1 font-display text-2xl">
+              {displayName || profile?.email || "Blogger"}
+            </div>
             <p className="mt-1 text-sm text-foreground/70">{tr("This is how others see you.")}</p>
             <div className="pointer-events-none absolute bottom-5 right-3 select-none font-display text-3xl leading-none tracking-tight text-foreground/[0.08] [writing-mode:vertical-rl] [text-orientation:mixed]">
               love potion.
@@ -340,7 +372,8 @@ function ProfilePage() {
             </select>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
               <p className="font-hand text-base text-[var(--brand-magenta)]">
-                {tr("shown over your avatar, like instagram notes")}. {tr("choose a timer or leave it open-ended.")}
+                {tr("shown over your avatar, like instagram notes")}.{" "}
+                {tr("choose a timer or leave it open-ended.")}
               </p>
               <div className="flex items-center gap-3">
                 {noteSaveMessage ? (
@@ -400,9 +433,24 @@ function ProfilePage() {
               {tr("Password")}
             </div>
             <div className="mt-4 grid gap-4 md:grid-cols-3">
-              <Field label={tr("Current")} type="password" value={currentPassword} onChange={setCurrentPassword} />
-              <Field label={tr("New")} type="password" value={newPassword} onChange={setNewPassword} />
-              <Field label={tr("Confirm new")} type="password" value={confirmPassword} onChange={setConfirmPassword} />
+              <Field
+                label={tr("Current")}
+                type="password"
+                value={currentPassword}
+                onChange={setCurrentPassword}
+              />
+              <Field
+                label={tr("New")}
+                type="password"
+                value={newPassword}
+                onChange={setNewPassword}
+              />
+              <Field
+                label={tr("Confirm new")}
+                type="password"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+              />
             </div>
             <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
               {passwordMessage ? (
@@ -427,7 +475,6 @@ function ProfilePage() {
               </button>
             </div>
           </GlassCard>
-
         </div>
       </div>
     </div>
