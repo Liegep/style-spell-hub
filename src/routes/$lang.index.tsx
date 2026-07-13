@@ -190,7 +190,7 @@ function Landing() {
                 alt="Love Potion avatar"
                 width={1536}
                 height={1920}
-                className="max-h-[76vh] w-[58vw] max-w-[680px] object-contain [filter:drop-shadow(0_10px_26px_rgba(0,0,0,0.22))_drop-shadow(0_0_28px_rgba(241,122,169,0.18))]"
+                className="max-h-[76vh] w-[58vw] max-w-[680px] object-contain [filter:drop-shadow(0_0_24px_rgba(241,122,169,0.16))]"
               />
             ) : (
               <div className="aspect-[4/5] w-[58vw] max-w-[680px]" />
@@ -233,7 +233,7 @@ function Landing() {
           <ScrollReveal
             variant="fade-up"
             delay={340}
-            className="relative z-30 mt-6 flex flex-col items-start gap-6 px-2 md:-mt-[7vw] md:flex-row md:items-end md:justify-between md:px-6"
+            className="relative z-30 mt-6 flex flex-col items-start gap-6 px-2 md:-mt-[4.5vw] md:flex-row md:items-end md:justify-between md:px-6"
           >
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
