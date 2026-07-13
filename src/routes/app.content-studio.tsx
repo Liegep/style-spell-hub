@@ -681,7 +681,7 @@ function ProductEditor({
                   value={form.long_description ?? ""}
                   onChange={(event) => update("long_description", event.target.value)}
                   className={`${textareaClass} leading-7`}
-                  placeholder="Describe the mood, textures, and soul of the release..."
+                  placeholder={tr("Describe the mood, textures, and soul of the release...")}
                 />
                 <div className="mt-3 rounded-3xl border border-foreground/10 bg-[var(--brand-pink)]/25 p-5">
                   <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/45">
@@ -716,7 +716,7 @@ function ProductEditor({
                     value={form.second_life_link ?? ""}
                     onChange={(event) => update("second_life_link", event.target.value)}
                     className={inputClass}
-                    placeholder="secondlife://..."
+                    placeholder={tr("secondlife://...")}
                   />
                 </Field>
                 <Field label={tr("Marketplace URL")}>
@@ -724,7 +724,7 @@ function ProductEditor({
                     value={form.marketplace_link ?? ""}
                     onChange={(event) => update("marketplace_link", event.target.value)}
                     className={inputClass}
-                    placeholder="https://marketplace..."
+                    placeholder={tr("https://marketplace...")}
                   />
                 </Field>
                 <Field label={tr("Category")}>
@@ -779,7 +779,7 @@ function ProductEditor({
                     }
                     className={inputClass}
                   >
-                    <option value="">No deadline</option>
+                    <option value="">{tr("No deadline")}</option>
                     <option value="10">{tr("10 days after claim")}</option>
                     <option value="15">{tr("15 days after claim")}</option>
                     <option value="30">{tr("30 days after claim")}</option>
@@ -791,9 +791,9 @@ function ProductEditor({
                     onChange={(event) => update("status", event.target.value as ProductStatus)}
                     className={inputClass}
                   >
-                    <option value="draft">Draft</option>
-                    <option value="available">Available (Published)</option>
-                    <option value="archived">Archived</option>
+                    <option value="draft">{tr("Draft")}</option>
+                    <option value="available">{tr("Available (Published)")}</option>
+                    <option value="archived">{tr("Archived")}</option>
                   </select>
                 </Field>
                 <Field label={tr("Display order")}>
@@ -1083,6 +1083,8 @@ const siteAssetSlots: SiteAssetSlot[] = [
 ];
 
 function AssetsPanel() {
+  const { language } = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const [assets, setAssets] = useState<Record<string, SiteAsset>>({});
   const [files, setFiles] = useState<Partial<Record<SiteAssetKey, File>>>({});
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
@@ -1101,7 +1103,7 @@ function AssetsPanel() {
       } catch (error) {
         console.error("[Content Studio] Failed to load site assets", error);
         if (!isMounted) return;
-        setMessage(error instanceof Error ? error.message : "Could not load site assets.");
+        setMessage(error instanceof Error ? error.message : tr("Could not load site assets."));
         setState("error");
       }
     }
@@ -1116,7 +1118,7 @@ function AssetsPanel() {
   async function saveAsset(slot: SiteAssetSlot) {
     const file = files[slot.key];
     if (!file) {
-      setMessage("Choose an image before saving.");
+      setMessage(tr("Choose an image before saving."));
       return;
     }
 
@@ -1138,11 +1140,11 @@ function AssetsPanel() {
         delete next[slot.key];
         return next;
       });
-      setMessage(`${slot.label} updated.`);
+      setMessage(tr("Image updated."));
       setState("ready");
     } catch (error) {
       console.error("[Content Studio] Failed to save site asset", error);
-      setMessage(error instanceof Error ? error.message : "Could not save image.");
+      setMessage(error instanceof Error ? error.message : tr("Could not save image."));
     } finally {
       setSavingKey(null);
     }
@@ -1153,10 +1155,10 @@ function AssetsPanel() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-            <span>Site images</span> · <span>{state === "loading" ? "syncing" : state}</span>
+            <span>{tr("Site images")}</span> · <span>{state === "loading" ? tr("syncing") : tr(state)}</span>
           </div>
           <p className="mt-2 max-w-2xl text-sm text-foreground/60">
-            Swap the live images used by the public site. The original files remain as fallback.
+            {tr("Swap the live images used by the public site. The original files remain as fallback.")}
           </p>
         </div>
         {message ? (
@@ -1198,6 +1200,8 @@ function AssetSlotCard({
   onFileChange: (file: File | null) => void;
   onSave: () => void;
 }) {
+  const { language } = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const previewUrl = file ? URL.createObjectURL(file) : asset?.image_url ?? slot.fallbackUrl;
 
   return (
@@ -1205,12 +1209,12 @@ function AssetSlotCard({
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            Asset slot
+            {tr("Asset slot")}
           </div>
           <h3 className="mt-2 font-display text-3xl leading-none">{slot.label}</h3>
         </div>
         <span className="rounded-full bg-background/70 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/45">
-          {asset ? "live" : "fallback"}
+          {asset ? tr("live") : tr("fallback")}
         </span>
       </div>
 
@@ -1228,7 +1232,7 @@ function AssetSlotCard({
         />
         <div className="mt-3 rounded-full border border-foreground/15 px-4 py-3 text-center font-mono text-[10px] uppercase tracking-[0.3em] hover:bg-background/70">
           <ImagePlus className="mr-2 inline h-4 w-4" />
-          {file ? file.name : "Choose image"}
+          {file ? file.name : tr("Choose image")}
         </div>
       </label>
 
@@ -1239,7 +1243,7 @@ function AssetSlotCard({
         className="mt-4 rounded-full bg-foreground px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)] disabled:cursor-not-allowed disabled:opacity-45"
       >
         <Save className="mr-2 inline h-4 w-4" />
-        {isSaving ? "Saving..." : "Save image"}
+        {isSaving ? tr("Saving...") : tr("Save image")}
       </button>
     </GlassCard>
   );
@@ -1353,6 +1357,7 @@ function getDefaultContent(language: Lang): Record<string, string> {
 
 function ContentPanel({ uiLang }: { uiLang: Lang }) {
   const [language, setLanguage] = useState<Lang>(uiLang);
+  const tr = (value: string) => translateAppPhrase(value, language);
   const [drafts, setDrafts] = useState<Record<Lang, Record<string, string>>>({
     en: getDefaultContent("en"),
     es: getDefaultContent("es"),
@@ -1380,7 +1385,7 @@ function ContentPanel({ uiLang }: { uiLang: Lang }) {
       } catch (error) {
         console.error("[Content Studio] Failed to load site content", error);
         if (!isMounted) return;
-        setMessage(error instanceof Error ? error.message : "Could not load site content.");
+        setMessage(error instanceof Error ? error.message : tr("Could not load site content."));
         setState("error");
       }
     }
@@ -1415,11 +1420,11 @@ function ContentPanel({ uiLang }: { uiLang: Lang }) {
           value: drafts[language][field.key] ?? "",
         })),
       );
-      setMessage(`${section.title} saved for ${language.toUpperCase()}.`);
+      setMessage(tr("Content saved."));
       setState("ready");
     } catch (error) {
       console.error("[Content Studio] Failed to save site content", error);
-      setMessage(error instanceof Error ? error.message : "Could not save content.");
+      setMessage(error instanceof Error ? error.message : tr("Could not save content."));
     } finally {
       setSavingSection(null);
     }
@@ -1430,10 +1435,10 @@ function ContentPanel({ uiLang }: { uiLang: Lang }) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-            <span>Site copy</span> · <span>{state === "loading" ? "syncing" : state}</span>
+            <span>{tr("Site copy")}</span> · <span>{state === "loading" ? tr("syncing") : tr(state)}</span>
           </div>
           <p className="mt-2 max-w-2xl text-sm text-foreground/60">
-            Edit public site text by language. Saved fields override the built-in copy.
+            {tr("Edit public site text by language. Saved fields override the built-in copy.")}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -1447,7 +1452,7 @@ function ContentPanel({ uiLang }: { uiLang: Lang }) {
                   language === item ? "bg-foreground text-background" : "text-foreground/55"
                 }`}
               >
-                {item}
+                {tr(item)}
               </button>
             ))}
           </div>
@@ -1465,23 +1470,23 @@ function ContentPanel({ uiLang }: { uiLang: Lang }) {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-                  <span>Content block</span>
+                  <span>{tr("Content block")}</span>
                 </div>
                 <h3 className="mt-2 font-display text-3xl leading-none">
-                  <span>{section.title}</span>
+                  <span>{tr(section.title)}</span>
                 </h3>
                 <p className="mt-3 text-sm text-foreground/60">
-                  <span>{section.description}</span>
+                  <span>{tr(section.description)}</span>
                 </p>
               </div>
               <span className="rounded-full bg-[var(--brand-pink)] px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--brand-magenta)]">
-                {language}
+                {tr(language)}
               </span>
             </div>
 
             <div className="mt-6 grid gap-4">
               {section.fields.map((field) => (
-                <Field key={field.key} label={field.label}>
+                <Field key={field.key} label={tr(field.label)}>
                   {field.type === "long" ? (
                     <textarea
                       rows={4}
@@ -1508,10 +1513,10 @@ function ContentPanel({ uiLang }: { uiLang: Lang }) {
             >
               <Save className="mr-2 inline h-4 w-4" />
               {savingSection === section.id ? (
-                "Saving..."
+                tr("Saving...")
               ) : (
                 <>
-                  <span>Save</span> <span>{section.title}</span>
+                  <span>{tr("Save")}</span> <span>{tr(section.title)}</span>
                 </>
               )}
             </button>

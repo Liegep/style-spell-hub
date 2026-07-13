@@ -140,16 +140,16 @@ function AdminDash() {
   const didUseInitialReviewQueue = useRef(false);
   const adminTabs: Array<{ id: Tab; label: string; sub: string }> = [];
   if (tab === "overview") {
-    adminTabs.push({ id: "overview", label: "Overview", sub: "01" });
+    adminTabs.push({ id: "overview", label: tr("Overview"), sub: "01" });
   }
   if (tab === "products") {
-    adminTabs.push({ id: "products", label: "Products", sub: "02" });
+    adminTabs.push({ id: "products", label: tr("Products"), sub: "02" });
   }
   if (tab === "inbox") {
-    adminTabs.push({ id: "inbox", label: mailUnreadCount ? `Compose (${mailUnreadCount})` : "Compose", sub: "03" });
+    adminTabs.push({ id: "inbox", label: mailUnreadCount ? `${tr("Compose")} (${mailUnreadCount})` : tr("Compose"), sub: "03" });
   }
   if (tab === "newsletter") {
-    adminTabs.push({ id: "newsletter", label: "Newsletter", sub: "04" });
+    adminTabs.push({ id: "newsletter", label: tr("Newsletter"), sub: "04" });
   }
 
   useEffect(() => {
@@ -167,7 +167,7 @@ function AdminDash() {
         setReviewQueue(queue);
       } catch (error) {
         if (!mounted) return;
-        setReviewError(error instanceof Error ? error.message : "Could not load review queue.");
+        setReviewError(error instanceof Error ? error.message : tr("Could not load review queue."));
       }
     }
 
@@ -1309,7 +1309,7 @@ function Newsletter({
     } catch (loadError) {
       console.error("[Newsletter] failed to load data", loadError);
       setState("error");
-      setError(loadError instanceof Error ? loadError.message : "Could not load newsletter.");
+      setError(loadError instanceof Error ? loadError.message : tr("Could not load newsletter."));
     }
   }
 
@@ -1339,11 +1339,11 @@ function Newsletter({
 
     try {
       const count = await importNewsletterSubscribersFromCsv(file);
-      setFeedback(`${count} subscriber${count === 1 ? "" : "s"} imported.`);
+      setFeedback(`${count} ${tr(count === 1 ? "subscriber imported." : "subscribers imported.")}`);
       await loadNewsletter();
     } catch (importError) {
       console.error("[Newsletter] failed to import CSV", importError);
-      setError(importError instanceof Error ? importError.message : "Could not import CSV.");
+      setError(importError instanceof Error ? importError.message : tr("Could not import CSV."));
       setState("error");
     } finally {
       event.target.value = "";
@@ -1355,7 +1355,7 @@ function Newsletter({
     setError("");
 
     if (!title.trim() || !body.trim()) {
-      setError("Title and body are required before sending.");
+      setError(tr("Title and body are required before sending."));
       return;
     }
 
@@ -1364,30 +1364,30 @@ function Newsletter({
     try {
       const result = await sendNewsletterCampaign({ title, body, imageFile, slTextureItemName });
       if (result.queued === 0) {
-        setFeedback("Campaign saved, but no active subscribers were found.");
+        setFeedback(tr("Campaign saved, but no active subscribers were found."));
       } else if (result.deliveryStats.sent > 0) {
         setFeedback(
-          `Queued for ${result.queued} subscriber${result.queued === 1 ? "" : "s"} and sent ${result.deliveryStats.sent} Second Life IM${result.deliveryStats.sent === 1 ? "" : "s"}.`,
+          `${tr("Queued for")} ${result.queued} ${tr(result.queued === 1 ? "subscriber" : "subscribers")} ${tr("and sent")} ${result.deliveryStats.sent} ${tr(result.deliveryStats.sent === 1 ? "Second Life IM." : "Second Life IMs.")}`,
         );
       } else if (result.deliveryStats.failed > 0) {
         setFeedback(
-          `Queued for ${result.queued} subscriber${result.queued === 1 ? "" : "s"}, but ${result.deliveryStats.failed} delivery ${result.deliveryStats.failed === 1 ? "failed" : "deliveries failed"}.${result.deliveryStats.lastError ? ` ${result.deliveryStats.lastError}` : ""}`,
+          `${tr("Queued for")} ${result.queued} ${tr(result.queued === 1 ? "subscriber," : "subscribers,")} ${tr("but")} ${result.deliveryStats.failed} ${tr(result.deliveryStats.failed === 1 ? "delivery failed." : "deliveries failed.")}${result.deliveryStats.lastError ? ` ${result.deliveryStats.lastError}` : ""}`,
         );
       } else if (result.deliveryStats.pending > 0) {
         setFeedback(
-          `Queued for ${result.queued} subscriber${result.queued === 1 ? "" : "s"}. Delivery is waiting in the Second Life queue.`,
+          `${tr("Queued for")} ${result.queued} ${tr(result.queued === 1 ? "subscriber" : "subscribers")}. ${tr("Delivery is waiting in the Second Life queue.")}`,
         );
       } else if (result.processWarning) {
         setFeedback(
-          `Queued for ${result.queued} subscriber${result.queued === 1 ? "" : "s"}. Delivery processor needs attention: ${result.processWarning}`,
+          `${tr("Queued for")} ${result.queued} ${tr(result.queued === 1 ? "subscriber" : "subscribers")}. ${tr("Delivery processor needs attention:")} ${result.processWarning}`,
         );
       } else if (result.processed > 0) {
         setFeedback(
-          `Queued for ${result.queued} subscriber${result.queued === 1 ? "" : "s"} and sent ${result.processed} Second Life IM${result.processed === 1 ? "" : "s"}.`,
+          `${tr("Queued for")} ${result.queued} ${tr(result.queued === 1 ? "subscriber" : "subscribers")} ${tr("and sent")} ${result.processed} ${tr(result.processed === 1 ? "Second Life IM." : "Second Life IMs.")}`,
         );
       } else {
         setFeedback(
-          `Queued for ${result.queued} subscriber${result.queued === 1 ? "" : "s"}. Delivery is waiting in the queue.`,
+          `${tr("Queued for")} ${result.queued} ${tr(result.queued === 1 ? "subscriber" : "subscribers")}. ${tr("Delivery is waiting in the queue.")}`,
         );
       }
       setTitle("");
@@ -1398,7 +1398,7 @@ function Newsletter({
       setNewsletterView("sent");
     } catch (sendError) {
       console.error("[Newsletter] failed to send campaign", sendError);
-      setError(sendError instanceof Error ? sendError.message : "Could not send newsletter.");
+      setError(sendError instanceof Error ? sendError.message : tr("Could not send newsletter."));
       setState("error");
     }
   }
@@ -1552,7 +1552,7 @@ function NewsletterSubscribersPanel({
           <input
             value={manualName}
             onChange={(event) => setManualName(event.target.value)}
-            placeholder="Marie Whitfield"
+            placeholder={tr("Marie Whitfield")}
             className="mt-2 w-full rounded-full border border-foreground/15 bg-background/75 px-5 py-3 text-sm outline-none transition focus:border-[var(--brand-magenta)]"
           />
         </label>
@@ -1682,13 +1682,15 @@ function NewsletterSubscribersPanel({
 }
 
 function SentNewsletterCampaigns({ campaigns }: { campaigns: NewsletterCampaignWithStats[] }) {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   if (campaigns.length === 0) {
     return (
       <GlassCard tone="pink" className="p-8">
-        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">Sent editions</div>
-        <h2 className="mt-2 font-display text-4xl leading-none">No editions yet.</h2>
+        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">{tr("Sent editions")}</div>
+        <h2 className="mt-2 font-display text-4xl leading-none">{tr("No editions yet.")}</h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-foreground/60">
-          Sent newsletters will appear here with the delivery summary.
+          {tr("Sent newsletters will appear here with the delivery summary.")}
         </p>
       </GlassCard>
     );
@@ -1706,7 +1708,7 @@ function SentNewsletterCampaigns({ campaigns }: { campaigns: NewsletterCampaignW
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-                  {formatPrettyDate(campaign.sent_at || campaign.created_at)}
+                  {formatPrettyDate(campaign.sent_at || campaign.created_at, language)}
                 </div>
                 <h3 className="mt-2 font-display text-3xl leading-none">{campaign.title}</h3>
                 <p className="mt-2 line-clamp-2 max-w-3xl text-sm leading-6 text-foreground/60">{campaign.body}</p>
@@ -1717,7 +1719,7 @@ function SentNewsletterCampaigns({ campaigns }: { campaigns: NewsletterCampaignW
                   hasError ? "bg-[var(--brand-magenta)] text-white" : "bg-green-100 text-green-700",
                 )}
               >
-                {hasError ? "needs check" : "sent"}
+                {hasError ? tr("needs check") : tr("sent")}
               </span>
             </div>
 
@@ -1725,24 +1727,24 @@ function SentNewsletterCampaigns({ campaigns }: { campaigns: NewsletterCampaignW
               <div className="rounded-2xl border border-foreground/10 bg-white/35 p-4">
                 <div className="font-display text-3xl">{stats.sent}</div>
                 <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/50">
-                  <span>received of</span> {expectedTotal}
+                  <span>{tr("received of")}</span> {expectedTotal}
                 </div>
               </div>
               <div className="rounded-2xl border border-foreground/10 bg-white/35 p-4">
                 <div className="font-display text-3xl">{stats.pending}</div>
-                <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/50">pending</div>
+                <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/50">{tr("pending")}</div>
               </div>
               <div className="rounded-2xl border border-foreground/10 bg-white/35 p-4">
                 <div className="font-display text-3xl">{stats.failed}</div>
-                <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/50">with error</div>
+                <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/50">{tr("with error")}</div>
               </div>
             </div>
 
             {hasError ? (
               <div className="mt-4 rounded-2xl border border-[var(--brand-magenta)]/30 bg-[var(--brand-magenta)]/10 px-5 py-3 text-sm text-[var(--brand-magenta)]">
                 {stats.failed > 0
-                  ? `${stats.failed} delivery ${stats.failed === 1 ? "failed" : "deliveries failed"}.`
-                  : "Delivery needs attention."}
+                  ? `${stats.failed} ${tr(stats.failed === 1 ? "delivery failed." : "deliveries failed.")}`
+                  : tr("Delivery needs attention.")}
                 {stats.lastError ? ` ${stats.lastError}` : ""}
               </div>
             ) : null}
@@ -1818,13 +1820,14 @@ function Preferences() {
   );
 }
 
-function formatPrettyDate(value: string | null) {
-  if (!value) return "recently";
+function formatPrettyDate(value: string | null, language: "en" | "es") {
+  const fallback = language === "es" ? "recientemente" : "recently";
+  if (!value) return fallback;
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "recently";
+  if (Number.isNaN(date.getTime())) return fallback;
 
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat(language === "es" ? "es-ES" : "en-US", {
     month: "short",
     day: "numeric",
     hour: "2-digit",

@@ -371,12 +371,12 @@ function BloggerDash() {
           value={tab}
           onChange={setTab}
           tabs={[
-            { id: "home", label: "Overview", sub: "01" },
-            { id: "products", label: "Products", sub: "02" },
-            { id: "posts", label: "Posts", sub: "03" },
-            { id: "goodies", label: "Bag of goodies", sub: "04" },
-            { id: "inbox", label: "Mailbox", sub: "05", badge: mailUnreadCount },
-            { id: "profile", label: "Profile", sub: "06" },
+            { id: "home", label: tr("Overview"), sub: "01" },
+            { id: "products", label: tr("Products"), sub: "02" },
+            { id: "posts", label: tr("Posts"), sub: "03" },
+            { id: "goodies", label: tr("Bag of goodies"), sub: "04" },
+            { id: "inbox", label: tr("Mailbox"), sub: "05", badge: mailUnreadCount },
+            { id: "profile", label: tr("Profile"), sub: "06" },
           ]}
         />
       </div>
@@ -851,9 +851,9 @@ function Overview({
             {tr("RULES")}
           </div>
           <ul className="mt-3 space-y-2 text-sm">
-            <li>· 1 post / month minimum</li>
-            <li>· Credit "Love Potion"</li>
-            <li>· Tag #lovepotionsl on Flickr</li>
+            <li>· {tr("1 post / month minimum")}</li>
+            <li>· {tr('Credit "Love Potion"')}</li>
+            <li>· {tr("Tag #lovepotionsl on Flickr")}</li>
           </ul>
         </GlassCard>
 
@@ -930,7 +930,7 @@ function ProductsTab({
   if (loading) {
     return (
       <GlassCard tone="pink" className="p-8">
-        <div className="font-hand text-3xl text-[var(--brand-magenta)]">loading products...</div>
+        <div className="font-hand text-3xl text-[var(--brand-magenta)]">{tr("loading products...")}</div>
       </GlassCard>
     );
   }
@@ -1557,8 +1557,8 @@ function InboxTab({
       })}
       {mail.length === 0 ? (
         <GlassCard className="p-8 text-center">
-          <div className="font-hand text-3xl text-[var(--brand-magenta)]">no messages yet</div>
-          <p className="mt-2 text-sm text-foreground/55">Love Potion HQ has not sent anything here.</p>
+          <div className="font-hand text-3xl text-[var(--brand-magenta)]">{tr("no messages yet")}</div>
+          <p className="mt-2 text-sm text-foreground/55">{tr("Love Potion HQ has not sent anything here.")}</p>
         </GlassCard>
       ) : null}
     </div>
@@ -1574,16 +1574,17 @@ function LinksTab({
   onOpenProduct: (product: Product) => void;
   submissionByProduct: Record<string, BloggerSubmissionSummary>;
 }) {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   return (
     <div className="grid gap-5">
       <GlassCard tone="pink" className="p-8">
         <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">
-          SUBMIT YOUR POST
+          {tr("SUBMIT YOUR POST")}
         </div>
-        <h3 className="mt-2 font-display text-3xl">Choose the product first.</h3>
+        <h3 className="mt-2 font-display text-3xl">{tr("Choose the product first.")}</h3>
         <p className="mt-2 max-w-2xl text-sm text-foreground/70">
-          Cada envio fica preso ao produto certo, com deadline, localização, poster oficial e
-          instruções da loja no mesmo modal.
+          {tr("Each submission stays attached to the right product, with deadline, location, official poster, and store instructions in the same modal.")}
         </p>
       </GlassCard>
 
@@ -1604,7 +1605,7 @@ function LinksTab({
           <div>
             <div className="font-display text-2xl">{product.name}</div>
             <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/50">
-              <span>Deadline</span> · {product.deadline}
+              <span>{tr("Deadline")}</span> · {product.deadline}
             </div>
                 {submitted && (
                   <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-green-500/10 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-green-700">
@@ -1617,7 +1618,7 @@ function LinksTab({
                 onClick={() => onOpenProduct(product)}
                 className="rounded-full bg-foreground px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] text-background hover:bg-[var(--brand-magenta)]"
               >
-                Send links
+                {tr("Send links")}
               </button>
             </GlassCard>
           );
@@ -1678,16 +1679,16 @@ function ProductSubmissionModal({
   const modalDeadline = formatClaimDeadline(claim, product, language);
   const accountLockMessage =
     accountStatus === "blocked"
-      ? "Your account is paused by the monthly rule. Love Potion HQ needs to reactivate it before you can claim products or submit links."
+      ? tr("Your account is paused by the monthly rule. Love Potion HQ needs to reactivate it before you can claim products or submit links.")
       : accountStatus === "pending"
-        ? "Your account is waiting for approval. Claims and submissions unlock when Love Potion HQ activates your profile."
+        ? tr("Your account is waiting for approval. Claims and submissions unlock when Love Potion HQ activates your profile.")
         : accountStatus === "left"
-          ? "You left the blogger program. Claims and submissions are closed unless Love Potion HQ reactivates your profile."
-        : "";
+          ? tr("You left the blogger program. Claims and submissions are closed unless Love Potion HQ reactivates your profile.")
+          : "";
   const lockedClaimLabel =
-    accountStatus === "blocked" ? "Account paused" : accountStatus === "left" ? "Program left" : "Awaiting approval";
+    accountStatus === "blocked" ? tr("Account paused") : accountStatus === "left" ? tr("Program left") : tr("Awaiting approval");
   const lockedSubmitLabel =
-    accountStatus === "blocked" ? "Reactivate first" : accountStatus === "left" ? "Program left" : "Approval needed";
+    accountStatus === "blocked" ? tr("Reactivate first") : accountStatus === "left" ? tr("Program left") : tr("Approval needed");
 
   useEffect(() => {
     setClaimState(getProductClaimState(claim, submission));
@@ -1818,12 +1819,12 @@ function ProductSubmissionModal({
     if (!profileId || !canSubmit || status === "saving") return;
     if (accountLocked) {
       setStatus("error");
-      setMessage(accountLockMessage || "Your account cannot submit links right now.");
+      setMessage(accountLockMessage || tr("Your account cannot submit links right now."));
       return;
     }
     if (!isDelivered) {
       setStatus("error");
-      setMessage("Claim and receive this product first, then submit your portfolio links.");
+      setMessage(tr("Claim and receive this product first, then submit your portfolio links."));
       return;
     }
     setStatus("saving");
@@ -1842,7 +1843,7 @@ function ProductSubmissionModal({
       const invalid = normalizedLinks.find((link) => !isValidUrl(link.url));
       if (invalid) {
         setStatus("error");
-        setMessage(`${language === "es" ? "URL inválida" : "Invalid URL"}: ${invalid.url}`);
+        setMessage(`${tr("Invalid URL")}: ${invalid.url}`);
         return;
       }
 
@@ -1855,7 +1856,7 @@ function ProductSubmissionModal({
       });
 
       setStatus("success");
-      setMessage("Portfolio submitted. Your links were sent for review.");
+      setMessage(tr("Portfolio submitted. Your links were sent for review."));
       void notifyStaffSecondLifeQuietly({
         type: "manual",
         title: `New post to review: ${product.name}`,
@@ -1873,7 +1874,7 @@ function ProductSubmissionModal({
       });
     } catch (error) {
       setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Could not submit links.");
+      setMessage(error instanceof Error ? error.message : tr("Could not submit links."));
       return;
     }
   };
@@ -1882,12 +1883,12 @@ function ProductSubmissionModal({
     if (!profileId || claimState === "claiming" || claimState === "delivered") return;
     if (accountLocked) {
       setClaimState("error");
-      setMessage(accountLockMessage || "Your account cannot claim products right now.");
+      setMessage(accountLockMessage || tr("Your account cannot claim products right now."));
       return;
     }
     if (!isUuid(product.id)) {
       setClaimState("error");
-      setMessage("This product is in mock mode right now. Refresh and try again in live mode.");
+      setMessage(tr("This product is in mock mode right now. Refresh and try again in live mode."));
       return;
     }
     setClaimState("claiming");
@@ -1906,12 +1907,12 @@ function ProductSubmissionModal({
       setMessage(
         claim.deliveryNotice ??
           (claim.status === "delivered"
-            ? "Product delivered in Second Life. You can now submit your links."
-            : "Claim saved. Second Life delivery is still pending, so try delivery again before submitting links."),
+            ? tr("Product delivered in Second Life. You can now submit your links.")
+            : tr("Claim saved. Second Life delivery is still pending, so try delivery again before submitting links.")),
       );
     } catch (error) {
       setClaimState("error");
-      setMessage(error instanceof Error ? error.message : "Could not claim this product.");
+      setMessage(error instanceof Error ? error.message : tr("Could not claim this product."));
     }
   };
 
@@ -1920,13 +1921,13 @@ function ProductSubmissionModal({
     if (accountLocked) {
       setDemoState("error");
       setStatus("error");
-      setMessage(accountLockMessage || "Your account cannot request demos right now.");
+      setMessage(accountLockMessage || tr("Your account cannot request demos right now."));
       return;
     }
     if (!isUuid(product.id)) {
       setDemoState("error");
       setStatus("error");
-      setMessage("This product is in mock mode right now. Refresh and try again in live mode.");
+      setMessage(tr("This product is in mock mode right now. Refresh and try again in live mode."));
       return;
     }
 
@@ -1978,20 +1979,20 @@ function ProductSubmissionModal({
           />
 
           <div className="mt-6 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-            Release dossier
+            {tr("Release dossier")}
           </div>
           <h2 className="mt-2 font-display text-4xl leading-none">{product.name}</h2>
 
           <div className="mt-6 rounded-2xl bg-[var(--brand-magenta)]/10 p-4">
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-              Deadline
+              {tr("Deadline")}
             </div>
             <div className="mt-1 flex items-end justify-between gap-4">
               <span className="font-display text-2xl">{modalDeadline.deadline}</span>
               {submission ? (
                 <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-emerald-700">
                   <Check className="h-3.5 w-3.5" />
-                  Submitted
+                  {tr("Submitted")}
                 </span>
               ) : (
                 <span className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--brand-magenta)]">
@@ -2003,7 +2004,7 @@ function ProductSubmissionModal({
 
           <div className="mt-5">
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-              Location
+              {tr("Location")}
             </div>
             <button
               onClick={copyLocation}
@@ -2024,7 +2025,7 @@ function ProductSubmissionModal({
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-foreground/25 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.25em] hover:bg-foreground hover:text-background"
           >
             <Download className="h-4 w-4" />
-            {product.vendorPoster ? "Download vendor poster" : "Vendor poster unavailable"}
+            {product.vendorPoster ? tr("Download vendor poster") : tr("Vendor poster unavailable")}
           </button>
 
           {product.hasDemo ? (
@@ -2038,12 +2039,12 @@ function ProductSubmissionModal({
               {demoState === "sending"
                 ? language === "es"
                   ? "Enviando demo"
-                  : "Sending demo"
+                  : tr("Sending demo")
                 : demoState === "sent"
                   ? language === "es"
                     ? "Demo enviado"
-                    : "Demo sent"
-                  : "DEMO"}
+                    : tr("Demo sent")
+                  : tr("DEMO")}
             </button>
           ) : null}
         </div>
@@ -2052,21 +2053,21 @@ function ProductSubmissionModal({
           <button
             onClick={onClose}
             className="absolute right-5 top-5 rounded-full bg-foreground/5 p-3 hover:bg-foreground hover:text-background"
-            aria-label="Close product dossier"
+            aria-label={tr("Close product dossier")}
           >
             <X className="h-5 w-5" />
           </button>
 
           <div className="pr-14">
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-              Recommendations
+              {tr("Recommendations")}
             </div>
             <p className="mt-3 max-w-3xl whitespace-pre-line rounded-3xl border border-foreground/10 bg-white/45 px-5 py-4 text-base leading-8 text-foreground/70 md:text-lg">
               {product.recommendation}
             </p>
             {submission ? (
               <div className="mt-3 inline-flex rounded-full bg-foreground/10 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em]">
-                <span>Current status</span> · {statusLabel(submission.status)}
+                <span>{tr("Current status")}</span> · {statusLabel(submission.status)}
               </div>
             ) : null}
             {accountLocked ? (
@@ -2075,13 +2076,13 @@ function ProductSubmissionModal({
               </div>
             ) : null}
             {latestReviewerNote ? (
-              <ProductCommentBubble label="Love Potion note" profile={latestReviewer}>
+              <ProductCommentBubble label={tr("Love Potion note")} profile={latestReviewer}>
                 {latestReviewerNote}
               </ProductCommentBubble>
             ) : null}
             {!latestReviewerNote && loadingExisting ? (
               <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-foreground/50">
-                loading latest review note...
+                {tr("loading latest review note...")}
               </div>
             ) : null}
           </div>
@@ -2089,10 +2090,10 @@ function ProductSubmissionModal({
           <div className="mt-8 border-t border-foreground/10 pt-8">
             <div className="flex items-center justify-between gap-4">
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-                Submit your magic
+                {tr("Submit your magic")}
               </div>
               <span className="rounded-full bg-foreground px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-background">
-                {links.length} <span>links</span>
+                {links.length} <span>{tr("links")}</span>
               </span>
             </div>
 
@@ -2106,12 +2107,12 @@ function ProductSubmissionModal({
                         onChange={(event) => updateLink(link.id, { platform: event.target.value })}
                         className="w-full appearance-none rounded-xl border border-foreground/10 bg-background px-4 py-3 pr-11 font-mono text-[10px] uppercase tracking-[0.2em] outline-none transition focus:border-[var(--brand-magenta)]"
                       >
-                        <option>Flickr</option>
-                        <option>Blog</option>
-                        <option>Instagram</option>
-                        <option>Facebook</option>
-                        <option>Primfeed</option>
-                        <option>Other</option>
+                        <option>{tr("Flickr")}</option>
+                        <option>{tr("Blog")}</option>
+                        <option>{tr("Instagram")}</option>
+                        <option>{tr("Facebook")}</option>
+                        <option>{tr("Primfeed")}</option>
+                        <option>{tr("Other")}</option>
                       </select>
                       <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-foreground/70">
                         <ChevronDown className="h-4 w-4" strokeWidth={1.9} />
@@ -2120,14 +2121,14 @@ function ProductSubmissionModal({
                     <input
                       value={link.url}
                       onChange={(event) => updateLink(link.id, { url: event.target.value })}
-                      placeholder="https://..."
+                      placeholder={tr("https://...")}
                       className="rounded-xl border border-foreground/10 bg-background px-4 py-3 outline-none focus:border-[var(--brand-magenta)]"
                     />
                     <button
                       onClick={() => removeLink(link.id)}
                       className="rounded-xl px-3 text-[var(--brand-magenta)] hover:bg-[var(--brand-magenta)]/10 disabled:opacity-30"
                       disabled={links.length === 1}
-                      aria-label="Remove link"
+                      aria-label={tr("Remove link")}
                     >
                       <Trash2 className="h-5 w-5" />
                     </button>
@@ -2139,10 +2140,10 @@ function ProductSubmissionModal({
             <div className="mt-4 rounded-2xl border border-foreground/10 bg-white/45 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/50">
-                Message attached to this submission
+                {tr("Message attached to this submission")}
                 </div>
                 <span className="rounded-full bg-[var(--brand-pink)] px-3 py-1 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--brand-magenta)]">
-                  sent with portfolio
+                  {tr("sent with portfolio")}
                 </span>
               </div>
               <textarea
@@ -2626,11 +2627,11 @@ function ProfileTab(props: {
       window.dispatchEvent(new CustomEvent("profile-updated", { detail: updated }));
       setPhoto(getSafeAvatarUrl(updated.avatar_url));
       setPhotoFile(null);
-      setSaveMessage("Profile saved.");
+      setSaveMessage(tr("Profile saved."));
       window.setTimeout(() => setSaveMessage(""), 2600);
     } catch (error) {
       console.error("[Blogger Profile] save failed", error);
-      setSaveMessage(error instanceof Error ? error.message : "Could not save profile.");
+      setSaveMessage(error instanceof Error ? error.message : tr("Could not save profile."));
     } finally {
       setIsSaving(false);
     }
@@ -2643,11 +2644,11 @@ function ProfileTab(props: {
       return;
     }
     if (newPassword.length < 6) {
-      setPasswordMessage("New password must have at least 6 characters.");
+      setPasswordMessage(tr("New password must have at least 6 characters."));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordMessage("New password and confirmation do not match.");
+      setPasswordMessage(tr("New password and confirmation do not match."));
       return;
     }
 
@@ -2661,7 +2662,7 @@ function ProfileTab(props: {
       window.setTimeout(() => setPasswordMessage(""), 2600);
     } catch (error) {
       console.error("[Blogger Profile] password update failed", error);
-      setPasswordMessage(error instanceof Error ? error.message : "Could not update password.");
+      setPasswordMessage(error instanceof Error ? error.message : tr("Could not update password."));
     } finally {
       setIsUpdatingPassword(false);
     }
@@ -2698,7 +2699,7 @@ function ProfileTab(props: {
     } catch (error) {
       console.error("[Blogger Profile] leave program failed", error);
       setLeaveState("error");
-      setLeaveMessage(error instanceof Error ? error.message : "Could not leave the blogger program.");
+      setLeaveMessage(error instanceof Error ? error.message : tr("Could not leave the blogger program."));
     }
   }
 
@@ -2840,7 +2841,7 @@ function ProfileTab(props: {
         {/* Password */}
         <GlassCard className="p-6">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            PASSWORD
+            {tr("PASSWORD")}
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             <Field
@@ -2867,7 +2868,7 @@ function ProfileTab(props: {
               <span
                 className={cn(
                   "rounded-full px-3 py-1 text-xs font-medium",
-                  passwordMessage === "Password updated."
+                  passwordMessage === tr("Password updated.")
                     ? "bg-green-100 text-green-700"
                     : "bg-rose-100 text-rose-700",
                 )}
@@ -2939,7 +2940,7 @@ function ProfileTab(props: {
             <span
               className={cn(
                 "rounded-full px-3 py-1 text-xs font-medium",
-                saveMessage === "Profile saved." ? "bg-green-100 text-green-700" : "bg-rose-100 text-rose-700",
+                saveMessage === tr("Profile saved.") ? "bg-green-100 text-green-700" : "bg-rose-100 text-rose-700",
               )}
             >
               {saveMessage}
