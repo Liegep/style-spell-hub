@@ -20,7 +20,12 @@ import {
 } from "lucide-react";
 import { LangSwitch } from "@/components/brand/LangSwitch";
 import { AppTextTranslator } from "@/components/app/AppTextTranslator";
-import { getCurrentProfile, signOut, updateCurrentProfile, type AuthProfile } from "@/integrations/supabase/auth";
+import {
+  getCurrentProfile,
+  signOut,
+  updateCurrentProfile,
+  type AuthProfile,
+} from "@/integrations/supabase/auth";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
@@ -33,7 +38,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import bloggerAvatar from "@/assets/blogger-avatar.jpg";
 import logoIcon from "@/assets/logo-icon.png";
-import { countPersonalUnread, listInboxMessages, listPersonalInboxMessages } from "@/integrations/supabase/messages";
+import {
+  countPersonalUnread,
+  listInboxMessages,
+  listPersonalInboxMessages,
+} from "@/integrations/supabase/messages";
 import { getVisibleStatusMessage } from "@/lib/status-note";
 
 export const Route = createFileRoute("/app")({
@@ -72,7 +81,13 @@ const BLOGGER_NAV_ITEMS: NavItem[] = [
   { to: "/app/blogger", label: "Overview", icon: LayoutDashboard, access: "all" },
   { to: "/app/blogger", label: "Products", icon: Package, access: "all", section: "products" },
   { to: "/app/blogger", label: "Posts", icon: FileText, access: "all", section: "posts" },
-  { to: "/app/blogger", label: "Bag of goodies", icon: Download, access: "all", section: "goodies" },
+  {
+    to: "/app/blogger",
+    label: "Bag of goodies",
+    icon: Download,
+    access: "all",
+    section: "goodies",
+  },
   { to: "/app/blogger", label: "Mailbox", icon: Mail, access: "all", section: "inbox" },
   { to: "/app/blogger", label: "Profile", icon: UserCircle2, access: "all", section: "profile" },
   { to: "/app/blogger", label: "Help!", icon: CircleHelp, access: "all", tour: "blogger" },
@@ -90,27 +105,32 @@ function AppLayout() {
   const isSigningOutRef = useRef(false);
   const searchLang = (loc.search as { uiLang?: string } | undefined)?.uiLang;
   const routeLang = (searchLang === "es" ? "es" : "en") as "en" | "es";
-  const appLanguage = (searchLang === "es" || searchLang === "en"
-    ? searchLang
-    : storedLang === "es" || storedLang === "en"
-      ? storedLang
-    : profile?.language_preference === "es"
-      ? "es"
-      : "en") as "en" | "es";
-  const redirectLang = (searchLang === "es" || searchLang === "en"
-    ? searchLang
-    : storedLang === "es" || storedLang === "en"
-      ? storedLang
-      : profile?.language_preference === "es"
-        ? "es"
-        : "en") as "en" | "es";
+  const appLanguage = (
+    searchLang === "es" || searchLang === "en"
+      ? searchLang
+      : storedLang === "es" || storedLang === "en"
+        ? storedLang
+        : profile?.language_preference === "es"
+          ? "es"
+          : "en"
+  ) as "en" | "es";
+  const redirectLang = (
+    searchLang === "es" || searchLang === "en"
+      ? searchLang
+      : storedLang === "es" || storedLang === "en"
+        ? storedLang
+        : profile?.language_preference === "es"
+          ? "es"
+          : "en"
+  ) as "en" | "es";
   const currentSection = (loc.search as { section?: string } | undefined)?.section;
   const currentTour = (loc.search as { tour?: string } | undefined)?.tour;
 
   const isActive = (to: string) => loc.pathname === to || loc.pathname.startsWith(`${to}/`);
   const isItemActive = (item: NavItem) => {
     if (item.to === "/app/blogger") {
-      if (!(loc.pathname === "/app/blogger" || loc.pathname.startsWith("/app/blogger/"))) return false;
+      if (!(loc.pathname === "/app/blogger" || loc.pathname.startsWith("/app/blogger/")))
+        return false;
       if (item.tour) return currentTour === item.tour;
       return (item.section ?? undefined) === (currentSection ?? undefined);
     }
@@ -142,25 +162,22 @@ function AppLayout() {
     } as never);
   }, [appLanguage, loc.pathname, navigate, profile?.language_preference, searchLang, storedLang]);
 
-  const visibleItems = useMemo(
-    () => {
-      const addBadges = (items: NavItem[]) =>
-        items.map((item) => {
-          if (item.to === "/app/applications") {
-            return { ...item, badge: pendingApplicationsCount };
-          }
-          if (item.section === "inbox") {
-            return { ...item, badge: mailUnreadCount };
-          }
-          return item;
-        });
-      if (!profile) return addBadges(NAV_ITEMS.filter((item) => item.access === "all"));
-      if (profile.role === "blogger") return addBadges(BLOGGER_NAV_ITEMS);
-      if (profile.role === "super_admin") return addBadges(NAV_ITEMS);
-      return addBadges(NAV_ITEMS.filter((item) => item.access !== "super"));
-    },
-    [mailUnreadCount, pendingApplicationsCount, profile],
-  );
+  const visibleItems = useMemo(() => {
+    const addBadges = (items: NavItem[]) =>
+      items.map((item) => {
+        if (item.to === "/app/applications") {
+          return { ...item, badge: pendingApplicationsCount };
+        }
+        if (item.section === "inbox") {
+          return { ...item, badge: mailUnreadCount };
+        }
+        return item;
+      });
+    if (!profile) return addBadges(NAV_ITEMS.filter((item) => item.access === "all"));
+    if (profile.role === "blogger") return addBadges(BLOGGER_NAV_ITEMS);
+    if (profile.role === "super_admin") return addBadges(NAV_ITEMS);
+    return addBadges(NAV_ITEMS.filter((item) => item.access !== "super"));
+  }, [mailUnreadCount, pendingApplicationsCount, profile]);
 
   useEffect(() => {
     let isMounted = true;
@@ -185,7 +202,10 @@ function AppLayout() {
 
         if (!currentProfile) {
           setAuthError("Authenticated user has no profile row.");
-        } else if (currentProfile.role !== "blogger" && currentProfile.account_status !== "active") {
+        } else if (
+          currentProfile.role !== "blogger" &&
+          currentProfile.account_status !== "active"
+        ) {
           await signOut();
           window.location.replace(`/${redirectLang}/login`);
         } else {
@@ -195,7 +215,11 @@ function AppLayout() {
           if (!searchLang && savedLang !== profileLang) {
             window.localStorage.setItem("love-potion-ui-lang", profileLang);
           }
-          if (!searchLang && (savedLang === "es" || savedLang === "en") && savedLang === profileLang) {
+          if (
+            !searchLang &&
+            (savedLang === "es" || savedLang === "en") &&
+            savedLang === profileLang
+          ) {
             await navigate({
               to: loc.pathname,
               search: (prev) => ({ ...(prev as object), uiLang: savedLang }),
@@ -229,8 +253,24 @@ function AppLayout() {
     });
 
     const onProfileUpdated = (event: Event) => {
-      const custom = event as CustomEvent<AuthProfile>;
-      if (custom.detail) setProfile(custom.detail);
+      const custom = event as CustomEvent<Partial<AuthProfile>>;
+      if (custom.detail) {
+        setProfile((current) =>
+          current
+            ? ({ ...current, ...custom.detail } as AuthProfile)
+            : (custom.detail as AuthProfile),
+        );
+      }
+
+      void getCurrentProfile(custom.detail?.id)
+        .then((freshProfile) => {
+          if (!isMounted || !freshProfile) return;
+          setProfile(freshProfile);
+        })
+        .catch((error) => {
+          if (!isMounted) return;
+          console.error("[Sidebar] failed to refresh profile after update", error);
+        });
     };
     window.addEventListener("profile-updated", onProfileUpdated as EventListener);
 
@@ -248,7 +288,6 @@ function AppLayout() {
     }
 
     let mounted = true;
-    let intervalId: number | undefined;
 
     async function loadPendingApplicationsCount() {
       try {
@@ -266,7 +305,7 @@ function AppLayout() {
     }
 
     void loadPendingApplicationsCount();
-    intervalId = window.setInterval(() => void loadPendingApplicationsCount(), 60_000);
+    const intervalId = window.setInterval(() => void loadPendingApplicationsCount(), 60_000);
     window.addEventListener("focus", loadPendingApplicationsCount);
 
     return () => {
@@ -283,7 +322,6 @@ function AppLayout() {
     }
 
     let mounted = true;
-    let intervalId: number | undefined;
 
     async function loadMailCount() {
       try {
@@ -301,7 +339,7 @@ function AppLayout() {
     const onMessagesUpdated = () => void loadMailCount();
 
     void loadMailCount();
-    intervalId = window.setInterval(() => void loadMailCount(), 60_000);
+    const intervalId = window.setInterval(() => void loadMailCount(), 60_000);
     window.addEventListener("focus", loadMailCount);
     window.addEventListener("messages-updated", onMessagesUpdated);
 
@@ -337,7 +375,9 @@ function AppLayout() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <div className="font-display text-4xl">love potion<span className="text-[var(--brand-magenta)]">.</span></div>
+          <div className="font-display text-4xl">
+            love potion<span className="text-[var(--brand-magenta)]">.</span>
+          </div>
           <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.35em] text-foreground/50">
             checking your access
           </p>
@@ -371,7 +411,11 @@ function AppLayout() {
       <AppTextTranslator language={appLanguage} />
       <div className="flex">
         <aside className="relative sticky top-0 hidden h-screen w-72 shrink-0 overflow-y-auto border-r border-foreground/10 p-6 md:flex md:flex-col">
-          <Link to="/$lang" params={{ lang: profile?.language_preference === "es" ? "es" : redirectLang }} className="block">
+          <Link
+            to="/$lang"
+            params={{ lang: profile?.language_preference === "es" ? "es" : redirectLang }}
+            className="block"
+          >
             <div className="flex items-end gap-2">
               <img src={logoIcon} alt="Love Potion icon" className="h-7 w-7 object-contain" />
               <div className="font-display text-2xl leading-none">
@@ -418,7 +462,9 @@ function AppLayout() {
                   key={`${it.to}-${it.section ?? it.tour ?? "home"}`}
                   to={it.to}
                   search={linkSearch}
-                  data-blogger-tour={it.to === "/app/blogger" ? (it.section ?? it.tour ?? "home") : undefined}
+                  data-blogger-tour={
+                    it.to === "/app/blogger" ? (it.section ?? it.tour ?? "home") : undefined
+                  }
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition",
                     active
@@ -491,7 +537,8 @@ function ProfileQuickCard({
     busy: "bg-[var(--brand-magenta)]",
     offline: "bg-slate-400",
   }[profile.availability_status ?? "available"];
-  const identityTag = profile.role === "super_admin" ? "Love Potion Owner" : profile.role.replace("_", " ");
+  const identityTag =
+    profile.role === "super_admin" ? "Love Potion Owner" : profile.role.replace("_", " ");
 
   return (
     <div className="rounded-2xl border border-foreground/10 bg-background/80 p-3">
@@ -504,7 +551,12 @@ function ProfileQuickCard({
                 alt={displayName}
                 className="h-14 w-14 rounded-full object-cover ring-2 ring-white/90 shadow-sm"
               />
-              <span className={cn("absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-background", statusColor)} />
+              <span
+                className={cn(
+                  "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-background",
+                  statusColor,
+                )}
+              />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
@@ -520,7 +572,8 @@ function ProfileQuickCard({
               <Circle className="mr-2 h-3.5 w-3.5 fill-amber-400 text-amber-400" /> Vacation
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => void onStatusChange("busy")}>
-              <Circle className="mr-2 h-3.5 w-3.5 fill-[var(--brand-magenta)] text-[var(--brand-magenta)]" /> Busy
+              <Circle className="mr-2 h-3.5 w-3.5 fill-[var(--brand-magenta)] text-[var(--brand-magenta)]" />{" "}
+              Busy
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => void onStatusChange("offline")}>
               <Circle className="mr-2 h-3.5 w-3.5 fill-slate-400 text-slate-400" /> Offline
@@ -539,7 +592,9 @@ function ProfileQuickCard({
 
         {note ? (
           <div className="relative min-h-[56px] min-w-0 flex-1 rounded-2xl bg-white px-3 py-2 text-left shadow-md">
-            <p className="line-clamp-2 font-hand text-base leading-tight text-[var(--brand-magenta)]">{note}</p>
+            <p className="line-clamp-2 font-hand text-base leading-tight text-[var(--brand-magenta)]">
+              {note}
+            </p>
             <span className="absolute -left-1.5 top-7 h-3 w-3 rotate-45 bg-white" />
           </div>
         ) : null}
