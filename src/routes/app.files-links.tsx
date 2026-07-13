@@ -18,6 +18,8 @@ import {
   listSharedResources,
   updateSharedResource,
 } from "@/integrations/supabase/resources";
+import { translateAppPhrase } from "@/i18n/app-text";
+import { useLang } from "@/i18n/dict";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/files-links")({
@@ -42,6 +44,8 @@ export const Route = createFileRoute("/app/files-links")({
 });
 
 function FilesLinksPage() {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const initialData = Route.useLoaderData();
   const [resources, setResources] = useState<SharedResource[]>(initialData.resources);
   const [state, setState] = useState<"loading" | "ready" | "error">(initialData.error ? "error" : "ready");
@@ -73,7 +77,7 @@ function FilesLinksPage() {
       setState("ready");
     } catch (error) {
       setState("error");
-      setMessage(error instanceof Error ? error.message : "Could not load files and links.");
+      setMessage(error instanceof Error ? error.message : tr("Could not load files and links."));
     }
   }
 
@@ -98,16 +102,16 @@ function FilesLinksPage() {
       setLinkUrl("");
       setLinkDesc("");
       setLinkModalOpen(false);
-      setMessage("Link added.");
+      setMessage(tr("Link added."));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not add link.");
+      setMessage(error instanceof Error ? error.message : tr("Could not add link."));
     }
   }
 
   async function onAddImage(event: React.FormEvent) {
     event.preventDefault();
     if (!imgFile) {
-      setMessage("Select an image first.");
+      setMessage(tr("Select an image first."));
       return;
     }
     setMessage("");
@@ -123,9 +127,9 @@ function FilesLinksPage() {
       setImgDesc("");
       setImgFile(null);
       setImageModalOpen(false);
-      setMessage("Image uploaded.");
+      setMessage(tr("Image uploaded."));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not upload image.");
+      setMessage(error instanceof Error ? error.message : tr("Could not upload image."));
     }
   }
 
@@ -134,9 +138,9 @@ function FilesLinksPage() {
     try {
       await deleteSharedResource(id);
       setResources((current) => current.filter((item) => item.id !== id));
-      setMessage("Item deleted.");
+      setMessage(tr("Item deleted."));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not delete item.");
+      setMessage(error instanceof Error ? error.message : tr("Could not delete item."));
     }
   }
 
@@ -162,9 +166,9 @@ function FilesLinksPage() {
       });
       setResources((current) => current.map((resource) => (resource.id === updated.id ? updated : resource)));
       setEditingId(null);
-      setMessage("Item updated.");
+      setMessage(tr("Item updated."));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not update item.");
+      setMessage(error instanceof Error ? error.message : tr("Could not update item."));
     }
   }
 
@@ -221,10 +225,10 @@ function FilesLinksPage() {
         ),
       );
       setOrderState("idle");
-      setMessage("Order saved.");
+      setMessage(tr("Order saved."));
     } catch (error) {
       setOrderState("error");
-      setMessage(error instanceof Error ? error.message : "Could not save the new order.");
+      setMessage(error instanceof Error ? error.message : tr("Could not save the new order."));
       void load();
     }
   }
@@ -234,11 +238,11 @@ function FilesLinksPage() {
       <header className="flex items-end justify-between">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-            {isSuper ? "SUPER ADMIN · FILES" : "ADMIN · FILES"}
+            {isSuper ? tr("SUPER ADMIN · FILES") : tr("ADMIN · FILES")}
           </div>
-          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">Files & links.</h1>
+          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">{tr("Files & links.")}</h1>
         </div>
-        <HandwrittenNote>share the kit</HandwrittenNote>
+        <HandwrittenNote>{tr("share the kit")}</HandwrittenNote>
       </header>
 
       {message ? (
@@ -249,12 +253,12 @@ function FilesLinksPage() {
 
       {state === "error" ? (
         <GlassCard className="mt-8 p-6">
-          <p className="text-sm text-foreground/75">{message || "Could not load resources."}</p>
+          <p className="text-sm text-foreground/75">{message || tr("Could not load resources.")}</p>
           <button
             onClick={() => void load()}
             className="mt-4 rounded-full bg-foreground px-5 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-background"
           >
-            Retry
+            {tr("Retry")}
           </button>
         </GlassCard>
       ) : null}
@@ -268,7 +272,7 @@ function FilesLinksPage() {
               className="inline-flex items-center gap-2 rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-white transition hover:bg-foreground"
             >
               <Link2 className="h-4 w-4" />
-              Add link
+              {tr("Add link")}
             </button>
             <button
               type="button"
@@ -276,11 +280,11 @@ function FilesLinksPage() {
               className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-background transition hover:bg-[var(--brand-magenta)]"
             >
               <ImagePlus className="h-4 w-4" />
-              Upload image
+              {tr("Upload image")}
             </button>
           </div>
           <span className="text-sm text-foreground/55">
-            {orderState === "saving" ? "Saving order..." : "Drag the handle to rearrange what bloggers see first."}
+            {orderState === "saving" ? tr("Saving order...") : tr("Drag the handle to rearrange what bloggers see first.")}
           </span>
         </div>
       ) : null}
@@ -289,14 +293,14 @@ function FilesLinksPage() {
         <DialogContent className="max-w-2xl rounded-3xl border-[var(--brand-pink)] bg-background p-8">
           <DialogHeader>
             <DialogTitle className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-              Add link
+              {tr("Add link")}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={onAddLink} className="grid gap-3">
             <input
               value={linkTitle}
               onChange={(event) => setLinkTitle(event.target.value)}
-              placeholder="Mainstore, Event board..."
+              placeholder={tr("Mainstore, Event board...")}
               required
               className={inputClass}
             />
@@ -310,11 +314,11 @@ function FilesLinksPage() {
             <input
               value={linkDesc}
               onChange={(event) => setLinkDesc(event.target.value)}
-              placeholder="Small note (optional)"
+              placeholder={tr("Small note (optional)")}
               className={inputClass}
             />
             <button className="mt-2 rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-white hover:bg-foreground">
-              + Add link
+              {tr("+ Add link")}
             </button>
           </form>
         </DialogContent>
@@ -324,14 +328,14 @@ function FilesLinksPage() {
         <DialogContent className="max-w-2xl rounded-3xl border-[var(--brand-pink)] bg-background p-8">
           <DialogHeader>
             <DialogTitle className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-              Upload image
+              {tr("Upload image")}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={onAddImage} className="grid gap-3">
             <input
               value={imgTitle}
               onChange={(event) => setImgTitle(event.target.value)}
-              placeholder="Logo texture, brand pack..."
+              placeholder={tr("Logo texture, brand pack...")}
               required
               className={inputClass}
             />
@@ -345,13 +349,13 @@ function FilesLinksPage() {
             <input
               value={imgDesc}
               onChange={(event) => setImgDesc(event.target.value)}
-              placeholder="Small note (optional)"
+              placeholder={tr("Small note (optional)")}
               className={inputClass}
             />
             <button className="mt-2 rounded-full bg-foreground px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-background hover:bg-[var(--brand-magenta)]">
               <span className="inline-flex items-center justify-center gap-2">
                 <ImagePlus className="h-4 w-4" />
-                Upload image
+                {tr("Upload image")}
               </span>
             </button>
           </form>
@@ -361,7 +365,7 @@ function FilesLinksPage() {
       <div className="mt-8 grid gap-6 xl:grid-cols-2">
         <GlassCard className="p-6">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            <span>Shared links</span> ({links.length})
+            <span>{tr("Shared links")}</span> ({links.length})
           </div>
           <div className="mt-4 space-y-3">
             {links.map((item) => (
@@ -430,7 +434,7 @@ function FilesLinksPage() {
                             className="inline-flex items-center gap-2 rounded-full border border-foreground/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] hover:bg-foreground hover:text-background"
                           >
                             <Link2 className="h-3.5 w-3.5" />
-                            Open
+                            {tr("Open")}
                           </a>
                           <button
                             type="button"
@@ -438,7 +442,7 @@ function FilesLinksPage() {
                             className="inline-flex items-center gap-2 rounded-full border border-foreground/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] hover:bg-foreground hover:text-background"
                           >
                             {copiedId === item.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                            {copiedId === item.id ? "Copied" : "Copy"}
+                            {copiedId === item.id ? tr("Copied") : tr("Copy")}
                           </button>
                         </div>
                       </>
@@ -488,7 +492,7 @@ function FilesLinksPage() {
             ))}
             {links.length === 0 ? (
               <div className="rounded-xl border border-dashed border-foreground/15 p-6 text-center font-hand text-2xl text-[var(--brand-magenta)]">
-                no links yet
+                {tr("no links yet")}
               </div>
             ) : null}
           </div>
@@ -496,7 +500,7 @@ function FilesLinksPage() {
 
         <GlassCard className="p-6">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            <span>Shared images</span> ({images.length})
+            <span>{tr("Shared images")}</span> ({images.length})
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {images.map((item) => (
@@ -562,7 +566,7 @@ function FilesLinksPage() {
                     className="inline-flex items-center gap-2 rounded-full border border-foreground/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] hover:bg-foreground hover:text-background"
                   >
                     <Download className="h-3.5 w-3.5" />
-                    Download
+                    {tr("Download")}
                   </a>
                   <a
                     href={item.url}
@@ -570,7 +574,7 @@ function FilesLinksPage() {
                     rel="noreferrer"
                     className="inline-flex items-center gap-2 rounded-full border border-foreground/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] hover:bg-foreground hover:text-background"
                   >
-                    Open
+                    {tr("Open")}
                   </a>
                   {isSuper ? (
                     editingId === item.id ? (
@@ -581,7 +585,7 @@ function FilesLinksPage() {
                           className="inline-flex items-center gap-2 rounded-full border border-foreground/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-100 hover:text-emerald-700"
                         >
                           <Save className="h-3.5 w-3.5" />
-                          Save
+                          {tr("Save")}
                         </button>
                         <button
                           type="button"
@@ -589,7 +593,7 @@ function FilesLinksPage() {
                           className="inline-flex items-center gap-2 rounded-full border border-foreground/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] hover:bg-foreground/10"
                         >
                           <X className="h-3.5 w-3.5" />
-                          Cancel
+                          {tr("Cancel")}
                         </button>
                       </>
                     ) : (
@@ -600,7 +604,7 @@ function FilesLinksPage() {
                           className="inline-flex items-center gap-2 rounded-full border border-foreground/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] hover:bg-foreground hover:text-background"
                         >
                           <Pencil className="h-3.5 w-3.5" />
-                          Edit
+                          {tr("Edit")}
                         </button>
                         <button
                           type="button"
@@ -608,7 +612,7 @@ function FilesLinksPage() {
                           className="inline-flex items-center gap-2 rounded-full border border-rose-200 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-rose-600 hover:bg-rose-100"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                          Delete
+                          {tr("Delete")}
                         </button>
                       </>
                     )
@@ -618,7 +622,7 @@ function FilesLinksPage() {
             ))}
             {images.length === 0 ? (
               <div className="rounded-xl border border-dashed border-foreground/15 p-6 text-center font-hand text-2xl text-[var(--brand-magenta)] sm:col-span-2">
-                no images yet
+                {tr("no images yet")}
               </div>
             ) : null}
           </div>

@@ -13,6 +13,8 @@ import { getBloggerRejoinHistory, type BloggerRejoinHistory } from "@/integratio
 import { createBloggerAccount } from "@/integrations/supabase/bloggers-admin";
 import { notifySecondLifeQuietly, sendInternalMessage } from "@/integrations/supabase/messages";
 import type { ApplicationFormField, BloggerApplication } from "@/integrations/supabase/database.types";
+import { translateAppPhrase } from "@/i18n/app-text";
+import { useLang } from "@/i18n/dict";
 
 type LoginSummary = {
   displayName: string;
@@ -34,6 +36,8 @@ export function ApplicationsPanel({
   initialFormFields = [],
   initialError = "",
 }: ApplicationsPanelProps) {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const [applications, setApplications] = useState<BloggerApplication[]>(initialApplications);
   const [formFields, setFormFields] = useState<ApplicationFormField[]>(initialFormFields);
   const [filter, setFilter] = useState<ApplicationStatus | "all">("pending");
@@ -48,7 +52,7 @@ export function ApplicationsPanel({
   const [rejoinHistory, setRejoinHistory] = useState<BloggerRejoinHistory | null>(null);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [state, setState] = useState<"idle" | "loading" | "reviewing" | "error">(initialError ? "error" : "idle");
-  const [error, setError] = useState(initialError);
+  const [error, setError] = useState(initialError ? tr(initialError) : "");
   const didUseInitialApplications = useRef(false);
 
   useEffect(() => {
@@ -73,7 +77,7 @@ export function ApplicationsPanel({
         setState("idle");
       } catch (loadError) {
         if (!mounted) return;
-        setError(loadError instanceof Error ? loadError.message : "Could not load applications.");
+        setError(loadError instanceof Error ? loadError.message : tr("Could not load applications."));
         setState("error");
       }
     }
@@ -151,19 +155,19 @@ export function ApplicationsPanel({
 
     if (selected.status !== "approved") {
       setOnboardingState("error");
-      setOnboardingMessage("Approve this application before creating the blogger account.");
+      setOnboardingMessage(tr("Approve this application before creating the blogger account."));
       return;
     }
 
     if (!onboardingPassword.trim()) {
       setOnboardingState("error");
-      setOnboardingMessage("Add a temporary password first.");
+      setOnboardingMessage(tr("Add a temporary password first."));
       return;
     }
 
     if (onboardingUuid.trim() && !isUuid(onboardingUuid.trim())) {
       setOnboardingState("error");
-      setOnboardingMessage("SL UUID format looks invalid. Use full UUID (8-4-4-4-12).");
+      setOnboardingMessage(tr("SL UUID format looks invalid. Use full UUID (8-4-4-4-12)."));
       return;
     }
 
@@ -239,14 +243,14 @@ export function ApplicationsPanel({
       setOnboardingMessage(
         welcomeNoteCreated
           ? slWelcomeAttempted
-            ? "Blogger account created. Welcome note created, and the Second Life ping was attempted."
-            : "Blogger account created. Welcome note created. Add an SL UUID if you want Second Life pings."
-          : "Blogger account created. Welcome note could not be created, but the login summary is ready to copy.",
+            ? tr("Blogger account created. Welcome note created, and the Second Life ping was attempted.")
+            : tr("Blogger account created. Welcome note created. Add an SL UUID if you want Second Life pings.")
+          : tr("Blogger account created. Welcome note could not be created, but the login summary is ready to copy."),
       );
       setOnboardingPassword("");
     } catch (createError) {
       setOnboardingState("error");
-      setOnboardingMessage(createError instanceof Error ? createError.message : "Could not create blogger account.");
+      setOnboardingMessage(createError instanceof Error ? createError.message : tr("Could not create blogger account."));
     }
   }
 
@@ -268,9 +272,9 @@ export function ApplicationsPanel({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-              Application queue
+              {tr("Application queue")}
             </div>
-            <h3 className="mt-1 font-display text-3xl">Blogger hopefuls.</h3>
+            <h3 className="mt-1 font-display text-3xl">{tr("Blogger hopefuls.")}</h3>
           </div>
           <div className="flex flex-wrap gap-2">
             {(["pending", "approved", "rejected", "all"] as const).map((status) => (
@@ -283,9 +287,9 @@ export function ApplicationsPanel({
                   filter === status ? "bg-foreground text-background" : "bg-foreground/5 text-foreground/60",
                 )}
               >
-                {status.replace("_", " ")}
-              </button>
-            ))}
+                  {tr(status === "all" ? "All" : status.replace("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()))}
+                </button>
+              ))}
           </div>
         </div>
 
@@ -298,14 +302,14 @@ export function ApplicationsPanel({
         <div className="mt-6 grid gap-4">
           {state === "loading" ? (
             <div className="rounded-2xl border border-dashed border-foreground/20 p-10 text-center font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-              Loading applications...
+              {tr("Loading applications...")}
             </div>
           ) : null}
           {state !== "loading" && applications.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-foreground/20 p-10 text-center">
-              <HandwrittenNote>No applications here.</HandwrittenNote>
+              <HandwrittenNote>{tr("No applications here.")}</HandwrittenNote>
               <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/45">
-                Try another status filter.
+                {tr("Try another status filter.")}
               </div>
             </div>
           ) : null}
@@ -337,7 +341,7 @@ export function ApplicationsPanel({
                         : "bg-[var(--brand-rose)]/40 text-[var(--brand-magenta)]",
                   )}
                 >
-                  {application.status}
+                  {tr(application.status.replace(/\b\w/g, (letter) => letter.toUpperCase()))}
                 </span>
               </div>
             </button>
@@ -349,30 +353,30 @@ export function ApplicationsPanel({
         {selected ? (
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-              Review dossier
+              {tr("Review dossier")}
             </div>
             <h3 className="mt-2 font-display text-4xl leading-none">{formatApplicantName(selected, formFields)}</h3>
             <div className="mt-4 space-y-2 text-sm text-foreground/70">
-              <ApplicationLine label="Email" value={getApplicantEmail(selected, formFields)} />
-              <ApplicationLine label="Applicant name" value={getApplicantName(selected, formFields)} />
-              <ApplicationLine label="SL avatar" value={selected.sl_avatar_name} />
-              <ApplicationLine label="Flickr" value={selected.flickr_url} link />
-              <ApplicationLine label="Instagram" value={selected.instagram_url} />
-              <ApplicationLine label="Blog" value={selected.blog_url} link />
+              <ApplicationLine label={tr("Email")} value={getApplicantEmail(selected, formFields)} />
+              <ApplicationLine label={tr("Applicant name")} value={getApplicantName(selected, formFields)} />
+              <ApplicationLine label={tr("SL avatar")} value={selected.sl_avatar_name} />
+              <ApplicationLine label={tr("Flickr")} value={selected.flickr_url} link />
+              <ApplicationLine label={tr("Instagram")} value={selected.instagram_url} />
+              <ApplicationLine label={tr("Blog")} value={selected.blog_url} link />
             </div>
 
             <ApplicationAnswerList answers={selected.answers} formFields={formFields} />
 
             <label className="mt-6 block">
               <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-                Internal review note
+                {tr("Internal review note")}
               </span>
               <textarea
                 value={comment}
                 onChange={(event) => setComment(event.target.value)}
                 rows={4}
                 className="mt-2 w-full rounded-2xl border border-foreground/20 bg-background/70 px-4 py-3 text-sm outline-none focus:border-[var(--brand-magenta)]"
-                placeholder="Optional note about this application..."
+                placeholder={tr("Optional note about this application...")}
               />
             </label>
 
@@ -383,7 +387,7 @@ export function ApplicationsPanel({
                 onClick={() => void handleReview("approved")}
                 className="rounded-full bg-green-600 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-white disabled:opacity-50"
               >
-                Approve
+                {tr("Approve")}
               </button>
               <button
                 type="button"
@@ -391,41 +395,41 @@ export function ApplicationsPanel({
                 onClick={() => void handleReview("rejected")}
                 className="rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-white disabled:opacity-50"
               >
-                Reject
+                {tr("Reject")}
               </button>
             </div>
             {selected.status !== "pending" ? (
               <div className="mt-4 rounded-2xl bg-white/60 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-foreground/60">
-                Reviewed as {selected.status}
+                {tr("Reviewed as")} {tr(selected.status.replace(/\b\w/g, (letter) => letter.toUpperCase()))}
               </div>
             ) : null}
 
             <div className="mt-6 rounded-2xl border border-white/70 bg-white/55 p-5">
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-                Approved onboarding
+                {tr("Approved onboarding")}
               </div>
               <p className="mt-2 text-sm text-foreground/65">
-                After approval, create the real blogger login from this application.
+                {tr("After approval, create the real blogger login from this application.")}
               </p>
               <div className="mt-4 grid gap-3">
                 <label className="block">
                   <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-                    Login email · optional
+                    {tr("Login email · optional")}
                   </span>
                   <input
                     type="email"
                     value={onboardingEmail}
                     onChange={(event) => setOnboardingEmail(event.target.value)}
                     className="mt-2 w-full rounded-full border border-foreground/15 bg-background/70 px-4 py-3 text-sm outline-none focus:border-[var(--brand-magenta)]"
-                placeholder="blogger@email.com"
+                    placeholder={tr("blogger@email.com")}
                   />
                   <p className="mt-2 text-xs text-foreground/55">
-                    Optional. If empty, Love Potion creates a private technical email and she logs in with her avatar name.
+                    {tr("Optional. If empty, Love Potion creates a private technical email and she logs in with her avatar name.")}
                   </p>
                 </label>
                 <label className="block">
                   <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-                    SL avatar UUID
+                    {tr("SL avatar UUID")}
                   </span>
                   <input
                     value={onboardingUuid}
@@ -435,13 +439,15 @@ export function ApplicationsPanel({
                   />
                   {rejoinHistory ? (
                     <div className="mt-3 rounded-2xl border border-[var(--brand-magenta)]/30 bg-[var(--brand-pink)]/60 px-4 py-3 text-sm text-[var(--brand-magenta)]">
-                      This UUID has left the blogger program {rejoinHistory.totalSignals} time{rejoinHistory.totalSignals === 1 ? "" : "s"} before. Review before creating a new account.
+                      {rejoinHistory.totalSignals === 1
+                        ? `1 ${tr("This UUID has left the blogger program once before. Review before creating a new account.")}`
+                        : `${rejoinHistory.totalSignals} ${tr("This UUID has left the blogger program multiple times before. Review before creating a new account.")}`}
                     </div>
                   ) : null}
                 </label>
                 <label className="block">
                   <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-                    Temporary password
+                    {tr("Temporary password")}
                   </span>
                   <input
                     type="password"
@@ -449,7 +455,7 @@ export function ApplicationsPanel({
                     value={onboardingPassword}
                     onChange={(event) => setOnboardingPassword(event.target.value)}
                     className="mt-2 w-full rounded-full border border-foreground/15 bg-background/70 px-4 py-3 text-sm outline-none focus:border-[var(--brand-magenta)]"
-                    placeholder="Give her a first password"
+                    placeholder={tr("Give her a first password")}
                   />
                 </label>
               </div>
@@ -470,25 +476,25 @@ export function ApplicationsPanel({
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
                       <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-                        Welcome notecard
+                        {tr("Welcome notecard")}
                       </div>
                       <div className="mt-3 space-y-1 text-sm text-foreground/75">
                         <div>
-                          <span className="font-semibold text-foreground">Login:</span> {loginSummary.loginName}
+                          <span className="font-semibold text-foreground">{tr("Login")}:</span> {loginSummary.loginName}
                         </div>
                         <div>
                           <span className="font-semibold text-foreground">
-                            {loginSummary.usesInternalEmail ? "Internal email:" : "Email:"}
+                            {loginSummary.usesInternalEmail ? `${tr("Internal email")}:` : `${tr("Email")}:`}
                           </span>{" "}
                           {loginSummary.email}
                         </div>
                         <div>
-                          <span className="font-semibold text-foreground">Temporary password:</span>{" "}
+                          <span className="font-semibold text-foreground">{tr("Temporary password")}:</span>{" "}
                           {loginSummary.temporaryPassword}
                         </div>
                         {loginSummary.slAvatarUuid ? (
                           <div className="break-all">
-                            <span className="font-semibold text-foreground">SL UUID:</span> {loginSummary.slAvatarUuid}
+                            <span className="font-semibold text-foreground">{tr("SL UUID")}:</span> {loginSummary.slAvatarUuid}
                           </div>
                         ) : null}
                       </div>
@@ -498,7 +504,7 @@ export function ApplicationsPanel({
                       onClick={() => void copyLoginSummary()}
                       className="rounded-full border border-[var(--brand-magenta)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--brand-magenta)] hover:bg-[var(--brand-magenta)] hover:text-white"
                     >
-                      {copyState === "copied" ? "Copied" : copyState === "error" ? "Copy failed" : "Copy"}
+                      {copyState === "copied" ? tr("Copied") : copyState === "error" ? tr("Copy failed") : tr("Copy")}
                     </button>
                   </div>
                 </div>
@@ -509,16 +515,16 @@ export function ApplicationsPanel({
                 onClick={() => void handleCreateBloggerFromApplication()}
                 className="mt-4 rounded-full bg-foreground px-5 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-background hover:bg-[var(--brand-magenta)] disabled:cursor-not-allowed disabled:opacity-45"
               >
-                {onboardingState === "saving" ? "Creating..." : "Create blogger login"}
+                {onboardingState === "saving" ? tr("Creating...") : tr("Create blogger login")}
               </button>
             </div>
           </div>
         ) : (
           <div className="flex min-h-[360px] items-center justify-center text-center">
             <div>
-              <HandwrittenNote>pick an application</HandwrittenNote>
+              <HandwrittenNote>{tr("pick an application")}</HandwrittenNote>
               <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
-                The review will open here.
+                {tr("The review will open here.")}
               </div>
             </div>
           </div>
@@ -551,12 +557,14 @@ function ApplicationAnswerList({
   answers: BloggerApplication["answers"];
   formFields: ApplicationFormField[];
 }) {
+  const language = useLang();
+  const tr = (value: string) => translateAppPhrase(value, language);
   const entries = Object.entries(answers ?? {}).filter(([, value]) => formatAnswerValue(value));
 
   if (entries.length === 0) {
     return (
       <div className="mt-6 rounded-2xl bg-background/60 p-4 text-sm text-foreground/55">
-        No extra answers were sent with this application.
+        {tr("No extra answers were sent with this application.")}
       </div>
     );
   }
