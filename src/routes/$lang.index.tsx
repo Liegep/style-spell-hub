@@ -214,7 +214,7 @@ function Landing() {
           <ScrollReveal
             variant="slide-left"
             delay={260}
-            className="absolute right-6 top-[28%] z-30 hidden flex-col items-end md:flex"
+            className="absolute right-[4.5%] top-[31%] z-30 hidden flex-col items-end md:flex xl:right-[4%]"
           >
             <span className="font-mono text-[9px] uppercase tracking-[0.4em] text-[var(--brand-magenta)]">
               {landingText.sloganLabel}
@@ -225,8 +225,8 @@ function Landing() {
           </ScrollReveal>
 
           {/* magenta X */}
-          <div className="absolute right-[10%] top-[18%] z-30 hidden md:block">
-            <span className="font-display text-[10vw] leading-none text-[var(--brand-magenta)]">x</span>
+          <div className="absolute right-[3.5%] top-[24%] z-30 hidden md:block xl:right-[3%]">
+            <span className="font-display text-[9.2vw] leading-none text-[var(--brand-magenta)]">x</span>
           </div>
 
           {/* bottom CTA */}
