@@ -15,10 +15,12 @@ import {
   type ReviewQueueItem,
 } from "@/integrations/supabase/dashboard";
 import {
+  countManagerUnread,
+  getManagerMessageReadAt,
   listPersonalInboxMessages,
-  markInternalMessageRead,
   listMessageRecipients,
   listRecentSentMessages,
+  markManagerMessagesRead,
   notifySecondLifeQuietly,
   sendInternalMessage,
   sendSecondLifeNotification,
@@ -111,7 +113,7 @@ export const Route = createFileRoute("/app/admin")({
             ? reviewQueueResult.reason.message
             : "Could not load review queue."
           : "",
-      mailUnreadCount: received.filter((message) => !message.read_at).length,
+      mailUnreadCount: countManagerUnread(received),
       newsletterError:
         subscribersResult.status === "rejected" || campaignsResult.status === "rejected"
           ? "Could not load newsletter."
@@ -261,7 +263,7 @@ function AdminDash() {
         if (!profile?.id) return;
         const messages = await listPersonalInboxMessages(profile.id);
         if (!mounted) return;
-        setMailUnreadCount(messages.filter((message) => !message.read_at).length);
+        setMailUnreadCount(countManagerUnread(messages));
       } catch (error) {
         console.error("[Admin] failed to load mail unread count", error);
       }
@@ -830,7 +832,7 @@ function Compose({
   const language = useLang();
   const tr = (value: string) => translateAppPhrase(value, language);
   const [scope, setScope] = useState<MessageScope>("personal");
-  const [recipients, setRecipients] = useState<MessageRecipient[]>(initialRecipients);
+  const [recipients] = useState<MessageRecipient[]>(initialRecipients);
   const [recipientId, setRecipientId] = useState(initialRecipients[0]?.id ?? "");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -838,7 +840,6 @@ function Compose({
   const [received, setReceived] = useState<InboxMessage[]>(initialReceived);
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState(initialError);
-  const [markingReadId, setMarkingReadId] = useState<string | null>(null);
   const [showAllReceived, setShowAllReceived] = useState(false);
   const [openThreadKey, setOpenThreadKey] = useState<string | null>(null);
   const [threadReplyBody, setThreadReplyBody] = useState<Record<string, string>>({});
@@ -848,7 +849,6 @@ function Compose({
   const [slState, setSlState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [slFeedback, setSlFeedback] = useState("");
 
-  const visibleReceived = showAllReceived ? received : received.slice(0, 5);
   const conversations = useMemo(() => {
     const threadMap = new Map<
       string,
@@ -863,6 +863,8 @@ function Compose({
           body: string | null;
           created_at: string;
           unread?: boolean;
+          readAt?: string | null;
+          readByName?: string | null;
         }>;
       }
     >();
@@ -883,7 +885,9 @@ function Compose({
         subject: message.subject,
         body: message.body,
         created_at: message.created_at,
-        unread: !message.read_at,
+        unread: !getManagerMessageReadAt(message),
+        readAt: getManagerMessageReadAt(message),
+        readByName: message.staff_read_by_name,
       });
       threadMap.set(key, thread);
     });
@@ -931,26 +935,86 @@ function Compose({
   );
   const visibleReceivedThreads = showAllReceived ? receivedThreads : receivedThreads.slice(0, 5);
 
-  async function onMarkRead(messageId: string) {
-    setMarkingReadId(messageId);
+  async function markThreadMessagesRead(messageIds: string[]) {
+    if (messageIds.length === 0) return;
     try {
-      await markInternalMessageRead(messageId);
+      await markManagerMessagesRead(messageIds);
+      const readAt = new Date().toISOString();
       setReceived((current) => {
         const next = current.map((message) =>
-          message.id === messageId
-            ? { ...message, read_at: message.read_at ?? new Date().toISOString() }
+          messageIds.includes(message.id)
+            ? {
+                ...message,
+                staff_read_at: message.staff_read_at ?? readAt,
+                staff_read_by_name: message.staff_read_by_name ?? tr("you"),
+              }
             : message,
         );
-        onUnreadChange(next.filter((message) => !message.read_at).length);
+        onUnreadChange(countManagerUnread(next));
         return next;
       });
     } catch (error) {
       console.error("[Compose] failed to mark message read", error);
       setError(error instanceof Error ? error.message : tr("Could not mark message as read."));
-    } finally {
-      setMarkingReadId(null);
     }
   }
+
+  async function onOpenThread(thread: (typeof conversations)[number]) {
+    const nextOpen = openThreadKey === thread.key ? null : thread.key;
+    setOpenThreadKey(nextOpen);
+    if (!nextOpen) return;
+
+    await markThreadMessagesRead(
+      thread.messages
+        .filter((message) => message.direction === "in" && message.unread)
+        .map((message) => message.id),
+    );
+  }
+
+  async function onOpenReplyModal(threadKey: string) {
+    setReplyModalThreadKey(threadKey);
+    const thread = conversations.find((item) => item.key === threadKey);
+    if (!thread) return;
+
+    await markThreadMessagesRead(
+      thread.messages
+        .filter((message) => message.direction === "in" && message.unread)
+        .map((message) => message.id),
+    );
+  }
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function refreshMailbox() {
+      try {
+        const profile = await getCurrentProfile();
+        if (!profile?.id) return;
+
+        const [nextReceived, nextRecent] = await Promise.all([
+          listPersonalInboxMessages(profile.id),
+          listRecentSentMessages(profile.id),
+        ]);
+
+        if (!mounted) return;
+        setReceived(nextReceived);
+        setRecent(nextRecent);
+        onUnreadChange(countManagerUnread(nextReceived));
+      } catch (error) {
+        console.error("[Compose] failed to refresh mailbox", error);
+      }
+    }
+
+    const handleMessagesUpdated = () => void refreshMailbox();
+    const handleFocus = () => void refreshMailbox();
+    window.addEventListener("messages-updated", handleMessagesUpdated);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      mounted = false;
+      window.removeEventListener("messages-updated", handleMessagesUpdated);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [onUnreadChange]);
 
   async function onSend() {
     setError("");
@@ -1229,9 +1293,7 @@ function Compose({
               >
                 <div className="flex items-start justify-between gap-3">
                   <button
-                    onClick={() =>
-                      setOpenThreadKey((current) => (current === thread.key ? null : thread.key))
-                    }
+                    onClick={() => void onOpenThread(thread)}
                     className="flex-1 text-left"
                   >
                     <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/50">
@@ -1250,7 +1312,7 @@ function Compose({
                   </button>
                   <div className="flex shrink-0 items-center gap-2">
                     <button
-                      onClick={() => setReplyModalThreadKey(thread.key)}
+                      onClick={() => void onOpenReplyModal(thread.key)}
                       className="rounded-full bg-[var(--brand-magenta)] px-3 py-2 font-mono text-[9px] uppercase tracking-[0.24em] text-white hover:bg-foreground"
                     >
                       {tr("reply")}
@@ -1287,14 +1349,12 @@ function Compose({
                             )}
                             {message.unread ? ` · ${tr("new")}` : ""}
                           </div>
-                          {message.direction === "in" && message.unread ? (
-                            <button
-                              onClick={() => void onMarkRead(message.id)}
-                              disabled={markingReadId === message.id}
-                              className="rounded-full bg-foreground px-3 py-1 font-mono text-[8px] uppercase tracking-[0.2em] text-background disabled:opacity-60"
-                            >
-                              {markingReadId === message.id ? tr("marking...") : tr("mark read")}
-                            </button>
+                          {message.direction === "in" && !message.unread && message.readAt ? (
+                            <span className="rounded-full bg-emerald-100 px-3 py-1 font-mono text-[8px] uppercase tracking-[0.2em] text-emerald-700">
+                              {message.readByName
+                                ? `${tr("read by")} ${message.readByName}`
+                                : tr("read")}
+                            </span>
                           ) : null}
                         </div>
                         <div className="mt-1 font-display text-sm">{message.subject}</div>
@@ -1318,7 +1378,7 @@ function Compose({
                           tr("Reply from here and keep the whole conversation together.")}
                       </span>
                       <button
-                        onClick={() => setReplyModalThreadKey(thread.key)}
+                        onClick={() => void onOpenReplyModal(thread.key)}
                         className="rounded-full bg-[var(--brand-magenta)] px-4 py-2 font-mono text-[9px] uppercase tracking-[0.24em] text-white hover:bg-foreground"
                       >
                         {tr("reply")}

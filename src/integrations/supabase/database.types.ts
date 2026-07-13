@@ -133,6 +133,9 @@ export type InternalMessage = {
   scope: MessageScope;
   sender_id: string | null;
   recipient_id: string | null;
+  staff_message_group_id: string | null;
+  staff_read_at: string | null;
+  staff_read_by: string | null;
   subject: string;
   body: string | null;
   image_url: string | null;

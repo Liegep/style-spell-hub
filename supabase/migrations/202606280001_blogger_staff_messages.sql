@@ -11,6 +11,7 @@ declare
   sender_profile public.profiles%rowtype;
   recipient record;
   recipient_ids uuid[] := '{}';
+  shared_group_id uuid := gen_random_uuid();
   clean_subject text := nullif(trim(message_subject), '');
   clean_body text := nullif(trim(message_body), '');
 begin
@@ -41,6 +42,7 @@ begin
       sender_id,
       scope,
       recipient_id,
+      staff_message_group_id,
       subject,
       body
     )
@@ -48,6 +50,7 @@ begin
       sender_profile.id,
       'personal',
       recipient.id,
+      shared_group_id,
       clean_subject,
       clean_body
     );

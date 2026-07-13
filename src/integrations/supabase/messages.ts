@@ -8,6 +8,7 @@ import type { InternalMessage, MessageScope, Profile } from "@/integrations/supa
 
 export type InboxMessage = InternalMessage & {
   sender_name: string | null;
+  staff_read_by_name: string | null;
 };
 
 export type SentMessage = InternalMessage & {
@@ -18,17 +19,31 @@ export type MessageRecipient = Pick<Profile, "id" | "display_name" | "full_name"
 
 function isMissingReadAtError(error: { message?: string; details?: string } | null) {
   const text = `${error?.message ?? ""} ${error?.details ?? ""}`;
-  return /read_at|schema cache|column/i.test(text);
+  return /read_at|staff_read|staff_message_group|schema cache|column/i.test(text);
 }
 
 export function countPersonalUnread(messages: Pick<InternalMessage, "scope" | "read_at">[]) {
   return messages.filter((message) => message.scope === "personal" && !message.read_at).length;
 }
 
+export function getManagerMessageReadAt(
+  message: Pick<InternalMessage, "read_at" | "staff_read_at">,
+) {
+  return message.staff_read_at ?? message.read_at;
+}
+
+export function countManagerUnread(
+  messages: Pick<InternalMessage, "scope" | "read_at" | "staff_read_at">[],
+) {
+  return messages.filter(
+    (message) => message.scope === "personal" && !getManagerMessageReadAt(message),
+  ).length;
+}
+
 export async function listInboxMessages(profileId: string) {
   const { data, error } = await supabase
     .from("internal_messages")
-    .select("id,scope,sender_id,recipient_id,subject,body,image_url,read_at,created_at")
+    .select("id,scope,sender_id,recipient_id,staff_message_group_id,staff_read_at,staff_read_by,subject,body,image_url,read_at,created_at")
     .or(`scope.eq.broadcast,recipient_id.eq.${profileId}`)
     .order("created_at", { ascending: false })
     .limit(50);
@@ -44,7 +59,16 @@ export async function listInboxMessages(profileId: string) {
       .limit(50);
 
     if (fallback.error) throw fallback.error;
-    return hydrateInboxMessages((fallback.data ?? []).map((row) => ({ ...row, read_at: row.created_at })) as InternalMessage[], "Love Potion HQ");
+    return hydrateInboxMessages(
+      (fallback.data ?? []).map((row) => ({
+        ...row,
+        read_at: row.created_at,
+        staff_message_group_id: null,
+        staff_read_at: null,
+        staff_read_by: null,
+      })) as InternalMessage[],
+      "Love Potion HQ",
+    );
   }
 
   const rows = (data ?? []) as InternalMessage[];
@@ -52,19 +76,21 @@ export async function listInboxMessages(profileId: string) {
 }
 
 async function hydrateInboxMessages(rows: InternalMessage[], fallbackName: string) {
-  const senderIds = [...new Set(rows.map((row) => row.sender_id).filter(Boolean))] as string[];
-  if (senderIds.length === 0) {
-    return rows.map((row) => ({ ...row, sender_name: null })) as InboxMessage[];
+  const profileIds = [
+    ...new Set(rows.flatMap((row) => [row.sender_id, row.staff_read_by].filter(Boolean))),
+  ] as string[];
+  if (profileIds.length === 0) {
+    return rows.map((row) => ({ ...row, sender_name: null, staff_read_by_name: null })) as InboxMessage[];
   }
 
   const { data: senders, error: senderError } = await supabase
     .from("profiles")
     .select("id,display_name,full_name,email")
-    .in("id", senderIds);
+    .in("id", profileIds);
 
   if (senderError) throw senderError;
 
-  const senderMap = new Map(
+  const profileMap = new Map(
     (senders ?? []).map((sender) => [
       sender.id,
       sender.display_name || sender.full_name || sender.email || fallbackName,
@@ -73,14 +99,15 @@ async function hydrateInboxMessages(rows: InternalMessage[], fallbackName: strin
 
   return rows.map((row) => ({
     ...row,
-    sender_name: row.sender_id ? senderMap.get(row.sender_id) ?? null : null,
+    sender_name: row.sender_id ? profileMap.get(row.sender_id) ?? null : null,
+    staff_read_by_name: row.staff_read_by ? profileMap.get(row.staff_read_by) ?? fallbackName : null,
   })) as InboxMessage[];
 }
 
 export async function listPersonalInboxMessages(profileId: string) {
   const { data, error } = await supabase
     .from("internal_messages")
-    .select("id,scope,sender_id,recipient_id,subject,body,image_url,read_at,created_at")
+    .select("id,scope,sender_id,recipient_id,staff_message_group_id,staff_read_at,staff_read_by,subject,body,image_url,read_at,created_at")
     .eq("scope", "personal")
     .eq("recipient_id", profileId)
     .order("created_at", { ascending: false })
@@ -98,7 +125,16 @@ export async function listPersonalInboxMessages(profileId: string) {
       .limit(30);
 
     if (fallback.error) throw fallback.error;
-    return hydrateInboxMessages((fallback.data ?? []).map((row) => ({ ...row, read_at: row.created_at })) as InternalMessage[], "Blogger");
+    return hydrateInboxMessages(
+      (fallback.data ?? []).map((row) => ({
+        ...row,
+        read_at: row.created_at,
+        staff_message_group_id: null,
+        staff_read_at: null,
+        staff_read_by: null,
+      })) as InternalMessage[],
+      "Blogger",
+    );
   }
 
   const rows = (data ?? []) as InternalMessage[];
@@ -117,6 +153,18 @@ export async function markInternalMessageRead(messageId: string) {
     .from("internal_messages")
     .update({ read_at: new Date().toISOString() })
     .eq("id", messageId);
+
+  if (isMissingReadAtError(error)) return;
+  if (error) throw error;
+  window.dispatchEvent(new Event("messages-updated"));
+}
+
+export async function markManagerMessagesRead(messageIds: string[]) {
+  if (messageIds.length === 0) return;
+
+  const { error } = await supabase.rpc("mark_staff_message_groups_read", {
+    target_message_ids: messageIds,
+  });
 
   if (isMissingReadAtError(error)) return;
   if (error) throw error;
@@ -182,6 +230,9 @@ export async function sendInternalMessage(input: {
   return {
     id: localId,
     ...message,
+    staff_message_group_id: null,
+    staff_read_at: null,
+    staff_read_by: null,
     image_url: null,
     read_at: null,
     created_at: new Date().toISOString(),
@@ -233,6 +284,9 @@ export async function sendInternalReply(input: {
     sender_id: input.senderId,
     scope: "personal",
     recipient_id: input.recipientId,
+    staff_message_group_id: null,
+    staff_read_at: null,
+    staff_read_by: null,
     subject: input.subject.trim(),
     body: input.body.trim(),
     image_url: null,
@@ -288,6 +342,9 @@ export async function sendMessageToStaff(input: {
     sender_id: input.senderId,
     scope: "personal",
     recipient_id: recipientIds[0] ?? null,
+    staff_message_group_id: null,
+    staff_read_at: null,
+    staff_read_by: null,
     subject: trimmedSubject,
     body: trimmedBody,
     image_url: null,
