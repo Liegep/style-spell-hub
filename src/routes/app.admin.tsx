@@ -1,4 +1,4 @@
-import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
@@ -366,6 +366,7 @@ function AdminDash() {
       <div className="mt-10">
         {tab === "overview" && (
           <Overview
+            uiLang={uiLang}
             reviewQueue={reviewQueue}
             reviewFilter={reviewFilter}
             setReviewFilter={setReviewFilter}
@@ -410,6 +411,7 @@ function AdminDash() {
 }
 
 function Overview({
+  uiLang,
   reviewQueue,
   reviewFilter,
   setReviewFilter,
@@ -420,6 +422,7 @@ function Overview({
   reviewError,
   onReview,
 }: {
+  uiLang?: string;
   reviewQueue: ReviewQueueItem[];
   reviewFilter: SubmissionStatus | "all";
   setReviewFilter: (value: SubmissionStatus | "all") => void;
@@ -452,6 +455,27 @@ function Overview({
           </GlassCard>
         ))}
       </div>
+
+      <GlassCard className="mt-6 flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
+            {tr("TEAM · AUDIT")}
+          </div>
+          <div className="mt-2 font-display text-3xl leading-none">{tr("Open the audit log.")}</div>
+          <p className="mt-2 max-w-2xl text-sm text-foreground/60">
+            {tr(
+              "Check the registration trail, queue health, and the latest staff actions in one place.",
+            )}
+          </p>
+        </div>
+        <Link
+          to="/app/audit-log"
+          search={uiLang === "es" || uiLang === "en" ? { uiLang } : {}}
+          className="inline-flex items-center justify-center rounded-full bg-foreground px-5 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-background hover:bg-[var(--brand-magenta)]"
+        >
+          {tr("Audit Log")}
+        </Link>
+      </GlassCard>
 
       <div className="mt-10">
         <GlassCard className="md:col-span-3">
