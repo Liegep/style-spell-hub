@@ -3,18 +3,17 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent 
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { products, stats } from "@/mocks/data";
 import { translateAppPhrase } from "@/i18n/app-text";
 import { useLang } from "@/i18n/dict";
 import { cn } from "@/lib/utils";
 import { getCurrentProfile } from "@/integrations/supabase/auth";
-import { getReviewQueue, reviewSubmission, type ReviewQueueItem } from "@/integrations/supabase/dashboard";
+import {
+  getReviewQueue,
+  reviewSubmission,
+  type ReviewQueueItem,
+} from "@/integrations/supabase/dashboard";
 import {
   listPersonalInboxMessages,
   markInternalMessageRead,
@@ -43,8 +42,13 @@ import type {
 } from "@/integrations/supabase/database.types";
 
 type Tab =
-  | "overview" | "products" | "inbox" | "newsletter"
-  | "locations" | "preferences" | "subscribers";
+  | "overview"
+  | "products"
+  | "inbox"
+  | "newsletter"
+  | "locations"
+  | "preferences"
+  | "subscribers";
 
 const ADMIN_SECTIONS: Tab[] = [
   "overview",
@@ -67,7 +71,14 @@ export const Route = createFileRoute("/app/admin")({
   }),
   loader: async () => {
     const profile = await getCurrentProfile();
-    const [reviewQueueResult, recipientsResult, sentResult, receivedResult, subscribersResult, campaignsResult] = await Promise.allSettled([
+    const [
+      reviewQueueResult,
+      recipientsResult,
+      sentResult,
+      receivedResult,
+      subscribersResult,
+      campaignsResult,
+    ] = await Promise.allSettled([
       getReviewQueue("pending"),
       listMessageRecipients(),
       profile?.id ? listRecentSentMessages(profile.id) : Promise.resolve([]),
@@ -78,13 +89,21 @@ export const Route = createFileRoute("/app/admin")({
     const received = receivedResult.status === "fulfilled" ? receivedResult.value : [];
 
     return {
-      campaigns: campaignsResult.status === "fulfilled" ? campaignsResult.value : ([] as NewsletterCampaignWithStats[]),
+      campaigns:
+        campaignsResult.status === "fulfilled"
+          ? campaignsResult.value
+          : ([] as NewsletterCampaignWithStats[]),
       composeError:
-        recipientsResult.status === "rejected" || sentResult.status === "rejected" || receivedResult.status === "rejected"
+        recipientsResult.status === "rejected" ||
+        sentResult.status === "rejected" ||
+        receivedResult.status === "rejected"
           ? "Could not load mailbox tools."
           : "",
       received,
-      recipients: recipientsResult.status === "fulfilled" ? recipientsResult.value : ([] as MessageRecipient[]),
+      recipients:
+        recipientsResult.status === "fulfilled"
+          ? recipientsResult.value
+          : ([] as MessageRecipient[]),
       reviewQueue: reviewQueueResult.status === "fulfilled" ? reviewQueueResult.value : [],
       reviewError:
         reviewQueueResult.status === "rejected"
@@ -94,22 +113,35 @@ export const Route = createFileRoute("/app/admin")({
           : "",
       mailUnreadCount: received.filter((message) => !message.read_at).length,
       newsletterError:
-        subscribersResult.status === "rejected" || campaignsResult.status === "rejected" ? "Could not load newsletter." : "",
+        subscribersResult.status === "rejected" || campaignsResult.status === "rejected"
+          ? "Could not load newsletter."
+          : "",
       recent: sentResult.status === "fulfilled" ? sentResult.value : ([] as SentMessage[]),
-      subscribers: subscribersResult.status === "fulfilled" ? subscribersResult.value : ([] as NewsletterSubscriber[]),
+      subscribers:
+        subscribersResult.status === "fulfilled"
+          ? subscribersResult.value
+          : ([] as NewsletterSubscriber[]),
     };
   },
   component: AdminDash,
 });
 
 const TITLES: Partial<Record<Tab, { eyebrow: string; title: string; note: string }>> = {
-  overview:      { eyebrow: "ADMIN · Nº 02",         title: "The atelier.",        note: "run the house" },
-  locations:     { eyebrow: "LOVE POTION · MAP",       title: "On the grid.",        note: "where they pose" },
-  products:      { eyebrow: "LOVE POTION · STOCK",     title: "The drops.",          note: "fresh on shelves" },
-  preferences:   { eyebrow: "LOVE POTION · RULES",     title: "House rules.",        note: "set the tempo" },
-  inbox:         { eyebrow: "ADMIN · COMPOSE",        title: "Write a love note.",  note: "from you, to them" },
-  subscribers:   { eyebrow: "LOVE POTION SUBSCRIBERS · LIST", title: "The list.",           note: "people who care" },
-  newsletter:    { eyebrow: "LOVE POTION SUBSCRIBERS · SEND", title: "A new edition.",      note: "send to grid" },
+  overview: { eyebrow: "ADMIN · Nº 02", title: "The atelier.", note: "run the house" },
+  locations: { eyebrow: "LOVE POTION · MAP", title: "On the grid.", note: "where they pose" },
+  products: { eyebrow: "LOVE POTION · STOCK", title: "The drops.", note: "fresh on shelves" },
+  preferences: { eyebrow: "LOVE POTION · RULES", title: "House rules.", note: "set the tempo" },
+  inbox: { eyebrow: "ADMIN · COMPOSE", title: "Write a love note.", note: "from you, to them" },
+  subscribers: {
+    eyebrow: "LOVE POTION SUBSCRIBERS · LIST",
+    title: "The list.",
+    note: "people who care",
+  },
+  newsletter: {
+    eyebrow: "LOVE POTION SUBSCRIBERS · SEND",
+    title: "A new edition.",
+    note: "send to grid",
+  },
 };
 
 function AdminDash() {
@@ -136,7 +168,9 @@ function AdminDash() {
   const [reviewSent, setReviewSent] = useState<Record<string, SubmissionStatus>>({});
   const [reviewError, setReviewError] = useState(initialData.reviewError);
   const [mailUnreadCount, setMailUnreadCount] = useState(initialData.mailUnreadCount);
-  const [newsletterView, setNewsletterView] = useState<"compose" | "sent" | "subscribers">("compose");
+  const [newsletterView, setNewsletterView] = useState<"compose" | "sent" | "subscribers">(
+    "compose",
+  );
   const didUseInitialReviewQueue = useRef(false);
   const adminTabs: Array<{ id: Tab; label: string; sub: string }> = [];
   if (tab === "overview") {
@@ -146,7 +180,11 @@ function AdminDash() {
     adminTabs.push({ id: "products", label: tr("Products"), sub: "02" });
   }
   if (tab === "inbox") {
-    adminTabs.push({ id: "inbox", label: mailUnreadCount ? `${tr("Compose")} (${mailUnreadCount})` : tr("Compose"), sub: "03" });
+    adminTabs.push({
+      id: "inbox",
+      label: mailUnreadCount ? `${tr("Compose")} (${mailUnreadCount})` : tr("Compose"),
+      sub: "03",
+    });
   }
   if (tab === "newsletter") {
     adminTabs.push({ id: "newsletter", label: tr("Newsletter"), sub: "04" });
@@ -172,7 +210,32 @@ function AdminDash() {
     }
 
     void loadReviewQueue();
-    const handleReviewQueueRefresh = () => void loadReviewQueue();
+    const handleReviewQueueRefresh = (event?: Event) => {
+      const detail =
+        event instanceof CustomEvent && event.detail && typeof event.detail === "object"
+          ? (event.detail as Partial<AuthProfile>)
+          : null;
+
+      if (detail?.id) {
+        setReviewQueue((current) =>
+          current.map((item) =>
+            item.blogger_id === detail.id
+              ? {
+                  ...item,
+                  blogger_status_message: detail.status_message ?? null,
+                  blogger_status_message_expires_at: detail.status_message_expires_at ?? null,
+                  blogger_availability_status:
+                    detail.availability_status ?? item.blogger_availability_status,
+                  blogger_avatar_url: detail.avatar_url ?? item.blogger_avatar_url,
+                  blogger_name: detail.display_name ?? detail.full_name ?? item.blogger_name,
+                }
+              : item,
+          ),
+        );
+      }
+
+      void loadReviewQueue();
+    };
     window.addEventListener("profile-updated", handleReviewQueueRefresh);
     window.addEventListener("bloggers-updated", handleReviewQueueRefresh);
     window.addEventListener("focus", handleReviewQueueRefresh);
@@ -229,9 +292,17 @@ function AdminDash() {
       const reviewNote = reviewMessage[submissionId]?.trim();
       if (reviewedItem?.blogger_id) {
         const notificationType =
-          status === "approved" ? "post_approved" : status === "rejected" ? "post_rejected" : "needs_revision";
+          status === "approved"
+            ? "post_approved"
+            : status === "rejected"
+              ? "post_rejected"
+              : "needs_revision";
         const statusText =
-          status === "approved" ? "approved" : status === "rejected" ? "rejected" : "needs revision";
+          status === "approved"
+            ? "approved"
+            : status === "rejected"
+              ? "rejected"
+              : "needs revision";
         void notifySecondLifeQuietly(
           {
             recipientId: reviewedItem.blogger_id,
@@ -271,21 +342,19 @@ function AdminDash() {
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
             {meta.eyebrow}
           </div>
-          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">
-            {meta.title}
-          </h1>
+          <h1 className="mt-2 font-display text-5xl leading-[0.95] md:text-7xl">{meta.title}</h1>
         </div>
         <HandwrittenNote>{meta.note}</HandwrittenNote>
       </div>
 
       <div className="mt-8 flex flex-wrap items-center gap-4">
-        <Tabs<Tab>
-          value={tab}
-          onChange={setTab}
-          tabs={adminTabs}
-        />
+        <Tabs<Tab> value={tab} onChange={setTab} tabs={adminTabs} />
         {tab === "newsletter" ? (
-          <NewsletterViewTabs newsletterView={newsletterView} setNewsletterView={setNewsletterView} uiLang={uiLang} />
+          <NewsletterViewTabs
+            newsletterView={newsletterView}
+            setNewsletterView={setNewsletterView}
+            uiLang={uiLang}
+          />
         ) : null}
       </div>
 
@@ -325,7 +394,10 @@ function AdminDash() {
         {tab === "locations" && <Locations />}
         {tab === "preferences" && <Preferences />}
         {tab === "subscribers" && (
-          <Subscribers initialError={initialData.newsletterError} initialSubscribers={initialData.subscribers} />
+          <Subscribers
+            initialError={initialData.newsletterError}
+            initialSubscribers={initialData.subscribers}
+          />
         )}
       </div>
     </div>
@@ -356,12 +428,12 @@ function Overview({
   const language = useLang();
   const tr = (value: string) => translateAppPhrase(value, language);
   const items = [
-    { n: stats.activeBloggers,   l: tr("Active bloggers") },
+    { n: stats.activeBloggers, l: tr("Active bloggers") },
     { n: stats.inactiveBloggers, l: tr("Inactive") },
-    { n: stats.postsThisMonth,   l: tr("Posts this month") },
-    { n: stats.productsLive,     l: tr("Products live") },
-    { n: stats.archiveSoon,      l: tr("Archive soon") },
-    { n: stats.subscribers,      l: tr("Subscribers") },
+    { n: stats.postsThisMonth, l: tr("Posts this month") },
+    { n: stats.productsLive, l: tr("Products live") },
+    { n: stats.archiveSoon, l: tr("Archive soon") },
+    { n: stats.subscribers, l: tr("Subscribers") },
   ];
   return (
     <div>
@@ -369,7 +441,9 @@ function Overview({
         {items.map((it, i) => (
           <GlassCard key={it.l} tone={i === 0 || i === 4 ? "pink" : "light"} className="p-5">
             <div className="font-display text-3xl">{it.n}</div>
-            <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/60">{it.l}</div>
+            <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/60">
+              {it.l}
+            </div>
           </GlassCard>
         ))}
       </div>
@@ -412,7 +486,9 @@ function Overview({
 
           {reviewQueue.length === 0 ? (
             <div className="mt-4 rounded-xl border border-dashed border-foreground/15 p-6 text-center font-hand text-2xl text-[var(--brand-magenta)]">
-              {reviewFilter === "pending" ? tr("no pending submissions · try ALL") : tr("no submissions to review")}
+              {reviewFilter === "pending"
+                ? tr("no pending submissions · try ALL")
+                : tr("no submissions to review")}
             </div>
           ) : (
             <div className="mt-4 space-y-3">
@@ -498,34 +574,47 @@ function Overview({
 
       <div className="mt-10 grid gap-6 md:grid-cols-3">
         <GlassCard className="md:col-span-2">
-          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">{tr("RULES IN EFFECT")}</div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+            {tr("RULES IN EFFECT")}
+          </div>
           <ul className="mt-4 space-y-3">
             {[
               { k: tr("Post frequency"), v: tr("1 post / month") },
               { k: tr("Auto-archive"), v: tr("After 90 days available") },
               { k: tr("Inactivity warning"), v: tr("21 days no posts") },
             ].map((r) => (
-              <li key={r.k} className="flex items-center justify-between rounded-xl bg-background/60 px-4 py-3">
+              <li
+                key={r.k}
+                className="flex items-center justify-between rounded-xl bg-background/60 px-4 py-3"
+              >
                 <span className="font-display text-lg">{r.k}</span>
-                <span className="rounded-full bg-foreground px-3 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-background">{r.v}</span>
-              </li>
-            ))}
-          </ul>
-        </GlassCard>
-        <GlassCard tone="pink">
-          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">{tr("UPCOMING ARCHIVE")}</div>
-          <ul className="mt-4 space-y-2 text-sm">
-            {products.filter(p => p.expires.includes("days") && parseInt(p.expires) < 30).map(p => (
-              <li key={p.id} className="flex items-center justify-between border-b border-foreground/10 pb-2">
-                <span>{p.name}</span>
-                <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
-                  {tr("in")} {p.expires.replace("days", tr("days"))}
+                <span className="rounded-full bg-foreground px-3 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-background">
+                  {r.v}
                 </span>
               </li>
             ))}
           </ul>
         </GlassCard>
-
+        <GlassCard tone="pink">
+          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">
+            {tr("UPCOMING ARCHIVE")}
+          </div>
+          <ul className="mt-4 space-y-2 text-sm">
+            {products
+              .filter((p) => p.expires.includes("days") && parseInt(p.expires) < 30)
+              .map((p) => (
+                <li
+                  key={p.id}
+                  className="flex items-center justify-between border-b border-foreground/10 pb-2"
+                >
+                  <span>{p.name}</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
+                    {tr("in")} {p.expires.replace("days", tr("days"))}
+                  </span>
+                </li>
+              ))}
+          </ul>
+        </GlassCard>
       </div>
     </div>
   );
@@ -542,26 +631,40 @@ function Products() {
         const danger = !isNaN(days) && days < 30;
         return (
           <GlassCard key={p.id} className="overflow-hidden p-0">
-            <img src={p.img} alt={p.name} loading="lazy" className="aspect-[4/5] w-full object-cover" />
+            <img
+              src={p.img}
+              alt={p.name}
+              loading="lazy"
+              className="aspect-[4/5] w-full object-cover"
+            />
             <div className="p-5">
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
                 {tr("Added")} {p.added.replace("days ago", tr("days ago"))}
               </div>
               <h3 className="mt-1 font-display text-2xl">{p.name}</h3>
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm">{p.claims} {tr("claims")}</span>
-                <span className={cn(
-                  "rounded-full px-2 py-1 font-mono text-[9px] uppercase tracking-[0.25em]",
-                  danger ? "bg-[var(--brand-magenta)] text-white" : "bg-foreground/10",
-                )}>
+                <span className="text-sm">
+                  {p.claims} {tr("claims")}
+                </span>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-1 font-mono text-[9px] uppercase tracking-[0.25em]",
+                    danger ? "bg-[var(--brand-magenta)] text-white" : "bg-foreground/10",
+                  )}
+                >
                   {p.expires.replace("days", tr("days"))}
                 </span>
               </div>
               {/* Timeline bar */}
               <div className="mt-3 h-1 w-full rounded-full bg-foreground/10">
                 <div
-                  className={cn("h-1 rounded-full", danger ? "bg-[var(--brand-magenta)]" : "bg-[var(--brand-rose)]")}
-                  style={{ width: `${Math.min(100, ((90 - (parseInt(p.added) || 0)) / 90) * 100)}%` }}
+                  className={cn(
+                    "h-1 rounded-full",
+                    danger ? "bg-[var(--brand-magenta)]" : "bg-[var(--brand-rose)]",
+                  )}
+                  style={{
+                    width: `${Math.min(100, ((90 - (parseInt(p.added) || 0)) / 90) * 100)}%`,
+                  }}
                 />
               </div>
             </div>
@@ -573,7 +676,16 @@ function Products() {
 }
 
 function FormBuilder() {
-  const fieldTypes = ["Short text", "Long text", "Email", "URL", "Select", "Checkbox", "File", "Date"];
+  const fieldTypes = [
+    "Short text",
+    "Long text",
+    "Email",
+    "URL",
+    "Select",
+    "Checkbox",
+    "File",
+    "Date",
+  ];
   const canvasFields = [
     { t: "Short text", k: "SL avatar name" },
     { t: "Email", k: "Contact email" },
@@ -584,10 +696,15 @@ function FormBuilder() {
   return (
     <div className="grid gap-6 md:grid-cols-12">
       <GlassCard className="md:col-span-3">
-        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">FIELDS</div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+          FIELDS
+        </div>
         <div className="mt-4 flex flex-col gap-2">
           {fieldTypes.map((f) => (
-            <button key={f} className="flex items-center justify-between rounded-lg border border-dashed border-foreground/30 px-3 py-2 text-left text-sm hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]">
+            <button
+              key={f}
+              className="flex items-center justify-between rounded-lg border border-dashed border-foreground/30 px-3 py-2 text-left text-sm hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]"
+            >
               <span>{f}</span>
               <span className="font-mono text-[10px]">+</span>
             </button>
@@ -598,19 +715,30 @@ function FormBuilder() {
       <GlassCard tone="pink" className="md:col-span-6">
         <div className="flex items-center justify-between">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">CANVAS</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">
+              CANVAS
+            </div>
             <h3 className="mt-1 font-display text-2xl">Blogger application</h3>
           </div>
-          <button className="rounded-full bg-foreground px-4 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-background">Publish</button>
+          <button className="rounded-full bg-foreground px-4 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-background">
+            Publish
+          </button>
         </div>
         <div className="mt-6 space-y-3">
           {canvasFields.map((f, i) => (
-            <div key={f.k} className="group flex items-center justify-between rounded-xl bg-background/70 p-4">
+            <div
+              key={f.k}
+              className="group flex items-center justify-between rounded-xl bg-background/70 p-4"
+            >
               <div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">Nº 0{i + 1} · {f.t}</div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
+                  Nº 0{i + 1} · {f.t}
+                </div>
                 <div className="mt-1 font-display text-lg">{f.k}</div>
               </div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/40">⋮⋮ drag</div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/40">
+                ⋮⋮ drag
+              </div>
             </div>
           ))}
           <div className="rounded-xl border-2 border-dashed border-foreground/20 p-6 text-center font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
@@ -620,22 +748,36 @@ function FormBuilder() {
       </GlassCard>
 
       <GlassCard className="md:col-span-3">
-        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">PROPERTIES</div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+          PROPERTIES
+        </div>
         <div className="mt-4 space-y-3 text-sm">
           <label className="block">
-            <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">Label</span>
-            <input className="mt-1 w-full rounded-lg border border-foreground/20 bg-background/70 px-3 py-2" defaultValue="Flickr URL" />
+            <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+              Label
+            </span>
+            <input
+              className="mt-1 w-full rounded-lg border border-foreground/20 bg-background/70 px-3 py-2"
+              defaultValue="Flickr URL"
+            />
           </label>
           <label className="block">
-            <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">Required</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+              Required
+            </span>
             <select className="mt-1 w-full rounded-lg border border-foreground/20 bg-background/70 px-3 py-2">
               <option>Yes</option>
               <option>No</option>
             </select>
           </label>
           <label className="block">
-            <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">Validation</span>
-            <input className="mt-1 w-full rounded-lg border border-foreground/20 bg-background/70 px-3 py-2" defaultValue="URL" />
+            <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+              Validation
+            </span>
+            <input
+              className="mt-1 w-full rounded-lg border border-foreground/20 bg-background/70 px-3 py-2"
+              defaultValue="URL"
+            />
           </label>
         </div>
       </GlassCard>
@@ -740,7 +882,9 @@ function Compose({
     return [...threadMap.values()]
       .map((thread) => ({
         ...thread,
-        messages: thread.messages.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)),
+        messages: thread.messages.sort(
+          (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
+        ),
       }))
       .sort((a, b) => Date.parse(b.latestAt) - Date.parse(a.latestAt));
   }, [received, recent]);
@@ -750,7 +894,10 @@ function Compose({
     [conversations, replyModalThreadKey],
   );
   const receivedThreads = useMemo(
-    () => conversations.filter((thread) => thread.messages.some((message) => message.direction === "in")),
+    () =>
+      conversations.filter((thread) =>
+        thread.messages.some((message) => message.direction === "in"),
+      ),
     [conversations],
   );
   const visibleReceivedThreads = showAllReceived ? receivedThreads : receivedThreads.slice(0, 5);
@@ -761,7 +908,9 @@ function Compose({
       await markInternalMessageRead(messageId);
       setReceived((current) => {
         const next = current.map((message) =>
-          message.id === messageId ? { ...message, read_at: message.read_at ?? new Date().toISOString() } : message,
+          message.id === messageId
+            ? { ...message, read_at: message.read_at ?? new Date().toISOString() }
+            : message,
         );
         onUnreadChange(next.filter((message) => !message.read_at).length);
         return next;
@@ -852,9 +1001,12 @@ function Compose({
     }
 
     const recipient = recipients.find((item) => item.id === recipientId);
-    const recipientName = recipient?.display_name || recipient?.full_name || recipient?.sl_avatar_name || tr("there");
+    const recipientName =
+      recipient?.display_name || recipient?.full_name || recipient?.sl_avatar_name || tr("there");
     const testTitle = subject.trim() || "Love Potion HQ";
-    const testBody = body.trim() || `Hi ${recipientName}, ${tr("this is a Second Life IM test from Love Potion HQ.")}`;
+    const testBody =
+      body.trim() ||
+      `Hi ${recipientName}, ${tr("this is a Second Life IM test from Love Potion HQ.")}`;
 
     setSlState("sending");
     try {
@@ -872,7 +1024,9 @@ function Compose({
       }, 3500);
     } catch (error) {
       console.error("[Compose] failed to send Second Life notification", error);
-      setSlFeedback(error instanceof Error ? error.message : tr("Could not send the Second Life IM."));
+      setSlFeedback(
+        error instanceof Error ? error.message : tr("Could not send the Second Life IM."),
+      );
       setSlState("error");
     }
   }
@@ -887,7 +1041,9 @@ function Compose({
     }
 
     const latestSubject = thread.messages[0]?.subject || tr("Message");
-    const subjectLine = latestSubject.toLowerCase().startsWith("re:") ? latestSubject : `Re: ${latestSubject}`;
+    const subjectLine = latestSubject.toLowerCase().startsWith("re:")
+      ? latestSubject
+      : `Re: ${latestSubject}`;
 
     setThreadSendingKey(thread.key);
     try {
@@ -978,7 +1134,7 @@ function Compose({
             className="w-full rounded-2xl border border-foreground/30 bg-background/70 px-5 py-3 text-sm"
           />
           <div className="flex flex-wrap items-center justify-end gap-3">
-            {(error || state === "sent") ? (
+            {error || state === "sent" ? (
               <span
                 className={cn(
                   "rounded-full px-3 py-1 text-xs font-medium",
@@ -994,7 +1150,9 @@ function Compose({
                   <span
                     className={cn(
                       "rounded-full px-3 py-1 text-xs font-medium",
-                      slState === "sent" ? "bg-green-100 text-green-700" : "bg-rose-100 text-rose-700",
+                      slState === "sent"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-rose-100 text-rose-700",
                     )}
                   >
                     {slFeedback}
@@ -1042,11 +1200,16 @@ function Compose({
               >
                 <div className="flex items-start justify-between gap-3">
                   <button
-                    onClick={() => setOpenThreadKey((current) => (current === thread.key ? null : thread.key))}
+                    onClick={() =>
+                      setOpenThreadKey((current) => (current === thread.key ? null : thread.key))
+                    }
                     className="flex-1 text-left"
                   >
                     <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/50">
-                      {thread.name} · {new Date(thread.latestAt).toLocaleDateString(language === "es" ? "es" : undefined)}
+                      {thread.name} ·{" "}
+                      {new Date(thread.latestAt).toLocaleDateString(
+                        language === "es" ? "es" : undefined,
+                      )}
                       {unreadCount ? ` · ${unreadCount} ${tr("NEW")}` : ""}
                     </div>
                     <div className="mt-1 font-display text-base">{latestIncoming.subject}</div>
@@ -1066,7 +1229,9 @@ function Compose({
                     <span
                       className={cn(
                         "rounded-full px-2 py-1 font-mono text-[8px] uppercase tracking-[0.2em]",
-                        unreadCount ? "bg-[var(--brand-magenta)] text-white" : "bg-foreground/10 text-foreground/55",
+                        unreadCount
+                          ? "bg-[var(--brand-magenta)] text-white"
+                          : "bg-foreground/10 text-foreground/55",
                       )}
                     >
                       {open ? tr("close") : tr("open")}
@@ -1088,7 +1253,9 @@ function Compose({
                         <div className="flex items-start justify-between gap-3">
                           <div className="font-mono text-[8px] uppercase tracking-[0.24em] text-foreground/45">
                             {message.direction === "in" ? tr("blogger") : tr("you")} ·{" "}
-                            {new Date(message.created_at).toLocaleDateString(language === "es" ? "es" : undefined)}
+                            {new Date(message.created_at).toLocaleDateString(
+                              language === "es" ? "es" : undefined,
+                            )}
                             {message.unread ? ` · ${tr("new")}` : ""}
                           </div>
                           {message.direction === "in" && message.unread ? (
@@ -1103,7 +1270,9 @@ function Compose({
                         </div>
                         <div className="mt-1 font-display text-sm">{message.subject}</div>
                         {message.body ? (
-                          <p className="mt-1 whitespace-pre-wrap text-foreground/65">{message.body}</p>
+                          <p className="mt-1 whitespace-pre-wrap text-foreground/65">
+                            {message.body}
+                          </p>
                         ) : null}
                       </div>
                     ))}
@@ -1116,7 +1285,8 @@ function Compose({
                             : "text-[var(--brand-magenta)]",
                         )}
                       >
-                        {threadFeedback[thread.key] || tr("Reply from here and keep the whole conversation together.")}
+                        {threadFeedback[thread.key] ||
+                          tr("Reply from here and keep the whole conversation together.")}
                       </span>
                       <button
                         onClick={() => setReplyModalThreadKey(thread.key)}
@@ -1131,7 +1301,9 @@ function Compose({
             );
           })}
           {receivedThreads.length === 0 ? (
-            <li className="font-hand text-2xl text-[var(--brand-magenta)]">{tr("no replies yet")}</li>
+            <li className="font-hand text-2xl text-[var(--brand-magenta)]">
+              {tr("no replies yet")}
+            </li>
           ) : null}
         </ul>
         {receivedThreads.length > 5 ? (
@@ -1175,11 +1347,15 @@ function Compose({
                         >
                           <div className="font-mono text-[8px] uppercase tracking-[0.24em] text-foreground/45">
                             {message.direction === "in" ? tr("blogger") : tr("you")} ·{" "}
-                            {new Date(message.created_at).toLocaleDateString(language === "es" ? "es" : undefined)}
+                            {new Date(message.created_at).toLocaleDateString(
+                              language === "es" ? "es" : undefined,
+                            )}
                           </div>
                           <div className="mt-1 font-display text-sm">{message.subject}</div>
                           {message.body ? (
-                            <p className="mt-1 whitespace-pre-wrap text-foreground/65">{message.body}</p>
+                            <p className="mt-1 whitespace-pre-wrap text-foreground/65">
+                              {message.body}
+                            </p>
                           ) : null}
                         </div>
                       ))}
@@ -1192,7 +1368,10 @@ function Compose({
                     <textarea
                       value={threadReplyBody[replyModalThread.key] ?? ""}
                       onChange={(event) =>
-                        setThreadReplyBody((current) => ({ ...current, [replyModalThread.key]: event.target.value }))
+                        setThreadReplyBody((current) => ({
+                          ...current,
+                          [replyModalThread.key]: event.target.value,
+                        }))
                       }
                       rows={6}
                       placeholder={`${tr("Reply to")} ${replyModalThread.name}...`}
@@ -1215,7 +1394,9 @@ function Compose({
                       disabled={threadSendingKey === replyModalThread.key}
                       className="rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.28em] text-white hover:bg-foreground disabled:opacity-60"
                     >
-                      {threadSendingKey === replyModalThread.key ? tr("sending...") : tr("send reply")}
+                      {threadSendingKey === replyModalThread.key
+                        ? tr("sending...")
+                        : tr("send reply")}
                     </button>
                   </div>
                 </div>
@@ -1294,7 +1475,9 @@ function Newsletter({
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState(initialError);
 
-  const activeSubscribers = subscribers.filter((subscriber) => subscriber.is_active && !subscriber.unsubscribed_at);
+  const activeSubscribers = subscribers.filter(
+    (subscriber) => subscriber.is_active && !subscriber.unsubscribed_at,
+  );
 
   async function loadNewsletter() {
     try {
@@ -1410,15 +1593,26 @@ function Newsletter({
           <GlassCard tone="pink" className="p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">{tr("New newsletter")}</div>
-                <h2 className="mt-2 font-display text-4xl leading-none">{tr("Send to the grid.")}</h2>
+                <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">
+                  {tr("New newsletter")}
+                </div>
+                <h2 className="mt-2 font-display text-4xl leading-none">
+                  {tr("Send to the grid.")}
+                </h2>
                 <p className="mt-2 text-sm text-foreground/60">
-                  {tr("Text is sent by IM. If you add a texture item name, the prim also gives that texture from its inventory; the uploaded image remains a fallback.")}
+                  {tr(
+                    "Text is sent by IM. If you add a texture item name, the prim also gives that texture from its inventory; the uploaded image remains a fallback.",
+                  )}
                 </p>
               </div>
               <label className="cursor-pointer rounded-full border border-[var(--brand-magenta)] px-5 py-2 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--brand-magenta)] transition hover:bg-[var(--brand-magenta)] hover:text-white">
                 {tr("Import CSV")}
-                <input type="file" accept=".csv,text/csv" onChange={onCsvImport} className="hidden" />
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={onCsvImport}
+                  className="hidden"
+                />
               </label>
             </div>
 
@@ -1445,7 +1639,11 @@ function Newsletter({
 
             <label className="mt-4 block cursor-pointer rounded-2xl border-2 border-dashed border-foreground/20 p-6 text-center transition hover:border-[var(--brand-magenta)] hover:bg-white/25">
               {imagePreview ? (
-                <img src={imagePreview} alt={tr("Newsletter preview")} className="mx-auto max-h-72 rounded-xl object-contain" />
+                <img
+                  src={imagePreview}
+                  alt={tr("Newsletter preview")}
+                  className="mx-auto max-h-72 rounded-xl object-contain"
+                />
               ) : (
                 <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
                   {tr("Add campaign image · optional")}
@@ -1467,7 +1665,9 @@ function Newsletter({
 
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
               <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-                {state === "loading" ? "loading" : (
+                {state === "loading" ? (
+                  "loading"
+                ) : (
                   <>
                     {activeSubscribers.length} <span>{tr("active subscribers")}</span>
                   </>
@@ -1513,7 +1713,9 @@ function NewsletterSubscribersPanel({
   const [manualUuid, setManualUuid] = useState("");
   const [manualState, setManualState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [manualMessage, setManualMessage] = useState("");
-  const activeSubscribers = subscribers.filter((subscriber) => subscriber.is_active && !subscriber.unsubscribed_at);
+  const activeSubscribers = subscribers.filter(
+    (subscriber) => subscriber.is_active && !subscriber.unsubscribed_at,
+  );
 
   function formatSubscriberSource(source: string | null | undefined) {
     if (source === "manual") return "manual";
@@ -1540,15 +1742,22 @@ function NewsletterSubscribersPanel({
     } catch (addError) {
       console.error("[Newsletter] failed to add subscriber", addError);
       setManualState("error");
-      setManualMessage(addError instanceof Error ? addError.message : tr("Could not add subscriber."));
+      setManualMessage(
+        addError instanceof Error ? addError.message : tr("Could not add subscriber."),
+      );
     }
   }
 
   const manualAddForm = showManualAdd ? (
-    <form onSubmit={(event) => void onManualSubmit(event)} className="border-b border-foreground/10 bg-[var(--brand-pink)]/25 p-6">
+    <form
+      onSubmit={(event) => void onManualSubmit(event)}
+      className="border-b border-foreground/10 bg-[var(--brand-pink)]/25 p-6"
+    >
       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(260px,0.9fr)_auto] md:items-end">
         <label className="block">
-          <span className="font-mono text-[9px] uppercase tracking-[0.26em] text-foreground/45">{tr("Subscriber name")}</span>
+          <span className="font-mono text-[9px] uppercase tracking-[0.26em] text-foreground/45">
+            {tr("Subscriber name")}
+          </span>
           <input
             value={manualName}
             onChange={(event) => setManualName(event.target.value)}
@@ -1557,7 +1766,9 @@ function NewsletterSubscribersPanel({
           />
         </label>
         <label className="block">
-          <span className="font-mono text-[9px] uppercase tracking-[0.26em] text-foreground/45">{tr("SL avatar UUID")}</span>
+          <span className="font-mono text-[9px] uppercase tracking-[0.26em] text-foreground/45">
+            {tr("SL avatar UUID")}
+          </span>
           <input
             value={manualUuid}
             onChange={(event) => setManualUuid(event.target.value)}
@@ -1591,7 +1802,9 @@ function NewsletterSubscribersPanel({
   if (loading) {
     return (
       <GlassCard tone="pink" className="p-8">
-        <div className="font-hand text-3xl text-[var(--brand-magenta)]">{tr("loading subscribers")}</div>
+        <div className="font-hand text-3xl text-[var(--brand-magenta)]">
+          {tr("loading subscribers")}
+        </div>
       </GlassCard>
     );
   }
@@ -1601,10 +1814,14 @@ function NewsletterSubscribersPanel({
       <GlassCard tone="pink" className="overflow-hidden p-0">
         <div className="flex flex-wrap items-end justify-between gap-4 p-6">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">{tr("SUBSCRIBERS")}</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+              {tr("SUBSCRIBERS")}
+            </div>
             <h2 className="mt-2 font-display text-4xl leading-none">{tr("No subscribers yet.")}</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-foreground/60">
-              {tr("Add someone manually by name and SL UUID, or import a CSV when you have a bigger list.")}
+              {tr(
+                "Add someone manually by name and SL UUID, or import a CSV when you have a bigger list.",
+              )}
             </p>
           </div>
           <button
@@ -1630,7 +1847,8 @@ function NewsletterSubscribersPanel({
           <h2 className="mt-2 font-display text-4xl leading-none">{tr("The list.")}</h2>
         </div>
         <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-foreground/55">
-          {activeSubscribers.length} <span>{tr("active")}</span> · {subscribers.length} <span>{tr("total")}</span>
+          {activeSubscribers.length} <span>{tr("active")}</span> · {subscribers.length}{" "}
+          <span>{tr("total")}</span>
         </div>
         <button
           type="button"
@@ -1645,12 +1863,18 @@ function NewsletterSubscribersPanel({
       <div className="divide-y divide-foreground/5">
         {subscribers.map((subscriber) => {
           const displayName =
-            subscriber.display_name || subscriber.sl_avatar_name || subscriber.email || tr("Second Life Resident");
+            subscriber.display_name ||
+            subscriber.sl_avatar_name ||
+            subscriber.email ||
+            tr("Second Life Resident");
           const active = subscriber.is_active && !subscriber.unsubscribed_at;
           const source = formatSubscriberSource(subscriber.source);
 
           return (
-            <div key={subscriber.id} className="grid gap-3 p-5 md:grid-cols-[minmax(0,1fr)_minmax(240px,0.8fr)_120px_120px] md:items-center">
+            <div
+              key={subscriber.id}
+              className="grid gap-3 p-5 md:grid-cols-[minmax(0,1fr)_minmax(240px,0.8fr)_120px_120px] md:items-center"
+            >
               <div className="min-w-0">
                 <div className="truncate font-display text-2xl leading-tight">{displayName}</div>
                 {subscriber.email ? (
@@ -1687,7 +1911,9 @@ function SentNewsletterCampaigns({ campaigns }: { campaigns: NewsletterCampaignW
   if (campaigns.length === 0) {
     return (
       <GlassCard tone="pink" className="p-8">
-        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">{tr("Sent editions")}</div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+          {tr("Sent editions")}
+        </div>
         <h2 className="mt-2 font-display text-4xl leading-none">{tr("No editions yet.")}</h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-foreground/60">
           {tr("Sent newsletters will appear here with the delivery summary.")}
@@ -1711,7 +1937,9 @@ function SentNewsletterCampaigns({ campaigns }: { campaigns: NewsletterCampaignW
                   {formatPrettyDate(campaign.sent_at || campaign.created_at, language)}
                 </div>
                 <h3 className="mt-2 font-display text-3xl leading-none">{campaign.title}</h3>
-                <p className="mt-2 line-clamp-2 max-w-3xl text-sm leading-6 text-foreground/60">{campaign.body}</p>
+                <p className="mt-2 line-clamp-2 max-w-3xl text-sm leading-6 text-foreground/60">
+                  {campaign.body}
+                </p>
               </div>
               <span
                 className={cn(
@@ -1732,11 +1960,15 @@ function SentNewsletterCampaigns({ campaigns }: { campaigns: NewsletterCampaignW
               </div>
               <div className="rounded-2xl border border-foreground/10 bg-white/35 p-4">
                 <div className="font-display text-3xl">{stats.pending}</div>
-                <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/50">{tr("pending")}</div>
+                <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/50">
+                  {tr("pending")}
+                </div>
               </div>
               <div className="rounded-2xl border border-foreground/10 bg-white/35 p-4">
                 <div className="font-display text-3xl">{stats.failed}</div>
-                <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/50">{tr("with error")}</div>
+                <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/50">
+                  {tr("with error")}
+                </div>
               </div>
             </div>
 
@@ -1759,12 +1991,12 @@ function Locations() {
   const language = useLang();
   const tr = (value: string) => translateAppPhrase(value, language);
   const locs = [
-    { sim: "Love Potion Mainstore",      region: "Pink Atoll",      visitors: 1240, traffic: "high"   },
-    { sim: "Velvet Pose Studio",         region: "Ivory Bay",       visitors: 412,  traffic: "medium" },
-    { sim: "Lace Noir Photo Spot",       region: "Noir Hills",      visitors: 188,  traffic: "low"    },
-    { sim: "Satin Spell Runway",         region: "Pink Atoll",      visitors: 902,  traffic: "high"   },
-    { sim: "Tulle Rose Garden",          region: "Rose Cliffs",     visitors: 305,  traffic: "medium" },
-    { sim: "Silk Touch Beach",           region: "Coral Sea",       visitors: 76,   traffic: "low"    },
+    { sim: "Love Potion Mainstore", region: "Pink Atoll", visitors: 1240, traffic: "high" },
+    { sim: "Velvet Pose Studio", region: "Ivory Bay", visitors: 412, traffic: "medium" },
+    { sim: "Lace Noir Photo Spot", region: "Noir Hills", visitors: 188, traffic: "low" },
+    { sim: "Satin Spell Runway", region: "Pink Atoll", visitors: 902, traffic: "high" },
+    { sim: "Tulle Rose Garden", region: "Rose Cliffs", visitors: 305, traffic: "medium" },
+    { sim: "Silk Touch Beach", region: "Coral Sea", visitors: 76, traffic: "low" },
   ];
   return (
     <div className="grid gap-6 md:grid-cols-3">
@@ -1778,14 +2010,22 @@ function Locations() {
           <div className="mt-5 flex items-end justify-between">
             <div>
               <div className="font-display text-3xl">{l.visitors}</div>
-              <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/60">{tr("visitors / 7d")}</div>
+              <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/60">
+                {tr("visitors / 7d")}
+              </div>
             </div>
-            <span className={cn(
-              "rounded-full px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em]",
-              l.traffic === "high"   ? "bg-[var(--brand-magenta)] text-white" :
-              l.traffic === "medium" ? "bg-[var(--brand-rose)] text-white"    :
-                                       "bg-foreground/10 text-foreground/70",
-            )}>{tr(l.traffic)}</span>
+            <span
+              className={cn(
+                "rounded-full px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em]",
+                l.traffic === "high"
+                  ? "bg-[var(--brand-magenta)] text-white"
+                  : l.traffic === "medium"
+                    ? "bg-[var(--brand-rose)] text-white"
+                    : "bg-foreground/10 text-foreground/70",
+              )}
+            >
+              {tr(l.traffic)}
+            </span>
           </div>
         </GlassCard>
       ))}
@@ -1797,22 +2037,33 @@ function Preferences() {
   const language = useLang();
   const tr = (value: string) => translateAppPhrase(value, language);
   const prefs = [
-    { k: "Post frequency",         v: "1 / month",   o: ["1 / month", "2 / month", "1 / week"] },
-    { k: "Auto-archive after",     v: "90 days",     o: ["30 days", "60 days", "90 days"] },
-    { k: "Inactivity warning",     v: "21 days",     o: ["7 days", "14 days", "21 days"] },
-    { k: "Required platforms",     v: "Flickr",      o: ["Flickr", "Flickr + IG", "Any"] },
-    { k: "Default newsletter day", v: "Friday",      o: ["Monday", "Wednesday", "Friday"] },
+    { k: "Post frequency", v: "1 / month", o: ["1 / month", "2 / month", "1 / week"] },
+    { k: "Auto-archive after", v: "90 days", o: ["30 days", "60 days", "90 days"] },
+    { k: "Inactivity warning", v: "21 days", o: ["7 days", "14 days", "21 days"] },
+    { k: "Required platforms", v: "Flickr", o: ["Flickr", "Flickr + IG", "Any"] },
+    { k: "Default newsletter day", v: "Friday", o: ["Monday", "Wednesday", "Friday"] },
   ];
   return (
     <div className="grid gap-4">
       {prefs.map((p, i) => (
-        <GlassCard key={p.k} tone={i % 2 === 0 ? "light" : "pink"} className="flex items-center justify-between gap-6 p-6">
+        <GlassCard
+          key={p.k}
+          tone={i % 2 === 0 ? "light" : "pink"}
+          className="flex items-center justify-between gap-6 p-6"
+        >
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">Nº 0{i + 1}</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+              Nº 0{i + 1}
+            </div>
             <h3 className="mt-1 font-display text-xl">{tr(p.k)}</h3>
           </div>
-          <select className="rounded-full border border-foreground/30 bg-background/70 px-4 py-2 font-mono text-xs" defaultValue={p.v}>
-            {p.o.map((opt) => <option key={opt}>{tr(opt)}</option>)}
+          <select
+            className="rounded-full border border-foreground/30 bg-background/70 px-4 py-2 font-mono text-xs"
+            defaultValue={p.v}
+          >
+            {p.o.map((opt) => (
+              <option key={opt}>{tr(opt)}</option>
+            ))}
           </select>
         </GlassCard>
       ))}
@@ -1845,10 +2096,14 @@ function Subscribers({
   const language = useLang();
   const tr = (value: string) => translateAppPhrase(value, language);
   const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>(initialSubscribers);
-  const [state, setState] = useState<"loading" | "ready" | "saving" | "error">(initialError ? "error" : "ready");
+  const [state, setState] = useState<"loading" | "ready" | "saving" | "error">(
+    initialError ? "error" : "ready",
+  );
   const [error, setError] = useState(initialError);
 
-  const active = subscribers.filter((subscriber) => subscriber.is_active && !subscriber.unsubscribed_at);
+  const active = subscribers.filter(
+    (subscriber) => subscriber.is_active && !subscriber.unsubscribed_at,
+  );
   const paused = subscribers.length - active.length;
 
   async function loadSubscribers() {
@@ -1871,7 +2126,9 @@ function Subscribers({
       await loadSubscribers();
     } catch (toggleError) {
       console.error("[Subscribers] failed to update subscriber", toggleError);
-      setError(toggleError instanceof Error ? toggleError.message : tr("Could not update subscriber."));
+      setError(
+        toggleError instanceof Error ? toggleError.message : tr("Could not update subscriber."),
+      );
       setState("error");
     }
   }
@@ -1879,13 +2136,26 @@ function Subscribers({
   return (
     <div className="grid gap-6 md:grid-cols-4">
       <GlassCard tone="pink" className="md:col-span-1 p-6">
-        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">TOTAL</div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">
+          TOTAL
+        </div>
         <div className="mt-2 font-display text-6xl leading-none">{subscribers.length}</div>
-        <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">{tr("subscribers")}</div>
+        <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+          {tr("subscribers")}
+        </div>
         <div className="mt-6 space-y-2 text-sm">
-          <div className="flex justify-between"><span>{tr("Active")}</span><span className="font-mono">{active.length}</span></div>
-          <div className="flex justify-between"><span>{tr("Paused")}</span><span className="font-mono">{paused}</span></div>
-          <div className="flex justify-between"><span>{tr("Source")}</span><span className="font-mono">SL + CSV</span></div>
+          <div className="flex justify-between">
+            <span>{tr("Active")}</span>
+            <span className="font-mono">{active.length}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>{tr("Paused")}</span>
+            <span className="font-mono">{paused}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>{tr("Source")}</span>
+            <span className="font-mono">SL + CSV</span>
+          </div>
         </div>
       </GlassCard>
       <GlassCard className="md:col-span-3 overflow-x-auto p-0">
@@ -1907,50 +2177,72 @@ function Subscribers({
           <tbody>
             {state === "loading" ? (
               <tr>
-                <td colSpan={5} className="px-6 py-10 text-center font-hand text-2xl text-[var(--brand-magenta)]">
+                <td
+                  colSpan={5}
+                  className="px-6 py-10 text-center font-hand text-2xl text-[var(--brand-magenta)]"
+                >
                   {tr("loading subscribers")}
                 </td>
               </tr>
             ) : subscribers.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-10 text-center font-hand text-2xl text-[var(--brand-magenta)]">
+                <td
+                  colSpan={5}
+                  className="px-6 py-10 text-center font-hand text-2xl text-[var(--brand-magenta)]"
+                >
                   {tr("No subscribers yet.")}
                 </td>
               </tr>
-            ) : subscribers.map((subscriber) => (
-              <tr key={subscriber.id} className="border-b border-foreground/5 hover:bg-foreground/5">
-                <td className="px-6 py-4">
-                  <div className="font-display text-lg">
-                    {subscriber.display_name || subscriber.sl_avatar_name || subscriber.email || tr("Second Life Resident")}
-                  </div>
-                  <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/45">
-                    {subscriber.source}
-                  </div>
-                </td>
-                <td className="px-6 py-4 font-mono text-[10px] text-foreground/60">{subscriber.sl_avatar_uuid ?? tr("missing")}</td>
-                <td className="px-6 py-4 font-mono text-xs uppercase">{subscriber.language_preference}</td>
-                <td className="px-6 py-4">
-                  <span className={cn(
-                    "rounded-full px-3 py-1 font-mono text-[9px] uppercase tracking-[0.24em]",
-                    subscriber.is_active && !subscriber.unsubscribed_at
-                      ? "bg-green-50 text-green-700"
-                      : "bg-foreground/5 text-foreground/50",
-                  )}>
-                    {subscriber.is_active && !subscriber.unsubscribed_at ? tr("active") : tr("paused")}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button
-                    type="button"
-                    disabled={state === "saving"}
-                    onClick={() => void onToggle(subscriber)}
-                    className="rounded-full border border-foreground/15 px-4 py-2 font-mono text-[9px] uppercase tracking-[0.22em] transition hover:bg-foreground hover:text-background disabled:opacity-60"
-                  >
-                    {subscriber.is_active ? tr("pause") : tr("reactivate")}
-                  </button>
-                </td>
-              </tr>
-            ))}
+            ) : (
+              subscribers.map((subscriber) => (
+                <tr
+                  key={subscriber.id}
+                  className="border-b border-foreground/5 hover:bg-foreground/5"
+                >
+                  <td className="px-6 py-4">
+                    <div className="font-display text-lg">
+                      {subscriber.display_name ||
+                        subscriber.sl_avatar_name ||
+                        subscriber.email ||
+                        tr("Second Life Resident")}
+                    </div>
+                    <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/45">
+                      {subscriber.source}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 font-mono text-[10px] text-foreground/60">
+                    {subscriber.sl_avatar_uuid ?? tr("missing")}
+                  </td>
+                  <td className="px-6 py-4 font-mono text-xs uppercase">
+                    {subscriber.language_preference}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span
+                      className={cn(
+                        "rounded-full px-3 py-1 font-mono text-[9px] uppercase tracking-[0.24em]",
+                        subscriber.is_active && !subscriber.unsubscribed_at
+                          ? "bg-green-50 text-green-700"
+                          : "bg-foreground/5 text-foreground/50",
+                      )}
+                    >
+                      {subscriber.is_active && !subscriber.unsubscribed_at
+                        ? tr("active")
+                        : tr("paused")}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button
+                      type="button"
+                      disabled={state === "saving"}
+                      onClick={() => void onToggle(subscriber)}
+                      className="rounded-full border border-foreground/15 px-4 py-2 font-mono text-[9px] uppercase tracking-[0.22em] transition hover:bg-foreground hover:text-background disabled:opacity-60"
+                    >
+                      {subscriber.is_active ? tr("pause") : tr("reactivate")}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </GlassCard>

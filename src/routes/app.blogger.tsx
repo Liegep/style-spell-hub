@@ -1881,6 +1881,35 @@ function ProductSubmissionModal({
     };
   }, []);
 
+  useEffect(() => {
+    const handleProfileUpdated = (event: Event) => {
+      const detail =
+        event instanceof CustomEvent && event.detail && typeof event.detail === "object"
+          ? (event.detail as Partial<AuthProfile>)
+          : null;
+
+      if (!detail?.id || latestReviewer?.id !== detail.id) return;
+
+      setLatestReviewer((current) =>
+        current
+          ? {
+              ...current,
+              display_name: detail.display_name ?? current.display_name,
+              full_name: detail.full_name ?? current.full_name,
+              email: detail.email ?? current.email,
+              avatar_url: detail.avatar_url ?? current.avatar_url,
+              status_message: detail.status_message ?? null,
+              status_message_expires_at: detail.status_message_expires_at ?? null,
+              availability_status: detail.availability_status ?? current.availability_status,
+            }
+          : current,
+      );
+    };
+
+    window.addEventListener("profile-updated", handleProfileUpdated);
+    return () => window.removeEventListener("profile-updated", handleProfileUpdated);
+  }, [latestReviewer?.id]);
+
   const normalizeUrl = (value: string) => {
     const raw = value.trim();
     if (!raw) return "";
