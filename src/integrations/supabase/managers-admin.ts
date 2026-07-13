@@ -30,6 +30,55 @@ export async function createManagerAccount(input: {
   role: ManagerRole;
   accountStatus: AccountStatus;
 }) {
+  const email = input.email.trim().toLowerCase();
+  const displayName = input.displayName.trim();
+
+  const { data: existingProfile, error: existingProfileError } = await supabase
+    .from("profiles")
+    .select(MANAGER_SELECT)
+    .eq("email", email)
+    .maybeSingle<ManagerListItem>();
+
+  if (existingProfileError) throw existingProfileError;
+
+  if (existingProfile) {
+    if (existingProfile.role === "admin" || existingProfile.role === "super_admin") {
+      throw new Error("This email already belongs to a manager account.");
+    }
+
+    const { data: promotedProfile, error: promotedProfileError } = await supabase
+      .from("profiles")
+      .update({
+        display_name: displayName,
+        full_name: displayName,
+        role: input.role,
+        account_status: input.accountStatus,
+        availability_status: "available",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existingProfile.id)
+      .eq("role", "blogger")
+      .select(MANAGER_SELECT)
+      .single<ManagerListItem>();
+
+    if (promotedProfileError) throw promotedProfileError;
+
+    void logAuditEvent({
+      action: "Promoted blogger to manager",
+      targetType: "profile",
+      targetId: promotedProfile.id,
+      targetName: promotedProfile.display_name ?? promotedProfile.full_name ?? promotedProfile.email,
+      metadata: {
+        email,
+        previous_role: "blogger",
+        role: input.role,
+        account_status: input.accountStatus,
+      },
+    });
+
+    return promotedProfile;
+  }
+
   const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
   if (!url || !anon) throw new Error("Supabase is not configured.");
@@ -42,9 +91,6 @@ export async function createManagerAccount(input: {
       storageKey: `lp-manager-onboarding-${Date.now()}`,
     },
   });
-
-  const email = input.email.trim().toLowerCase();
-  const displayName = input.displayName.trim();
 
   const { data: signUpData, error: signUpError } = await signupClient.auth.signUp({
     email,

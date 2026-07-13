@@ -329,15 +329,19 @@ function ManagerEditor({
             />
           </Field>
           {isCreate ? (
-            <Field label={tr("Initial password")}>
+            <p className="text-sm text-foreground/60">
+              {tr("If this email already belongs to a blogger, Love Potion will upgrade that existing account to manager instead of creating a duplicate login.")}
+            </p>
+          ) : null}
+          {isCreate ? (
+            <Field label={tr("Initial password for new accounts")}>
               <input
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 className={inputClass}
-                required
-                minLength={8}
-                placeholder={tr("At least 8 characters")}
+                minLength={6}
+                placeholder={tr("Only needed when creating a brand new login")}
               />
             </Field>
           ) : null}
