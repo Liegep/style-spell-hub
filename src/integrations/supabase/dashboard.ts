@@ -115,6 +115,8 @@ export type DeliveryDeskItem = Pick<
   blogger_name: string;
   blogger_avatar_uuid: string | null;
   blogger_avatar_name: string | null;
+  latest_submission_id: string | null;
+  latest_submission_status: SubmissionStatus | null;
 };
 
 function startOfCurrentMonthIso() {
@@ -451,7 +453,11 @@ export async function getDeliveryDeskClaims() {
   const productIds = [...new Set(rows.map((row) => row.product_id))];
   const bloggerIds = [...new Set(rows.map((row) => row.blogger_id))];
 
-  const [{ data: products, error: productError }, { data: bloggers, error: bloggerError }] = await Promise.all([
+  const [
+    { data: products, error: productError },
+    { data: bloggers, error: bloggerError },
+    { data: submissions, error: submissionsError },
+  ] = await Promise.all([
     supabase
       .from("product_releases")
       .select("id,name,editorial_image_url,image_url,delivery_item_key")
@@ -460,17 +466,38 @@ export async function getDeliveryDeskClaims() {
       .from("profiles")
       .select("id,display_name,full_name,email,sl_avatar_uuid,sl_avatar_name")
       .in("id", bloggerIds),
+    supabase
+      .from("blog_submissions")
+      .select("id,product_id,blogger_id,status,submitted_at")
+      .in("product_id", productIds)
+      .in("blogger_id", bloggerIds)
+      .order("submitted_at", { ascending: false }),
   ]);
 
   if (productError) throw productError;
   if (bloggerError) throw bloggerError;
+  if (submissionsError) throw submissionsError;
 
   const productMap = new Map((products ?? []).map((product) => [product.id, product]));
   const bloggerMap = new Map((bloggers ?? []).map((blogger) => [blogger.id, blogger]));
+  const latestSubmissionByBloggerProduct = new Map<
+    string,
+    Pick<BlogSubmission, "id" | "product_id" | "blogger_id" | "status" | "submitted_at">
+  >();
+
+  ((submissions ?? []) as Array<
+    Pick<BlogSubmission, "id" | "product_id" | "blogger_id" | "status" | "submitted_at">
+  >).forEach((submission) => {
+    const key = `${submission.blogger_id}:${submission.product_id}`;
+    if (!latestSubmissionByBloggerProduct.has(key)) {
+      latestSubmissionByBloggerProduct.set(key, submission);
+    }
+  });
 
   return rows.map((row) => {
     const product = productMap.get(row.product_id);
     const blogger = bloggerMap.get(row.blogger_id);
+    const latestSubmission = latestSubmissionByBloggerProduct.get(`${row.blogger_id}:${row.product_id}`);
 
     return {
       ...row,
@@ -480,6 +507,8 @@ export async function getDeliveryDeskClaims() {
       blogger_name: blogger?.display_name ?? blogger?.full_name ?? blogger?.email ?? "Unknown blogger",
       blogger_avatar_uuid: blogger?.sl_avatar_uuid ?? null,
       blogger_avatar_name: blogger?.sl_avatar_name ?? null,
+      latest_submission_id: latestSubmission?.id ?? null,
+      latest_submission_status: latestSubmission?.status ?? null,
     } satisfies DeliveryDeskItem;
   });
 }

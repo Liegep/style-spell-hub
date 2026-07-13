@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getCurrentProfile, type AuthProfile } from "@/integrations/supabase/auth";
 import { notifySecondLifeQuietly } from "@/integrations/supabase/messages";
-import type { ClaimStatus, SubmissionStatus } from "@/integrations/supabase/database.types";
+import type { SubmissionStatus } from "@/integrations/supabase/database.types";
 import { useLang } from "@/i18n/dict";
 import { translateAppPhrase } from "@/i18n/app-text";
 import { getVisibleStatusMessage } from "@/lib/status-note";
@@ -224,6 +224,16 @@ function AtelierPage() {
             : item,
         );
       });
+      setDeliveryDesk((current) =>
+        current.map((claim) =>
+          claim.latest_submission_id === submissionId
+            ? {
+                ...claim,
+                latest_submission_status: status,
+              }
+            : claim,
+        ),
+      );
       setReviewSent((current) => ({ ...current, [submissionId]: status }));
       if (selectedReviewId === submissionId) {
         window.setTimeout(() => setSelectedReviewId(null), 900);
@@ -294,17 +304,6 @@ function AtelierPage() {
 
   function statusLabel(status: SubmissionStatus) {
     if (status === "needs_revision") return "needs revision";
-    return status;
-  }
-
-  function claimTone(status: ClaimStatus) {
-    if (status === "delivered") return "bg-emerald-100 text-emerald-700 border-emerald-200";
-    if (status === "failed") return "bg-rose-100 text-rose-700 border-rose-200";
-    return "bg-amber-50 text-amber-700 border-amber-200";
-  }
-
-  function claimLabel(status: ClaimStatus) {
-    if (status === "claimed") return "delivery pending";
     return status;
   }
 
@@ -437,14 +436,6 @@ function AtelierPage() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="truncate font-display text-2xl">{claim.product_name}</div>
-                      <span
-                        className={cn(
-                          "rounded-full border px-3 py-1 font-mono text-[8px] uppercase tracking-[0.22em]",
-                          claimTone(claim.status),
-                        )}
-                      >
-                        {claimLabel(claim.status)}
-                      </span>
                     </div>
                     <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/55">
                       {claim.blogger_name} · {tr("claimed")} {prettyDate(claim.claimed_at)} ·{" "}
@@ -458,7 +449,17 @@ function AtelierPage() {
                   </div>
 
                   <div className="flex items-center justify-end">
-                    {claim.status === "delivered" ? (
+                    {claim.status === "delivered" && claim.latest_submission_status === "pending" && claim.latest_submission_id ? (
+                      <button
+                        onClick={() => {
+                          setReviewFilter("pending");
+                          setSelectedReviewId(claim.latest_submission_id);
+                        }}
+                        className="rounded-full border border-foreground/15 px-4 py-3 font-mono text-[9px] uppercase tracking-[0.22em] text-foreground/55 hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]"
+                      >
+                        {tr("review")}
+                      </button>
+                    ) : claim.status === "delivered" ? (
                       <span className="rounded-full bg-emerald-100 px-4 py-3 font-mono text-[9px] uppercase tracking-[0.22em] text-emerald-700">
                         {tr("complete")}
                       </span>
