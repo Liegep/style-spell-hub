@@ -492,6 +492,7 @@ function BloggerDash() {
           submission={submissionByProduct[selectedProduct.id]}
           submissionHistory={submissions.filter((row) => row.product_id === selectedProduct.id)}
           claim={claimByProduct[selectedProduct.id]}
+          profile={profile}
           profileId={profileId}
           accountLocked={accountLocked}
           accountStatus={profile?.account_status ?? "active"}
@@ -1735,6 +1736,7 @@ function ProductSubmissionModal({
   submission,
   submissionHistory,
   claim,
+  profile,
   profileId,
   accountLocked,
   accountStatus,
@@ -1746,6 +1748,7 @@ function ProductSubmissionModal({
   submission?: BloggerSubmissionSummary;
   submissionHistory: BloggerSubmissionSummary[];
   claim?: BloggerProductClaimSummary;
+  profile?: AuthProfile | null;
   profileId: string | null;
   accountLocked: boolean;
   accountStatus: string;
