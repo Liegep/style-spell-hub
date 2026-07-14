@@ -2193,11 +2193,31 @@ function Subscribers({
     initialError ? "error" : "ready",
   );
   const [error, setError] = useState(initialError);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const active = subscribers.filter(
     (subscriber) => subscriber.is_active && !subscriber.unsubscribed_at,
   );
   const paused = subscribers.length - active.length;
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredSubscribers = useMemo(() => {
+    if (!normalizedSearch) return subscribers;
+
+    return subscribers.filter((subscriber) => {
+      const haystack = [
+        subscriber.display_name,
+        subscriber.sl_avatar_name,
+        subscriber.email,
+        subscriber.sl_avatar_uuid,
+        subscriber.source,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(normalizedSearch);
+    });
+  }, [normalizedSearch, subscribers]);
 
   async function loadSubscribers() {
     try {
@@ -2257,6 +2277,15 @@ function Subscribers({
             {error}
           </div>
         ) : null}
+        <div className="border-b border-foreground/10 px-6 py-4">
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder={tr("Search by name, email, or UUID")}
+            className="w-full rounded-full border border-foreground/15 bg-background/70 px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-foreground/35 focus:border-foreground/30"
+          />
+        </div>
         <table className="w-full text-sm">
           <thead className="border-b border-foreground/10">
             <tr className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
@@ -2286,8 +2315,17 @@ function Subscribers({
                   {tr("No subscribers yet.")}
                 </td>
               </tr>
+            ) : filteredSubscribers.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="px-6 py-10 text-center font-hand text-2xl text-[var(--brand-magenta)]"
+                >
+                  {tr("No subscriber found for this search.")}
+                </td>
+              </tr>
             ) : (
-              subscribers.map((subscriber) => (
+              filteredSubscribers.map((subscriber) => (
                 <tr
                   key={subscriber.id}
                   className="border-b border-foreground/5 hover:bg-foreground/5"

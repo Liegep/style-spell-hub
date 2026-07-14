@@ -795,8 +795,10 @@ export const appText = {
     "loading subscribers": "loading subscribers",
     "Subscribers": "Subscribers",
     "SUBSCRIBERS": "SUBSCRIBERS",
+    "Search by name, email, or UUID": "Search by name, email, or UUID",
     "active subscribers": "active subscribers",
     "No subscribers yet.": "No subscribers yet.",
+    "No subscriber found for this search.": "No subscriber found for this search.",
     "Add someone manually by name and SL UUID, or import a CSV when you have a bigger list.":
       "Add someone manually by name and SL UUID, or import a CSV when you have a bigger list.",
     "+ Add subscriber": "+ Add subscriber",
@@ -1784,8 +1786,10 @@ export const appText = {
     "loading subscribers": "cargando subscribers",
     "Subscribers": "Suscriptores",
     "SUBSCRIBERS": "SUSCRIPTORES",
+    "Search by name, email, or UUID": "Buscar por nombre, email o UUID",
     "active subscribers": "suscriptores activos",
     "No subscribers yet.": "Aún no hay suscriptores.",
+    "No subscriber found for this search.": "No se encontró ningún suscriptor para esta búsqueda.",
     "Add someone manually by name and SL UUID, or import a CSV when you have a bigger list.":
       "Agrega a alguien manualmente por nombre y UUID de SL, o importa un CSV cuando tengas una lista más grande.",
     "+ Add subscriber": "+ Agregar suscriptor",
