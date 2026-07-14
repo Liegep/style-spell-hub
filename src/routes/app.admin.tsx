@@ -2279,31 +2279,11 @@ function Subscribers({
     initialError ? "error" : "ready",
   );
   const [error, setError] = useState(initialError);
-  const [searchTerm, setSearchTerm] = useState("");
 
   const active = subscribers.filter(
     (subscriber) => subscriber.is_active && !subscriber.unsubscribed_at,
   );
   const paused = subscribers.length - active.length;
-  const normalizedSearch = searchTerm.trim().toLowerCase();
-  const filteredSubscribers = useMemo(() => {
-    if (!normalizedSearch) return subscribers;
-
-    return subscribers.filter((subscriber) => {
-      const haystack = [
-        subscriber.display_name,
-        subscriber.sl_avatar_name,
-        subscriber.email,
-        subscriber.sl_avatar_uuid,
-        subscriber.source,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      return haystack.includes(normalizedSearch);
-    });
-  }, [normalizedSearch, subscribers]);
 
   async function loadSubscribers() {
     try {
@@ -2327,32 +2307,6 @@ function Subscribers({
       console.error("[Subscribers] failed to update subscriber", toggleError);
       setError(
         toggleError instanceof Error ? toggleError.message : tr("Could not update subscriber."),
-      );
-      setState("error");
-    }
-  }
-
-  async function onDelete(subscriber: NewsletterSubscriber) {
-    const subscriberName =
-      subscriber.display_name ||
-      subscriber.sl_avatar_name ||
-      subscriber.email ||
-      subscriber.sl_avatar_uuid ||
-      tr("Second Life Resident");
-    const confirmed = window.confirm(
-      `${tr("Delete subscriber?")}\n\n${subscriberName}\n${subscriber.sl_avatar_uuid ?? tr("missing")}`,
-    );
-
-    if (!confirmed) return;
-
-    setState("saving");
-    try {
-      await deleteNewsletterSubscriber(subscriber);
-      await loadSubscribers();
-    } catch (deleteError) {
-      console.error("[Subscribers] failed to delete subscriber", deleteError);
-      setError(
-        deleteError instanceof Error ? deleteError.message : tr("Could not delete subscriber."),
       );
       setState("error");
     }
@@ -2389,15 +2343,6 @@ function Subscribers({
             {error}
           </div>
         ) : null}
-        <div className="border-b border-foreground/10 px-6 py-4">
-          <input
-            type="search"
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder={tr("Search by name, email, or UUID")}
-            className="w-full rounded-full border border-foreground/15 bg-background/70 px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-foreground/35 focus:border-foreground/30"
-          />
-        </div>
         <table className="w-full text-sm">
           <thead className="border-b border-foreground/10">
             <tr className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
@@ -2427,17 +2372,8 @@ function Subscribers({
                   {tr("No subscribers yet.")}
                 </td>
               </tr>
-            ) : filteredSubscribers.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="px-6 py-10 text-center font-hand text-2xl text-[var(--brand-magenta)]"
-                >
-                  {tr("No subscriber found for this search.")}
-                </td>
-              </tr>
             ) : (
-              filteredSubscribers.map((subscriber) => (
+              subscribers.map((subscriber) => (
                 <tr
                   key={subscriber.id}
                   className="border-b border-foreground/5 hover:bg-foreground/5"
@@ -2449,20 +2385,8 @@ function Subscribers({
                         subscriber.email ||
                         tr("Second Life Resident")}
                     </div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="rounded-full bg-foreground/5 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/55">
-                        {subscriber.source}
-                      </span>
-                      <button
-                        type="button"
-                        disabled={state === "saving"}
-                        onClick={() => void onDelete(subscriber)}
-                        aria-label={tr("Delete")}
-                        title={tr("Delete")}
-                        className="flex h-6 w-6 items-center justify-center rounded-full border border-foreground/12 font-mono text-[11px] text-foreground/45 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
-                      >
-                        x
-                      </button>
+                    <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/45">
+                      {subscriber.source}
                     </div>
                   </td>
                   <td className="px-6 py-4 font-mono text-[10px] text-foreground/60">
