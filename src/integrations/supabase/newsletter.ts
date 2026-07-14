@@ -104,6 +104,25 @@ export async function addNewsletterSubscriber(input: ManualSubscriberInput) {
   return data as NewsletterSubscriber;
 }
 
+export async function deleteNewsletterSubscriber(subscriber: NewsletterSubscriber) {
+  const { error } = await supabase.from("newsletter_subscribers").delete().eq("id", subscriber.id);
+
+  if (error) throw error;
+
+  await logAuditEvent({
+    action: "newsletter_subscriber_deleted",
+    targetType: "newsletter_subscriber",
+    targetId: subscriber.id,
+    targetName:
+      subscriber.display_name || subscriber.sl_avatar_name || subscriber.email || subscriber.sl_avatar_uuid,
+    metadata: {
+      sl_avatar_uuid: subscriber.sl_avatar_uuid,
+      source: subscriber.source,
+      email: subscriber.email,
+    },
+  });
+}
+
 export async function listNewsletterCampaigns(limit = 8) {
   const { data, error } = await supabase
     .from("newsletter_campaigns")

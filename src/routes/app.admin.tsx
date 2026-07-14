@@ -30,6 +30,7 @@ import {
 } from "@/integrations/supabase/messages";
 import {
   addNewsletterSubscriber,
+  deleteNewsletterSubscriber,
   importNewsletterSubscribersFromCsv,
   listNewsletterCampaignsWithStats,
   listNewsletterSubscribers,
@@ -2246,6 +2247,32 @@ function Subscribers({
     }
   }
 
+  async function onDelete(subscriber: NewsletterSubscriber) {
+    const subscriberName =
+      subscriber.display_name ||
+      subscriber.sl_avatar_name ||
+      subscriber.email ||
+      subscriber.sl_avatar_uuid ||
+      tr("Second Life Resident");
+    const confirmed = window.confirm(
+      `${tr("Delete subscriber?")}\n\n${subscriberName}\n${subscriber.sl_avatar_uuid ?? tr("missing")}`,
+    );
+
+    if (!confirmed) return;
+
+    setState("saving");
+    try {
+      await deleteNewsletterSubscriber(subscriber);
+      await loadSubscribers();
+    } catch (deleteError) {
+      console.error("[Subscribers] failed to delete subscriber", deleteError);
+      setError(
+        deleteError instanceof Error ? deleteError.message : tr("Could not delete subscriber."),
+      );
+      setState("error");
+    }
+  }
+
   return (
     <div className="grid gap-6 md:grid-cols-4">
       <GlassCard tone="pink" className="md:col-span-1 p-6">
@@ -2337,8 +2364,20 @@ function Subscribers({
                         subscriber.email ||
                         tr("Second Life Resident")}
                     </div>
-                    <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/45">
-                      {subscriber.source}
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="rounded-full bg-foreground/5 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.24em] text-foreground/55">
+                        {subscriber.source}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={state === "saving"}
+                        onClick={() => void onDelete(subscriber)}
+                        aria-label={tr("Delete")}
+                        title={tr("Delete")}
+                        className="flex h-6 w-6 items-center justify-center rounded-full border border-foreground/12 font-mono text-[11px] text-foreground/45 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+                      >
+                        x
+                      </button>
                     </div>
                   </td>
                   <td className="px-6 py-4 font-mono text-[10px] text-foreground/60">
