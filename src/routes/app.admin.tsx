@@ -2052,20 +2052,10 @@ function NewsletterSubscribersPanel({
               <div className="truncate font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/45">
                 {subscriber.sl_avatar_uuid || tr("no sl uuid")}
               </div>
-              <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.24em] text-foreground/55">
-                <span>{source}</span>
-                <button
-                  type="button"
-                  disabled={manualState === "saving"}
-                  onClick={() => void onDelete(subscriber)}
-                  aria-label={tr("Delete")}
-                  title={tr("Delete")}
-                  className="flex h-5 w-5 items-center justify-center rounded-full border border-foreground/12 text-[10px] text-foreground/45 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
-                >
-                  x
-                </button>
+              <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-foreground/55">
+                {source}
               </div>
-              <div>
+              <div className="flex items-center gap-2">
                 <span
                   className={cn(
                     "rounded-full px-3 py-1 font-mono text-[9px] uppercase tracking-[0.22em]",
@@ -2074,6 +2064,16 @@ function NewsletterSubscribersPanel({
                 >
                   {active ? tr("active") : tr("paused")}
                 </span>
+                <button
+                  type="button"
+                  disabled={manualState === "saving"}
+                  onClick={() => void onDelete(subscriber)}
+                  aria-label={tr("Delete")}
+                  title={tr("Delete")}
+                  className="flex h-6 w-6 items-center justify-center rounded-full border border-foreground/12 text-sm leading-none text-foreground/45 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+                >
+                  +
+                </button>
               </div>
             </div>
           );
