@@ -1807,9 +1807,29 @@ function NewsletterSubscribersPanel({
   const [manualUuid, setManualUuid] = useState("");
   const [manualState, setManualState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [manualMessage, setManualMessage] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const activeSubscribers = subscribers.filter(
     (subscriber) => subscriber.is_active && !subscriber.unsubscribed_at,
   );
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredSubscribers = useMemo(() => {
+    if (!normalizedSearch) return subscribers;
+
+    return subscribers.filter((subscriber) => {
+      const haystack = [
+        subscriber.display_name,
+        subscriber.sl_avatar_name,
+        subscriber.email,
+        subscriber.sl_avatar_uuid,
+        subscriber.source,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(normalizedSearch);
+    });
+  }, [normalizedSearch, subscribers]);
 
   function formatSubscriberSource(source: string | null | undefined) {
     if (source === "manual") return "manual";
@@ -1838,6 +1858,34 @@ function NewsletterSubscribersPanel({
       setManualState("error");
       setManualMessage(
         addError instanceof Error ? addError.message : tr("Could not add subscriber."),
+      );
+    }
+  }
+
+  async function onDelete(subscriber: NewsletterSubscriber) {
+    const subscriberName =
+      subscriber.display_name ||
+      subscriber.sl_avatar_name ||
+      subscriber.email ||
+      subscriber.sl_avatar_uuid ||
+      tr("Second Life Resident");
+    const confirmed = window.confirm(
+      `${tr("Delete subscriber?")}\n\n${subscriberName}\n${subscriber.sl_avatar_uuid ?? tr("missing")}`,
+    );
+
+    if (!confirmed) return;
+
+    setManualState("saving");
+    setManualMessage("");
+
+    try {
+      await deleteNewsletterSubscriber(subscriber);
+      await onSubscriberAdded();
+    } catch (deleteError) {
+      console.error("[Newsletter] failed to delete subscriber", deleteError);
+      setManualState("error");
+      setManualMessage(
+        deleteError instanceof Error ? deleteError.message : tr("Could not delete subscriber."),
       );
     }
   }
@@ -1952,10 +2000,36 @@ function NewsletterSubscribersPanel({
           {showManualAdd ? tr("Close") : tr("+ Add subscriber")}
         </button>
       </div>
+      <div className="border-b border-foreground/10 px-6 py-4">
+        <input
+          type="search"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder={tr("Search by name, email, or UUID")}
+          className="w-full rounded-full border border-foreground/15 bg-background/70 px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-foreground/35 focus:border-foreground/30"
+        />
+      </div>
       {manualAddForm}
+      {manualMessage ? (
+        <div
+          className={cn(
+            "mx-6 my-4 rounded-2xl border px-5 py-3 text-sm",
+            manualState === "error"
+              ? "border-[var(--brand-magenta)]/35 bg-[var(--brand-magenta)]/10 text-[var(--brand-magenta)]"
+              : "border-green-300 bg-green-50 text-green-700",
+          )}
+        >
+          {manualMessage}
+        </div>
+      ) : null}
 
       <div className="divide-y divide-foreground/5">
-        {subscribers.map((subscriber) => {
+        {filteredSubscribers.length === 0 ? (
+          <div className="px-6 py-10 text-center font-hand text-2xl text-[var(--brand-magenta)]">
+            {tr("No subscriber found for this search.")}
+          </div>
+        ) : (
+          filteredSubscribers.map((subscriber) => {
           const displayName =
             subscriber.display_name ||
             subscriber.sl_avatar_name ||
@@ -1978,8 +2052,18 @@ function NewsletterSubscribersPanel({
               <div className="truncate font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/45">
                 {subscriber.sl_avatar_uuid || tr("no sl uuid")}
               </div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-foreground/55">
-                {source}
+              <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.24em] text-foreground/55">
+                <span>{source}</span>
+                <button
+                  type="button"
+                  disabled={manualState === "saving"}
+                  onClick={() => void onDelete(subscriber)}
+                  aria-label={tr("Delete")}
+                  title={tr("Delete")}
+                  className="flex h-5 w-5 items-center justify-center rounded-full border border-foreground/12 text-[10px] text-foreground/45 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+                >
+                  x
+                </button>
               </div>
               <div>
                 <span
@@ -1993,7 +2077,8 @@ function NewsletterSubscribersPanel({
               </div>
             </div>
           );
-        })}
+        })
+        )}
       </div>
     </GlassCard>
   );
