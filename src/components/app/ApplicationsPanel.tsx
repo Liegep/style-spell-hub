@@ -137,12 +137,41 @@ export function ApplicationsPanel({
         reviewedBy: profile.id,
       });
 
-      setApplications((current) =>
-        filter === "all"
-          ? current.map((item) => (item.id === reviewed.id ? reviewed : item))
-          : current.filter((item) => item.id !== reviewed.id),
-      );
-      setSelected(reviewed);
+      let nextSelected: BloggerApplication | null = null;
+
+      setApplications((current) => {
+        if (filter === "all") {
+          const updated = current.map((item) => (item.id === reviewed.id ? reviewed : item));
+          nextSelected = reviewed;
+          return updated;
+        }
+
+        const selectedIndex = current.findIndex((item) => item.id === reviewed.id);
+        const updated = current.filter((item) => item.id !== reviewed.id);
+
+        if (updated.length > 0) {
+          const nextIndex = selectedIndex >= updated.length ? updated.length - 1 : Math.max(selectedIndex, 0);
+          nextSelected = updated[nextIndex] ?? null;
+        }
+
+        return updated;
+      });
+
+      if (nextSelected) {
+        openApplication(nextSelected);
+      } else {
+        setSelected(null);
+        setComment("");
+        setOnboardingUuid("");
+        setOnboardingEmail("");
+        setOnboardingPassword("");
+        setOnboardingState("idle");
+        setOnboardingMessage("");
+        setLoginSummary(null);
+        setCopyState("idle");
+        setRejoinHistory(null);
+      }
+
       setState("idle");
     } catch (reviewError) {
       setError(reviewError instanceof Error ? reviewError.message : "Could not review application.");
