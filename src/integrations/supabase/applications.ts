@@ -31,26 +31,21 @@ export async function submitBloggerApplication(input: ApplicationInput) {
     status: "pending" as const,
   };
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("blogger_applications")
     .insert(payload)
-    .select(
-      "id,display_name,email,sl_avatar_name,sl_avatar_uuid,language_preference,flickr_url,instagram_url,blog_url,answers,status,reviewed_by,review_comment,submitted_at,reviewed_at",
-    )
-    .single<BloggerApplication>();
 
   if (error) {
     throw normalizeSupabaseError(error, "Could not send your application.");
   }
 
   void notifyStaffAboutRejoinAttempt({
-    slAvatarUuid: data.sl_avatar_uuid,
-    displayName: data.display_name,
+    slAvatarUuid: payload.sl_avatar_uuid,
+    displayName: payload.display_name,
     source: "application",
-    applicationId: data.id,
   });
 
-  return data;
+  return payload;
 }
 
 function normalizeSupabaseError(
