@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { cn } from "@/lib/utils";
@@ -41,7 +41,7 @@ export function ApplicationsPanel({
   const [applications, setApplications] = useState<BloggerApplication[]>(initialApplications);
   const [formFields, setFormFields] = useState<ApplicationFormField[]>(initialFormFields);
   const [filter, setFilter] = useState<ApplicationStatus | "all">("pending");
-  const [selected, setSelected] = useState<BloggerApplication | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [comment, setComment] = useState("");
   const [onboardingUuid, setOnboardingUuid] = useState("");
   const [onboardingEmail, setOnboardingEmail] = useState("");
@@ -54,6 +54,10 @@ export function ApplicationsPanel({
   const [state, setState] = useState<"idle" | "loading" | "reviewing" | "error">(initialError ? "error" : "idle");
   const [error, setError] = useState(initialError ? tr(initialError) : "");
   const didUseInitialApplications = useRef(false);
+  const selected = useMemo(
+    () => applications.find((application) => application.id === selectedId) ?? null,
+    [applications, selectedId],
+  );
 
   useEffect(() => {
     if (!didUseInitialApplications.current) {
@@ -89,7 +93,7 @@ export function ApplicationsPanel({
   }, [filter]);
 
   function openApplication(application: BloggerApplication) {
-    setSelected(application);
+    setSelectedId(application.id);
     setComment(application.review_comment ?? "");
     setOnboardingUuid(application.sl_avatar_uuid ?? "");
     setOnboardingEmail(getApplicantEmail(application, formFields));
@@ -160,7 +164,7 @@ export function ApplicationsPanel({
       if (nextSelected) {
         openApplication(nextSelected);
       } else {
-        setSelected(null);
+        setSelectedId(null);
         setComment("");
         setOnboardingUuid("");
         setOnboardingEmail("");
@@ -178,6 +182,24 @@ export function ApplicationsPanel({
       setState("error");
     }
   }
+
+  useEffect(() => {
+    if (!selectedId) return;
+
+    const nextSelected = applications.find((application) => application.id === selectedId);
+    if (nextSelected) return;
+
+    setSelectedId(null);
+    setComment("");
+    setOnboardingUuid("");
+    setOnboardingEmail("");
+    setOnboardingPassword("");
+    setOnboardingState("idle");
+    setOnboardingMessage("");
+    setLoginSummary(null);
+    setCopyState("idle");
+    setRejoinHistory(null);
+  }, [applications, selectedId]);
 
   async function handleCreateBloggerFromApplication() {
     if (!selected) return;
@@ -380,7 +402,7 @@ export function ApplicationsPanel({
 
       <GlassCard tone="pink" className="p-6">
         {selected ? (
-          <div>
+          <div key={selected.id}>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
               {tr("Review dossier")}
             </div>
