@@ -39,7 +39,9 @@ export async function submitBloggerApplication(input: ApplicationInput) {
     )
     .single<BloggerApplication>();
 
-  if (error) throw error;
+  if (error) {
+    throw normalizeSupabaseError(error, "Could not send your application.");
+  }
 
   void notifyStaffAboutRejoinAttempt({
     slAvatarUuid: data.sl_avatar_uuid,
@@ -49,6 +51,25 @@ export async function submitBloggerApplication(input: ApplicationInput) {
   });
 
   return data;
+}
+
+function normalizeSupabaseError(
+  error: unknown,
+  fallbackMessage: string,
+) {
+  if (error instanceof Error) return error;
+
+  if (error && typeof error === "object" && "message" in error) {
+    const message = String((error as { message?: unknown }).message ?? "").trim();
+    const code = "code" in error ? String((error as { code?: unknown }).code ?? "").trim() : "";
+    const details = "details" in error ? String((error as { details?: unknown }).details ?? "").trim() : "";
+    const hint = "hint" in error ? String((error as { hint?: unknown }).hint ?? "").trim() : "";
+    const extra = [code && `Code: ${code}.`, details, hint].filter(Boolean).join(" ");
+
+    return new Error(extra ? `${message || fallbackMessage} ${extra}`.trim() : message || fallbackMessage);
+  }
+
+  return new Error(fallbackMessage);
 }
 
 export async function listBloggerApplications(status: ApplicationStatus | "all" = "pending") {
