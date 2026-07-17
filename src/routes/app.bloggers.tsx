@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
@@ -25,8 +25,25 @@ import { notifySecondLifeQuietly } from "@/integrations/supabase/messages";
 
 type BloggerFilter = "all" | "active" | "friends" | "blocked" | "vacation" | "missing_uuid";
 
+type BloggerCreateSearch = {
+  openCreate?: "application";
+  displayName?: string;
+  avatarName?: string;
+  avatarUuid?: string;
+  email?: string;
+  language?: "en" | "es";
+};
+
 export const Route = createFileRoute("/app/bloggers")({
   ssr: false,
+  validateSearch: (search: Record<string, unknown>): BloggerCreateSearch => ({
+    openCreate: search.openCreate === "application" ? "application" : undefined,
+    displayName: typeof search.displayName === "string" ? search.displayName : undefined,
+    avatarName: typeof search.avatarName === "string" ? search.avatarName : undefined,
+    avatarUuid: typeof search.avatarUuid === "string" ? search.avatarUuid : undefined,
+    email: typeof search.email === "string" ? search.email : undefined,
+    language: search.language === "es" ? "es" : search.language === "en" ? "en" : undefined,
+  }),
   loader: async () => {
     try {
       return {
@@ -47,6 +64,8 @@ function BloggersPage() {
   const language = useLang();
   const tr = (value: string) => translateAppPhrase(value, language);
   const initialData = Route.useLoaderData();
+  const createSearch = Route.useSearch();
+  const navigate = useNavigate({ from: "/app/bloggers" });
   const [filter, setFilter] = useState<BloggerFilter>("active");
   const [searchQuery, setSearchQuery] = useState("");
   const [rows, setRows] = useState<BloggerListItem[]>(initialData.rows);
@@ -157,6 +176,12 @@ function BloggersPage() {
         : current,
     );
   }
+
+  useEffect(() => {
+    if (createSearch.openCreate !== "application") return;
+    setIsCreateOpen(true);
+    void navigate({ search: {} });
+  }, [createSearch.openCreate, navigate]);
 
   return (
     <div className="px-6 py-10 md:px-12">
@@ -327,6 +352,13 @@ function BloggersPage() {
 
       {isCreateOpen ? (
         <CreateBloggerModal
+          initialValues={{
+            displayName: createSearch.displayName,
+            avatarName: createSearch.avatarName,
+            avatarUuid: createSearch.avatarUuid,
+            email: createSearch.email,
+            language: createSearch.language,
+          }}
           onClose={() => setIsCreateOpen(false)}
           onCreated={() => {
             setIsCreateOpen(false);
@@ -816,24 +848,45 @@ function HistoryRow({
 }
 
 function CreateBloggerModal({
+  initialValues,
   onClose,
   onCreated,
 }: {
+  initialValues?: {
+    displayName?: string;
+    avatarName?: string;
+    avatarUuid?: string;
+    email?: string;
+    language?: "en" | "es";
+  };
   onClose: () => void;
   onCreated: () => void;
 }) {
   const languageCode = useLang();
   const tr = (value: string) => translateAppPhrase(value, languageCode);
-  const [displayName, setDisplayName] = useState("");
-  const [avatarName, setAvatarName] = useState("");
-  const [avatarUuid, setAvatarUuid] = useState("");
-  const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState(initialValues?.displayName ?? "");
+  const [avatarName, setAvatarName] = useState(initialValues?.avatarName ?? "");
+  const [avatarUuid, setAvatarUuid] = useState(initialValues?.avatarUuid ?? "");
+  const [email, setEmail] = useState(initialValues?.email ?? "");
   const [password, setPassword] = useState("");
-  const [language, setLanguage] = useState<"en" | "es">("en");
+  const [language, setLanguage] = useState<"en" | "es">(initialValues?.language === "es" ? "es" : "en");
   const [accountStatus, setAccountStatus] = useState<"pending" | "active">("active");
   const [bloggerTier, setBloggerTier] = useState<BloggerTier>("standard");
   const [state, setState] = useState<"idle" | "saving" | "error">("idle");
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    setDisplayName(initialValues?.displayName ?? "");
+    setAvatarName(initialValues?.avatarName ?? "");
+    setAvatarUuid(initialValues?.avatarUuid ?? "");
+    setEmail(initialValues?.email ?? "");
+    setLanguage(initialValues?.language === "es" ? "es" : "en");
+    setPassword("");
+    setAccountStatus("active");
+    setBloggerTier("standard");
+    setState("idle");
+    setMessage("");
+  }, [initialValues]);
 
   async function createAccount(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

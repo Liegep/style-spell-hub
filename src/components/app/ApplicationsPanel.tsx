@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
@@ -38,6 +39,7 @@ export function ApplicationsPanel({
 }: ApplicationsPanelProps) {
   const language = useLang();
   const tr = (value: string) => translateAppPhrase(value, language);
+  const navigate = useNavigate({ from: "/app/applications" });
   const [applications, setApplications] = useState<BloggerApplication[]>(initialApplications);
   const [formFields, setFormFields] = useState<ApplicationFormField[]>(initialFormFields);
   const [filter, setFilter] = useState<ApplicationStatus | "all">("pending");
@@ -180,6 +182,32 @@ export function ApplicationsPanel({
       }
 
       setState("idle");
+
+      if (status === "approved") {
+        const displayName = getApplicantName(reviewed, formFields) || "Love Potion Blogger";
+        const avatarName =
+          reviewed.sl_avatar_name?.trim() ||
+          findAnswerByKeys(reviewed.answers, [
+            "slAvatarName",
+            "sl_avatar_name",
+            "avatarName",
+            "avatar_name",
+          ]) ||
+          displayName;
+        const email = getApplicantEmail(reviewed, formFields);
+
+        void navigate({
+          to: "/app/bloggers",
+          search: {
+            openCreate: "application",
+            displayName,
+            avatarName,
+            avatarUuid: reviewed.sl_avatar_uuid ?? "",
+            email,
+            language: reviewed.language_preference === "es" ? "es" : "en",
+          },
+        });
+      }
     } catch (reviewError) {
       setError(reviewError instanceof Error ? reviewError.message : "Could not review application.");
       setState("error");
