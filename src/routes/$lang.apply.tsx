@@ -68,12 +68,14 @@ function ApplyPage() {
         throw new Error(`${t.apply.missingField}: ${requiredMissing.label}.`);
       }
 
+      const languagePreference = resolveApplicationLanguagePreference(fields, form, lang);
+
       await submitBloggerApplication({
         displayName: readFormValue(form, "displayName"),
         email: readFormValue(form, "email"),
         slAvatarName: readFormValue(form, "slAvatarName"),
         slAvatarUuid: readFormValue(form, "slAvatarUuid"),
-        languagePreference: lang,
+        languagePreference,
         flickrUrl: readFormValue(form, "flickrUrl"),
         instagramUrl: readFormValue(form, "instagramUrl"),
         blogUrl: readFormValue(form, "blogUrl"),
@@ -332,4 +334,54 @@ function buildApplicationAnswers(fields: ApplicationFormField[], form: Record<st
     }
     return answers;
   }, {});
+}
+
+function resolveApplicationLanguagePreference(
+  fields: ApplicationFormField[],
+  form: Record<string, string>,
+  fallbackLang: "en" | "es",
+) {
+  const directKeys = [
+    "languagePreference",
+    "preferredLanguage",
+    "preferred_language",
+    "language",
+    "idioma",
+  ];
+
+  for (const key of directKeys) {
+    const normalized = normalizeLanguageValue(readFormValue(form, key));
+    if (normalized) return normalized;
+  }
+
+  const languageField = fields.find((field) => {
+    const key = field.field_key.trim().toLowerCase();
+    const label = field.label.trim().toLowerCase();
+    const help = (field.help_text ?? "").trim().toLowerCase();
+    return (
+      key.includes("language") ||
+      key.includes("idioma") ||
+      label.includes("language") ||
+      label.includes("idioma") ||
+      help.includes("language") ||
+      help.includes("idioma")
+    );
+  });
+
+  if (languageField) {
+    const normalized = normalizeLanguageValue(readFormValue(form, languageField.field_key));
+    if (normalized) return normalized;
+  }
+
+  return fallbackLang === "es" ? "es" : "en";
+}
+
+function normalizeLanguageValue(value: string): "en" | "es" | null {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return null;
+
+  if (["es", "spanish", "espanol", "español", "castellano"].includes(normalized)) return "es";
+  if (["en", "english", "ingles", "inglese", "inglês", "ingl\u00EAs"].includes(normalized)) return "en";
+
+  return null;
 }

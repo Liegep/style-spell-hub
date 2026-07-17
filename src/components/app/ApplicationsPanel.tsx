@@ -46,6 +46,7 @@ export function ApplicationsPanel({
   const [onboardingUuid, setOnboardingUuid] = useState("");
   const [onboardingEmail, setOnboardingEmail] = useState("");
   const [onboardingPassword, setOnboardingPassword] = useState("");
+  const [onboardingLanguage, setOnboardingLanguage] = useState<"en" | "es">("en");
   const [onboardingState, setOnboardingState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [onboardingMessage, setOnboardingMessage] = useState("");
   const [loginSummary, setLoginSummary] = useState<LoginSummary | null>(null);
@@ -98,6 +99,7 @@ export function ApplicationsPanel({
     setOnboardingUuid(application.sl_avatar_uuid ?? "");
     setOnboardingEmail(getApplicantEmail(application, formFields));
     setOnboardingPassword("");
+    setOnboardingLanguage(application.language_preference === "es" ? "es" : "en");
     setOnboardingState("idle");
     setOnboardingMessage("");
     setLoginSummary(null);
@@ -169,6 +171,7 @@ export function ApplicationsPanel({
         setOnboardingUuid("");
         setOnboardingEmail("");
         setOnboardingPassword("");
+        setOnboardingLanguage("en");
         setOnboardingState("idle");
         setOnboardingMessage("");
         setLoginSummary(null);
@@ -194,6 +197,7 @@ export function ApplicationsPanel({
     setOnboardingUuid("");
     setOnboardingEmail("");
     setOnboardingPassword("");
+    setOnboardingLanguage("en");
     setOnboardingState("idle");
     setOnboardingMessage("");
     setLoginSummary(null);
@@ -240,7 +244,7 @@ export function ApplicationsPanel({
         displayName,
         avatarName,
         avatarUuid: onboardingUuid.trim() || null,
-        language: selected.language_preference,
+        language: onboardingLanguage,
         accountStatus: "active",
       });
       const loginName = created.profile.sl_avatar_name ?? avatarName;
@@ -260,12 +264,12 @@ export function ApplicationsPanel({
       try {
         const staffProfile = await getCurrentProfile();
         if (staffProfile?.id) {
-          const welcomeBody = buildWelcomeMessage(selected.language_preference, loginName);
+          const welcomeBody = buildWelcomeMessage(onboardingLanguage, loginName);
           await sendInternalMessage({
             senderId: staffProfile.id,
             scope: "personal",
             recipientId: created.userId,
-            subject: selected.language_preference === "es" ? "Bienvenida a Love Potion" : "Welcome to Love Potion",
+            subject: onboardingLanguage === "es" ? "Bienvenida a Love Potion" : "Welcome to Love Potion",
             body: welcomeBody,
           });
           welcomeNoteCreated = true;
@@ -278,7 +282,7 @@ export function ApplicationsPanel({
                 type: "new_message",
                 title: selected.language_preference === "es" ? "Love Potion HQ" : "Love Potion HQ",
                 body:
-                  selected.language_preference === "es"
+                  onboardingLanguage === "es"
                     ? "Tu cuenta blogger esta lista. Espera tu notecard de bienvenida con tu login y contrasena temporal."
                     : "Your blogger account is ready. Please wait for your welcome notecard with your login and temporary password.",
               },
@@ -476,6 +480,22 @@ export function ApplicationsPanel({
                   />
                   <p className="mt-2 text-xs text-foreground/55">
                     {tr("Optional. If empty, Love Potion creates a private technical email and she logs in with her avatar name.")}
+                  </p>
+                </label>
+                <label className="block">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
+                    {tr("Language")}
+                  </span>
+                  <select
+                    value={onboardingLanguage}
+                    onChange={(event) => setOnboardingLanguage(event.target.value as "en" | "es")}
+                    className="mt-2 w-full rounded-full border border-foreground/15 bg-background/70 px-4 py-3 text-sm outline-none focus:border-[var(--brand-magenta)]"
+                  >
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                  </select>
+                  <p className="mt-2 text-xs text-foreground/55">
+                    {tr("This will be her first app language when she logs in. She can change it later in the selector.")}
                   </p>
                 </label>
                 <label className="block">
