@@ -48,6 +48,7 @@ function BloggersPage() {
   const tr = (value: string) => translateAppPhrase(value, language);
   const initialData = Route.useLoaderData();
   const [filter, setFilter] = useState<BloggerFilter>("active");
+  const [searchQuery, setSearchQuery] = useState("");
   const [rows, setRows] = useState<BloggerListItem[]>(initialData.rows);
   const [state, setState] = useState<"loading" | "ready" | "error">(
     initialData.error ? "error" : "ready",
@@ -84,20 +85,41 @@ function BloggersPage() {
   }, []);
 
   const filtered = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
     return rows.filter((blogger) => {
-      if (filter === "all") return blogger.account_status !== "left";
-      if (filter === "active") return blogger.account_status === "active";
-      if (filter === "friends")
-        return blogger.blogger_tier === "friend" && blogger.account_status !== "left";
-      if (filter === "blocked")
-        return blogger.account_status === "blocked" || blogger.account_status === "left";
-      if (filter === "vacation")
-        return blogger.availability_status === "vacation" && blogger.account_status !== "left";
-      if (filter === "missing_uuid")
-        return !blogger.sl_avatar_uuid && blogger.account_status !== "left";
-      return true;
+      const matchesFilter =
+        filter === "all"
+          ? blogger.account_status !== "left"
+          : filter === "active"
+            ? blogger.account_status === "active"
+            : filter === "friends"
+              ? blogger.blogger_tier === "friend" && blogger.account_status !== "left"
+              : filter === "blocked"
+                ? blogger.account_status === "blocked" || blogger.account_status === "left"
+                : filter === "vacation"
+                  ? blogger.availability_status === "vacation" && blogger.account_status !== "left"
+                  : filter === "missing_uuid"
+                    ? !blogger.sl_avatar_uuid && blogger.account_status !== "left"
+                    : true;
+
+      if (!matchesFilter) return false;
+      if (!normalizedQuery) return true;
+
+      const searchable = [
+        blogger.display_name,
+        blogger.full_name,
+        blogger.sl_avatar_name,
+        blogger.email,
+        blogger.sl_avatar_uuid,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchable.includes(normalizedQuery);
     });
-  }, [filter, rows]);
+  }, [filter, rows, searchQuery]);
 
   async function reactivateBlogger(blogger: BloggerListItem) {
     setStatusAction((current) => ({ ...current, [blogger.id]: "saving" }));
@@ -150,25 +172,42 @@ function BloggersPage() {
         <HandwrittenNote>{tr("your circle")}</HandwrittenNote>
       </header>
 
-      <div className="mt-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <Tabs<BloggerFilter>
-          value={filter}
-          onChange={setFilter}
-          tabs={[
-            { id: "all", label: tr("All bloggers"), sub: "01" },
-            { id: "active", label: tr("Active"), sub: "02" },
-            { id: "friends", label: tr("Friends"), sub: "03" },
-            { id: "blocked", label: tr("Blocked / Removed"), sub: "04" },
-            { id: "vacation", label: tr("Vacation"), sub: "05" },
-            { id: "missing_uuid", label: tr("Missing UUID"), sub: "06" },
-          ]}
-        />
-        <button
-          onClick={() => setIsCreateOpen(true)}
-          className="rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-white shadow-lg shadow-[var(--brand-magenta)]/20 hover:opacity-90"
-        >
-          + {tr("Create blogger")}
-        </button>
+      <div className="mt-8 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <Tabs<BloggerFilter>
+            value={filter}
+            onChange={setFilter}
+            tabs={[
+              { id: "all", label: tr("All bloggers"), sub: "01" },
+              { id: "active", label: tr("Active"), sub: "02" },
+              { id: "friends", label: tr("Friends"), sub: "03" },
+              { id: "blocked", label: tr("Blocked / Removed"), sub: "04" },
+              { id: "vacation", label: tr("Vacation"), sub: "05" },
+              { id: "missing_uuid", label: tr("Missing UUID"), sub: "06" },
+            ]}
+          />
+          <button
+            onClick={() => setIsCreateOpen(true)}
+            className="rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-white shadow-lg shadow-[var(--brand-magenta)]/20 hover:opacity-90"
+          >
+            + {tr("Create blogger")}
+          </button>
+        </div>
+
+        <div className="max-w-xl">
+          <label className="block">
+            <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
+              {tr("Search bloggers")}
+            </span>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder={tr("Search by name, avatar, email, or UUID")}
+              className="mt-2 w-full rounded-full border border-foreground/15 bg-white/70 px-5 py-3 text-sm outline-none transition focus:border-[var(--brand-magenta)]"
+            />
+          </label>
+        </div>
       </div>
 
       {state === "loading" ? (
@@ -279,7 +318,7 @@ function BloggersPage() {
           {filtered.length === 0 ? (
             <GlassCard className="p-8">
               <div className="font-hand text-3xl text-[var(--brand-magenta)]">
-                {tr("no bloggers in this filter")}
+                {searchQuery.trim() ? tr("No bloggers match this search.") : tr("no bloggers in this filter")}
               </div>
             </GlassCard>
           ) : null}

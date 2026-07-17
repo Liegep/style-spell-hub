@@ -234,6 +234,9 @@ export const appText = {
     "SL avatar UUID": "SL avatar UUID",
     "Temporary password": "Temporary password",
     "Language": "Language",
+    "Search bloggers": "Search bloggers",
+    "Search by name, avatar, email, or UUID": "Search by name, avatar, email, or UUID",
+    "No bloggers match this search.": "No bloggers match this search.",
     "This will be her first app language when she logs in. She can change it later in the selector.":
       "This will be her first app language when she logs in. She can change it later in the selector.",
     "Initial account status": "Initial account status",
@@ -1231,6 +1234,9 @@ export const appText = {
     "SL avatar UUID": "UUID del avatar SL",
     "Temporary password": "Contraseña temporal",
     "Language": "Idioma",
+    "Search bloggers": "Buscar bloggers",
+    "Search by name, avatar, email, or UUID": "Busca por nombre, avatar, email o UUID",
+    "No bloggers match this search.": "Ninguna blogger coincide con esta búsqueda.",
     "This will be her first app language when she logs in. She can change it later in the selector.":
       "Este será su primer idioma en la app cuando inicie sesión. Luego puede cambiarlo en el selector.",
     "Initial account status": "Estado inicial de la cuenta",
