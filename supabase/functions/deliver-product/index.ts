@@ -21,6 +21,17 @@ type DeliveryPurpose = "product" | "demo";
 type DeliveryServer = {
   server_url: string;
   object_name: string | null;
+  object_key: string | null;
+  region_name: string | null;
+};
+
+type DeliveryAttempt = {
+  objectName: string;
+  objectKey: string | null;
+  regionName: string | null;
+  status: number | null;
+  statusText: string;
+  responseText: string;
 };
 
 function isDemoDropboxName(objectName: string | null | undefined) {
@@ -34,15 +45,17 @@ async function getActiveDeliveryUrls(
 ) {
   const { data, error } = await supabase
     .from("second_life_delivery_servers")
-    .select("server_url,object_name")
+    .select("server_url,object_name,object_key,region_name")
     .eq("active", true)
     .order("last_seen_at", { ascending: false })
     .limit(20);
 
-  const urls: string[] = [];
+  const servers: DeliveryServer[] = [];
 
   if (!error && data?.length) {
-    const rows = data.filter((row): row is DeliveryServer => typeof row.server_url === "string" && row.server_url.length > 0);
+    const rows = data.filter(
+      (row): row is DeliveryServer => typeof row.server_url === "string" && row.server_url.length > 0,
+    );
 
     const preferredRows =
       purpose === "demo"
@@ -53,17 +66,78 @@ async function getActiveDeliveryUrls(
       purpose === "demo" ? rows.filter((row) => !isDemoDropboxName(row.object_name)) : rows;
 
     for (const row of [...preferredRows, ...fallbackRows]) {
-      if (!urls.includes(row.server_url)) {
-        urls.push(row.server_url);
+      if (!servers.some((server) => server.server_url === row.server_url)) {
+        servers.push(row);
       }
     }
   }
 
-  if (fallbackUrl && !urls.includes(fallbackUrl)) {
-    urls.push(fallbackUrl);
+  if (fallbackUrl && !servers.some((server) => server.server_url === fallbackUrl)) {
+    servers.push({
+      server_url: fallbackUrl,
+      object_name: "Fallback delivery URL",
+      object_key: null,
+      region_name: null,
+    });
   }
 
-  return urls;
+  return servers;
+}
+
+function formatDeliveryAttempt(attempt: DeliveryAttempt) {
+  const parts = [
+    `object=${attempt.objectName}`,
+    attempt.regionName ? `region=${attempt.regionName}` : null,
+    attempt.objectKey ? `object_key=${attempt.objectKey}` : null,
+    attempt.status !== null ? `status=${attempt.status}` : "status=network_error",
+    `status_text=${attempt.statusText || "-"}`,
+    `response=${attempt.responseText || "-"}`,
+  ].filter(Boolean);
+
+  return parts.join(" | ");
+}
+
+function formatDeliveryResponse(itemKey: string, attempts: DeliveryAttempt[]) {
+  const lines = [`item=${itemKey}`];
+
+  attempts.forEach((attempt, index) => {
+    lines.push(`attempt_${index + 1}: ${formatDeliveryAttempt(attempt)}`);
+  });
+
+  return lines.join("\n").slice(0, 2000);
+}
+
+async function tryDeliveryAcrossServers(
+  deliveryServers: DeliveryServer[],
+  slPayload: Record<string, unknown>,
+) {
+  const attempts: DeliveryAttempt[] = [];
+
+  for (const deliveryServer of deliveryServers) {
+    const slResponse = await fetch(deliveryServer.server_url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(slPayload),
+    });
+
+    const responseText = await slResponse.text();
+    const attempt: DeliveryAttempt = {
+      objectName: deliveryServer.object_name?.trim() || "Unnamed delivery object",
+      objectKey: deliveryServer.object_key,
+      regionName: deliveryServer.region_name,
+      status: slResponse.status,
+      statusText: slResponse.statusText,
+      responseText,
+    };
+
+    attempts.push(attempt);
+
+    if (slResponse.ok) {
+      return { delivered: true, attempts, lastAttempt: attempt };
+    }
+  }
+
+  return { delivered: false, attempts, lastAttempt: attempts.at(-1) ?? null };
 }
 
 function json(body: Record<string, unknown>, status = 200) {
@@ -122,13 +196,13 @@ Deno.serve(async (request) => {
     return json({ delivered: false, message: "Missing claim id." }, 400);
   }
 
-  const deliveryUrls = await getActiveDeliveryUrls(
+  const deliveryServers = await getActiveDeliveryUrls(
     supabase,
     fallbackDeliveryUrl ?? undefined,
     demoRequest ? "demo" : "product",
   );
 
-  if (!deliveryUrls.length) {
+  if (!deliveryServers.length) {
     return json({ delivered: false, message: "Second Life delivery URL is not configured." }, 500);
   }
 
@@ -192,31 +266,14 @@ Deno.serve(async (request) => {
     };
 
     try {
-      let delivered = false;
-      let responseText = "";
-      let responseStatusText = "";
+      const deliveryResult = await tryDeliveryAcrossServers(deliveryServers, slPayload);
 
-      for (const deliveryUrl of deliveryUrls) {
-        const slResponse = await fetch(deliveryUrl, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(slPayload),
-        });
-
-        responseText = await slResponse.text();
-        responseStatusText = slResponse.statusText;
-
-        if (slResponse.ok) {
-          delivered = true;
-          break;
-        }
-      }
-
-      if (!delivered) {
+      if (!deliveryResult.delivered) {
+        const failedAttempt = deliveryResult.lastAttempt;
         return json(
           {
             delivered: false,
-            message: `Second Life demo delivery failed: ${responseText || responseStatusText}`,
+            message: `Second Life demo delivery failed: ${failedAttempt?.responseText || failedAttempt?.statusText || "Unknown delivery error."}`,
           },
           502,
         );
@@ -280,32 +337,15 @@ Deno.serve(async (request) => {
   };
 
   try {
-    let delivered = false;
-    let responseText = "";
-    let responseStatusText = "";
-
-    for (const deliveryUrl of deliveryUrls) {
-      const slResponse = await fetch(deliveryUrl, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(slPayload),
-      });
-
-      responseText = await slResponse.text();
-      responseStatusText = slResponse.statusText;
-
-      if (slResponse.ok) {
-        delivered = true;
-        break;
-      }
-    }
+    const deliveryResult = await tryDeliveryAcrossServers(deliveryServers, slPayload);
+    const responseSummary = formatDeliveryResponse(itemKey, deliveryResult.attempts);
 
     const { error: updateError } = await supabase
       .from("product_claims")
       .update({
-        status: delivered ? "delivered" : "failed",
-        delivered_at: delivered ? new Date().toISOString() : null,
-        delivery_response: responseText.slice(0, 2000),
+        status: deliveryResult.delivered ? "delivered" : "failed",
+        delivered_at: deliveryResult.delivered ? new Date().toISOString() : null,
+        delivery_response: responseSummary,
       })
       .eq("id", claim.id);
 
@@ -319,11 +359,12 @@ Deno.serve(async (request) => {
       );
     }
 
-    if (!delivered) {
+    if (!deliveryResult.delivered) {
+      const failedAttempt = deliveryResult.lastAttempt;
       return json(
         {
           delivered: false,
-          message: `Second Life delivery failed: ${responseText || responseStatusText}`,
+          message: `Second Life delivery failed: ${failedAttempt?.responseText || failedAttempt?.statusText || "Unknown delivery error."}`,
         },
         502,
       );
