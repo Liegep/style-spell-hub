@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent 
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { products, stats } from "@/mocks/data";
 import { translateAppPhrase } from "@/i18n/app-text";
 import { useLang } from "@/i18n/dict";
@@ -846,7 +846,6 @@ function Compose({
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState(initialError);
   const [showAllReceived, setShowAllReceived] = useState(false);
-  const [openThreadKey, setOpenThreadKey] = useState<string | null>(null);
   const [threadReplyBody, setThreadReplyBody] = useState<Record<string, string>>({});
   const [threadSendingKey, setThreadSendingKey] = useState<string | null>(null);
   const [threadFeedback, setThreadFeedback] = useState<Record<string, string>>({});
@@ -964,18 +963,6 @@ function Compose({
     }
   }
 
-  async function onOpenThread(thread: (typeof conversations)[number]) {
-    const nextOpen = openThreadKey === thread.key ? null : thread.key;
-    setOpenThreadKey(nextOpen);
-    if (!nextOpen) return;
-
-    await markThreadMessagesRead(
-      thread.messages
-        .filter((message) => message.direction === "in" && message.unread)
-        .map((message) => message.id),
-    );
-  }
-
   async function onOpenReplyModal(threadKey: string) {
     setReplyModalThreadKey(threadKey);
     const thread = conversations.find((item) => item.key === threadKey);
@@ -987,6 +974,15 @@ function Compose({
         .map((message) => message.id),
     );
   }
+
+  useEffect(() => {
+    const unreadIds = received
+      .filter((message) => message.scope === "personal" && !getManagerMessageReadAt(message))
+      .map((message) => message.id);
+
+    if (unreadIds.length === 0) return;
+    void markThreadMessagesRead(unreadIds);
+  }, [received]);
 
   useEffect(() => {
     let mounted = true;
@@ -1281,7 +1277,6 @@ function Compose({
         </div>
         <ul className="mt-4 space-y-3">
           {visibleReceivedThreads.map((thread) => {
-            const open = openThreadKey === thread.key;
             const unreadCount = thread.messages.filter((message) => message.unread).length;
             const latestIncoming = thread.messages.find((message) => message.direction === "in");
             if (!latestIncoming) return null;
@@ -1297,10 +1292,7 @@ function Compose({
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <button
-                    onClick={() => void onOpenThread(thread)}
-                    className="flex-1 text-left"
-                  >
+                  <div className="flex-1 text-left">
                     <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/50">
                       {thread.name} ·{" "}
                       {new Date(thread.latestAt).toLocaleDateString(
@@ -1314,83 +1306,16 @@ function Compose({
                         {latestIncoming.body}
                       </p>
                     ) : null}
-                  </button>
-                  <div className="flex shrink-0 items-center gap-2">
+                  </div>
+                  <div className="flex shrink-0 items-center">
                     <button
                       onClick={() => void onOpenReplyModal(thread.key)}
                       className="rounded-full bg-[var(--brand-magenta)] px-3 py-2 font-mono text-[9px] uppercase tracking-[0.24em] text-white hover:bg-foreground"
                     >
-                      {tr("reply")}
+                      {tr("Reply")}
                     </button>
-                    <span
-                      className={cn(
-                        "rounded-full px-2 py-1 font-mono text-[8px] uppercase tracking-[0.2em]",
-                        unreadCount
-                          ? "bg-[var(--brand-magenta)] text-white"
-                          : "bg-foreground/10 text-foreground/55",
-                      )}
-                    >
-                      {open ? tr("close") : tr("open")}
-                    </span>
                   </div>
                 </div>
-                {open ? (
-                  <div className="mt-3 space-y-2">
-                    {thread.messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={cn(
-                          "rounded-xl px-3 py-2 text-xs",
-                          message.direction === "in"
-                            ? "bg-background/80"
-                            : "bg-foreground/5 text-foreground/70",
-                        )}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="font-mono text-[8px] uppercase tracking-[0.24em] text-foreground/45">
-                            {message.direction === "in" ? tr("blogger") : tr("you")} ·{" "}
-                            {new Date(message.created_at).toLocaleDateString(
-                              language === "es" ? "es" : undefined,
-                            )}
-                            {message.unread ? ` · ${tr("new")}` : ""}
-                          </div>
-                          {message.direction === "in" && !message.unread && message.readAt ? (
-                            <span className="rounded-full bg-emerald-100 px-3 py-1 font-mono text-[8px] uppercase tracking-[0.2em] text-emerald-700">
-                              {message.readByName
-                                ? `${tr("read by")} ${message.readByName}`
-                                : tr("read")}
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="mt-1 font-display text-sm">{message.subject}</div>
-                        {message.body ? (
-                          <p className="mt-1 whitespace-pre-wrap text-foreground/65">
-                            {message.body}
-                          </p>
-                        ) : null}
-                      </div>
-                    ))}
-                    <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--brand-magenta)]/15 bg-background/60 p-3">
-                      <span
-                        className={cn(
-                          "text-xs",
-                          threadFeedback[thread.key] === tr("Reply sent.")
-                            ? "text-emerald-700"
-                            : "text-[var(--brand-magenta)]",
-                        )}
-                      >
-                        {threadFeedback[thread.key] ||
-                          tr("Reply from here and keep the whole conversation together.")}
-                      </span>
-                      <button
-                        onClick={() => void onOpenReplyModal(thread.key)}
-                        className="rounded-full bg-[var(--brand-magenta)] px-4 py-2 font-mono text-[9px] uppercase tracking-[0.24em] text-white hover:bg-foreground"
-                      >
-                        {tr("reply")}
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
               </li>
             );
           })}
@@ -1422,6 +1347,9 @@ function Compose({
                   <DialogTitle className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
                     {tr("Reply to")} {replyModalThread.name}
                   </DialogTitle>
+                  <DialogDescription className="text-sm text-foreground/65">
+                    {tr("Reply from here and keep the whole conversation together.")}
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="mt-2 space-y-4">
                   <div className="rounded-2xl border border-foreground/10 bg-background/60 p-4">

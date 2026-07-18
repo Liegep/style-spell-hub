@@ -39,6 +39,7 @@ import {
 import bloggerAvatar from "@/assets/blogger-avatar.jpg";
 import logoIcon from "@/assets/logo-icon.png";
 import {
+  countManagerUnread,
   countPersonalUnread,
   listInboxMessages,
   listPersonalInboxMessages,
@@ -331,7 +332,13 @@ function AppLayout() {
           profile.role === "blogger"
             ? await listInboxMessages(profile.id)
             : await listPersonalInboxMessages(profile.id);
-        if (mounted) setMailUnreadCount(countPersonalUnread(messages));
+        if (mounted) {
+          setMailUnreadCount(
+            profile.role === "blogger"
+              ? countPersonalUnread(messages)
+              : countManagerUnread(messages),
+          );
+        }
       } catch (error) {
         console.error("[Sidebar] failed to load message count", error);
         if (mounted) setMailUnreadCount(0);
