@@ -18,11 +18,16 @@ type DeliveryRequest = {
 
 type DeliveryPurpose = "product" | "demo";
 
+type DeliveryServer = {
+  server_url: string;
+  object_name: string | null;
+};
+
 function isDemoDropboxName(objectName: string | null | undefined) {
   return typeof objectName === "string" && /demo/i.test(objectName);
 }
 
-async function getActiveDeliveryUrl(
+async function getActiveDeliveryUrls(
   supabase: ReturnType<typeof createClient>,
   fallbackUrl: string | undefined,
   purpose: DeliveryPurpose = "product",
@@ -34,27 +39,31 @@ async function getActiveDeliveryUrl(
     .order("last_seen_at", { ascending: false })
     .limit(20);
 
+  const urls: string[] = [];
+
   if (!error && data?.length) {
-    const matchingRow =
+    const rows = data.filter((row): row is DeliveryServer => typeof row.server_url === "string" && row.server_url.length > 0);
+
+    const preferredRows =
       purpose === "demo"
-        ? data.find((row) => isDemoDropboxName(row.object_name))
-        : data.find((row) => !isDemoDropboxName(row.object_name));
+        ? rows.filter((row) => isDemoDropboxName(row.object_name))
+        : rows.filter((row) => !isDemoDropboxName(row.object_name));
 
-    if (matchingRow?.server_url) {
-      return matchingRow.server_url as string;
-    }
+    const fallbackRows =
+      purpose === "demo" ? rows.filter((row) => !isDemoDropboxName(row.object_name)) : rows;
 
-    const fallbackRow =
-      purpose === "demo"
-        ? data.find((row) => Boolean(row.server_url))
-        : data.find((row) => Boolean(row.server_url) && !isDemoDropboxName(row.object_name));
-
-    if (fallbackRow?.server_url) {
-      return fallbackRow.server_url as string;
+    for (const row of [...preferredRows, ...fallbackRows]) {
+      if (!urls.includes(row.server_url)) {
+        urls.push(row.server_url);
+      }
     }
   }
 
-  return fallbackUrl;
+  if (fallbackUrl && !urls.includes(fallbackUrl)) {
+    urls.push(fallbackUrl);
+  }
+
+  return urls;
 }
 
 function json(body: Record<string, unknown>, status = 200) {
@@ -113,13 +122,13 @@ Deno.serve(async (request) => {
     return json({ delivered: false, message: "Missing claim id." }, 400);
   }
 
-  const deliveryUrl = await getActiveDeliveryUrl(
+  const deliveryUrls = await getActiveDeliveryUrls(
     supabase,
     fallbackDeliveryUrl ?? undefined,
     demoRequest ? "demo" : "product",
   );
 
-  if (!deliveryUrl) {
+  if (!deliveryUrls.length) {
     return json({ delivered: false, message: "Second Life delivery URL is not configured." }, 500);
   }
 
@@ -183,19 +192,31 @@ Deno.serve(async (request) => {
     };
 
     try {
-      const slResponse = await fetch(deliveryUrl, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(slPayload),
-      });
+      let delivered = false;
+      let responseText = "";
+      let responseStatusText = "";
 
-      const responseText = await slResponse.text();
+      for (const deliveryUrl of deliveryUrls) {
+        const slResponse = await fetch(deliveryUrl, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(slPayload),
+        });
 
-      if (!slResponse.ok) {
+        responseText = await slResponse.text();
+        responseStatusText = slResponse.statusText;
+
+        if (slResponse.ok) {
+          delivered = true;
+          break;
+        }
+      }
+
+      if (!delivered) {
         return json(
           {
             delivered: false,
-            message: `Second Life demo delivery failed: ${responseText || slResponse.statusText}`,
+            message: `Second Life demo delivery failed: ${responseText || responseStatusText}`,
           },
           502,
         );
@@ -259,14 +280,25 @@ Deno.serve(async (request) => {
   };
 
   try {
-    const slResponse = await fetch(deliveryUrl, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(slPayload),
-    });
+    let delivered = false;
+    let responseText = "";
+    let responseStatusText = "";
 
-    const responseText = await slResponse.text();
-    const delivered = slResponse.ok;
+    for (const deliveryUrl of deliveryUrls) {
+      const slResponse = await fetch(deliveryUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(slPayload),
+      });
+
+      responseText = await slResponse.text();
+      responseStatusText = slResponse.statusText;
+
+      if (slResponse.ok) {
+        delivered = true;
+        break;
+      }
+    }
 
     const { error: updateError } = await supabase
       .from("product_claims")
@@ -291,7 +323,7 @@ Deno.serve(async (request) => {
       return json(
         {
           delivered: false,
-          message: `Second Life delivery failed: ${responseText || slResponse.statusText}`,
+          message: `Second Life delivery failed: ${responseText || responseStatusText}`,
         },
         502,
       );
