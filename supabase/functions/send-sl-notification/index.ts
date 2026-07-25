@@ -17,6 +17,7 @@ type NotificationRequest = {
   imageUrl?: string;
   fallbackUrl?: string;
   textureItemName?: string;
+  batchSize?: number;
   metadata?: Record<string, unknown>;
 };
 
@@ -130,7 +131,10 @@ async function markDeliveryUrlInactive(supabase: SupabaseClient, deliveryId: str
     return;
   }
 
-  await supabase.from("second_life_delivery_servers").update({ active: false }).eq("id", deliveryId);
+  await supabase
+    .from("second_life_delivery_servers")
+    .update({ active: false })
+    .eq("id", deliveryId);
 }
 
 function isExpiredSecondLifeCap(responseText: string, statusText: string) {
@@ -144,7 +148,11 @@ async function requireStaff(supabase: SupabaseClient, authHeader: string) {
   } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
 
   if (userError || !user) {
-    return { allowed: false, status: 401, message: "You must be logged in to send Second Life notifications." };
+    return {
+      allowed: false,
+      status: 401,
+      message: "You must be logged in to send Second Life notifications.",
+    };
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -154,7 +162,11 @@ async function requireStaff(supabase: SupabaseClient, authHeader: string) {
     .single();
 
   if (profileError || !profile || !["admin", "super_admin"].includes(profile.role)) {
-    return { allowed: false, status: 403, message: "Only Love Potion staff can send Second Life notifications." };
+    return {
+      allowed: false,
+      status: 403,
+      message: "Only Love Potion staff can send Second Life notifications.",
+    };
   }
 
   return { allowed: true, userId: user.id };
@@ -206,7 +218,9 @@ async function processQueueItem(
   const imageUrl = (await canReachUrl(candidateImageUrl)) ? candidateImageUrl : "";
   const fallbackUrl = metadataText(metadata, "fallback_url") || imageUrl || actionUrl;
   const textureItemName = metadataText(metadata, "texture_item_name");
-  const body = textureItemName ? clean(queueItem.body) : appendFallbackLink(clean(queueItem.body), fallbackUrl);
+  const body = textureItemName
+    ? clean(queueItem.body)
+    : appendFallbackLink(clean(queueItem.body), fallbackUrl);
   const attempts = Number(queueItem.attempts ?? 0) + 1;
   const registeredDelivery = clean(queueItem.delivery_server_url)
     ? {
@@ -218,19 +232,39 @@ async function processQueueItem(
     : await getActiveDeliveryUrl(supabase, fallbackDeliveryUrl);
 
   if (queueStatus === "sent") {
-    return { sent: true, status: 200, message: "Second Life notification was already sent.", notificationId: queueId };
+    return {
+      sent: true,
+      status: 200,
+      message: "Second Life notification was already sent.",
+      notificationId: queueId,
+    };
   }
 
   if (queueStatus === "cancelled") {
-    return { sent: false, status: 400, message: "Notification was cancelled and will not be sent.", notificationId: queueId };
+    return {
+      sent: false,
+      status: 400,
+      message: "Notification was cancelled and will not be sent.",
+      notificationId: queueId,
+    };
   }
 
   if (!recipientSlUuid) {
-    return { sent: false, status: 400, message: "Notification has no Second Life avatar UUID.", notificationId: queueId };
+    return {
+      sent: false,
+      status: 400,
+      message: "Notification has no Second Life avatar UUID.",
+      notificationId: queueId,
+    };
   }
 
   if (!registeredDelivery?.url) {
-    return { sent: false, status: 500, message: "Second Life delivery URL is not configured.", notificationId: queueId };
+    return {
+      sent: false,
+      status: 500,
+      message: "Second Life delivery URL is not configured.",
+      notificationId: queueId,
+    };
   }
 
   try {
@@ -265,7 +299,10 @@ async function processQueueItem(
         sent_at: sent ? new Date().toISOString() : null,
         last_error: sent
           ? null
-          : `${expiredCap ? "Second Life endpoint expired. Reset the delivery prim and confirm it registers again. " : ""}${errorText}`.slice(0, 2000),
+          : `${expiredCap ? "Second Life endpoint expired. Reset the delivery prim and confirm it registers again. " : ""}${errorText}`.slice(
+              0,
+              2000,
+            ),
       })
       .eq("id", queueId);
 
@@ -284,9 +321,15 @@ async function processQueueItem(
       };
     }
 
-    return { sent: true, status: 200, message: "Second Life notification sent.", notificationId: queueId };
+    return {
+      sent: true,
+      status: 200,
+      message: "Second Life notification sent.",
+      notificationId: queueId,
+    };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown Second Life notification error.";
+    const message =
+      error instanceof Error ? error.message : "Unknown Second Life notification error.";
 
     await supabase
       .from("notification_queue")
@@ -297,7 +340,12 @@ async function processQueueItem(
       })
       .eq("id", queueId);
 
-    return { sent: false, status: 502, message: `Second Life notification failed: ${message}`, notificationId: queueId };
+    return {
+      sent: false,
+      status: 502,
+      message: `Second Life notification failed: ${message}`,
+      notificationId: queueId,
+    };
   }
 }
 
@@ -340,7 +388,9 @@ async function createQueueItem(supabase: SupabaseClient, payload: NotificationRe
       },
       status: "pending",
     })
-    .select("id,recipient_id,recipient_sl_uuid,delivery_server_url,type,title,body,action_url,metadata,status,attempts")
+    .select(
+      "id,recipient_id,recipient_sl_uuid,delivery_server_url,type,title,body,action_url,metadata,status,attempts",
+    )
     .single();
 
   if (error || !data) {
@@ -353,7 +403,9 @@ async function createQueueItem(supabase: SupabaseClient, payload: NotificationRe
 async function getQueueItem(supabase: SupabaseClient, queueId: string) {
   const { data, error } = await supabase
     .from("notification_queue")
-    .select("id,recipient_id,recipient_sl_uuid,delivery_server_url,type,title,body,action_url,metadata,status,attempts")
+    .select(
+      "id,recipient_id,recipient_sl_uuid,delivery_server_url,type,title,body,action_url,metadata,status,attempts",
+    )
     .eq("id", queueId)
     .single();
 
@@ -364,16 +416,32 @@ async function getQueueItem(supabase: SupabaseClient, queueId: string) {
   return { data };
 }
 
-async function processDueQueue(supabase: SupabaseClient, fallbackDeliveryUrl: string | undefined, deliverySecret: string) {
+function normalizeBatchSize(value: unknown, defaultSize = 5) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return defaultSize;
+  }
+
+  return Math.min(10, Math.max(1, Math.floor(numeric)));
+}
+
+async function processDueQueue(
+  supabase: SupabaseClient,
+  fallbackDeliveryUrl: string | undefined,
+  deliverySecret: string,
+  batchSize: number,
+) {
   const { data, error } = await supabase
     .from("notification_queue")
-    .select("id,recipient_id,recipient_sl_uuid,delivery_server_url,type,title,body,action_url,metadata,status,attempts")
+    .select(
+      "id,recipient_id,recipient_sl_uuid,delivery_server_url,type,title,body,action_url,metadata,status,attempts",
+    )
     .eq("channel", "second_life")
     .in("status", ["pending", "failed"])
     .lte("scheduled_at", new Date().toISOString())
     .lt("attempts", 3)
     .order("scheduled_at", { ascending: true })
-    .limit(25);
+    .limit(batchSize);
 
   if (error) {
     return { processed: 0, sent: 0, failed: 0, error: error.message };
@@ -410,7 +478,10 @@ Deno.serve(async (request) => {
   const deliverySecret = Deno.env.get("SECOND_LIFE_DELIVERY_SECRET");
 
   if (!supabaseUrl || !serviceRoleKey || !deliverySecret) {
-    return json({ sent: false, message: "Second Life notification service is not configured." }, 500);
+    return json(
+      { sent: false, message: "Second Life notification service is not configured." },
+      500,
+    );
   }
 
   const supabase = createClient(supabaseUrl, serviceRoleKey);
@@ -433,7 +504,12 @@ Deno.serve(async (request) => {
       }
     }
 
-    const result = await processDueQueue(supabase, fallbackDeliveryUrl ?? undefined, deliverySecret);
+    const result = await processDueQueue(
+      supabase,
+      fallbackDeliveryUrl ?? undefined,
+      deliverySecret,
+      normalizeBatchSize(payload.batchSize),
+    );
     return json({ sent: true, message: "Pending Second Life notifications processed.", ...result });
   }
 
@@ -456,6 +532,11 @@ Deno.serve(async (request) => {
     return json({ sent: false, message: "Notification queue item could not be prepared." }, 500);
   }
 
-  const result = await processQueueItem(supabase, queueResult.data, fallbackDeliveryUrl ?? undefined, deliverySecret);
+  const result = await processQueueItem(
+    supabase,
+    queueResult.data,
+    fallbackDeliveryUrl ?? undefined,
+    deliverySecret,
+  );
   return json(result, result.status);
 });

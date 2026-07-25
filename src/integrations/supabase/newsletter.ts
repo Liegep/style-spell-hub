@@ -1,10 +1,13 @@
 import {
   logAuditEvent,
-  processSecondLifeNotificationById,
+  processSecondLifeNotificationsInBatches,
 } from "@/integrations/supabase/audit-log";
 import { getCurrentProfile } from "@/integrations/supabase/auth";
 import { supabase } from "@/integrations/supabase/client";
-import type { NewsletterCampaign, NewsletterSubscriber } from "@/integrations/supabase/database.types";
+import type {
+  NewsletterCampaign,
+  NewsletterSubscriber,
+} from "@/integrations/supabase/database.types";
 
 type NewsletterCampaignInput = {
   title: string;
@@ -23,11 +26,6 @@ export type NewsletterDeliveryStats = {
 
 export type NewsletterCampaignWithStats = NewsletterCampaign & {
   deliveryStats: NewsletterDeliveryStats;
-};
-
-type NewsletterQueueRow = {
-  id: string;
-  status: string | null;
 };
 
 type CsvSubscriberRow = {
@@ -114,7 +112,10 @@ export async function deleteNewsletterSubscriber(subscriber: NewsletterSubscribe
     targetType: "newsletter_subscriber",
     targetId: subscriber.id,
     targetName:
-      subscriber.display_name || subscriber.sl_avatar_name || subscriber.email || subscriber.sl_avatar_uuid,
+      subscriber.display_name ||
+      subscriber.sl_avatar_name ||
+      subscriber.email ||
+      subscriber.sl_avatar_uuid,
     metadata: {
       sl_avatar_uuid: subscriber.sl_avatar_uuid,
       source: subscriber.source,
@@ -126,7 +127,9 @@ export async function deleteNewsletterSubscriber(subscriber: NewsletterSubscribe
 export async function listNewsletterCampaigns(limit = 8) {
   const { data, error } = await supabase
     .from("newsletter_campaigns")
-    .select("id,created_by,title,body,image_url,status,recipient_count,queued_count,sent_at,created_at,updated_at")
+    .select(
+      "id,created_by,title,body,image_url,status,recipient_count,queued_count,sent_at,created_at,updated_at",
+    )
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -134,7 +137,9 @@ export async function listNewsletterCampaigns(limit = 8) {
   return (data ?? []) as NewsletterCampaign[];
 }
 
-export async function listNewsletterCampaignsWithStats(limit = 12): Promise<NewsletterCampaignWithStats[]> {
+export async function listNewsletterCampaignsWithStats(
+  limit = 12,
+): Promise<NewsletterCampaignWithStats[]> {
   const campaigns = await listNewsletterCampaigns(limit);
   return Promise.all(
     campaigns.map(async (campaign) => ({
@@ -205,7 +210,9 @@ export async function sendNewsletterCampaign(input: NewsletterCampaignInput) {
       image_url: imageUrl,
       status: "draft",
     })
-    .select("id,created_by,title,body,image_url,status,recipient_count,queued_count,sent_at,created_at,updated_at")
+    .select(
+      "id,created_by,title,body,image_url,status,recipient_count,queued_count,sent_at,created_at,updated_at",
+    )
     .single<NewsletterCampaign>();
 
   if (insertError) {
@@ -228,18 +235,11 @@ export async function sendNewsletterCampaign(input: NewsletterCampaignInput) {
   let processed = 0;
   let processWarning: string | null = null;
   try {
-    const queueRows = await listNewsletterQueueRows(campaign.id);
-    const pendingRows = queueRows.filter((row) => row.status !== "sent" && row.status !== "cancelled");
-
-    for (const row of pendingRows) {
-      try {
-        await processSecondLifeNotificationById(row.id);
-        processed += 1;
-      } catch (error) {
-        processWarning = describeNewsletterError(error);
-        console.warn("[Newsletter] Could not process newsletter queue item.", { queueId: row.id, error });
-      }
-    }
+    const queuedCount = typeof queued === "number" ? queued : 0;
+    processed = await processSecondLifeNotificationsInBatches({
+      batchSize: 5,
+      maxBatches: Math.min(20, Math.max(1, Math.ceil(queuedCount / 5))),
+    });
   } catch (error) {
     processWarning = describeNewsletterError(error);
     console.warn("[Newsletter] Campaign queued, but immediate SL processing failed.", error);
@@ -272,21 +272,6 @@ export async function sendNewsletterCampaign(input: NewsletterCampaignInput) {
     processWarning,
     deliveryStats,
   };
-}
-
-async function listNewsletterQueueRows(campaignId: string): Promise<NewsletterQueueRow[]> {
-  const { data, error } = await supabase
-    .from("notification_queue")
-    .select("id,status")
-    .eq("channel", "second_life")
-    .contains("metadata", { source: "newsletter", campaign_id: campaignId })
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    throw new Error(`Could not read newsletter delivery queue: ${error.message}`);
-  }
-
-  return (data ?? []) as NewsletterQueueRow[];
 }
 
 async function attachTextureToNewsletterQueue(campaignId: string, textureItemName: string) {
@@ -378,7 +363,16 @@ function parseNewsletterCsv(text: string) {
 
   const header = rows[0].map((cell) => normalizeHeader(cell));
   const hasHeader = header.some((cell) =>
-    ["uuid", "sl_avatar_uuid", "avatar_uuid", "key", "email", "name", "display_name", "sl_avatar_name"].includes(cell),
+    [
+      "uuid",
+      "sl_avatar_uuid",
+      "avatar_uuid",
+      "key",
+      "email",
+      "name",
+      "display_name",
+      "sl_avatar_name",
+    ].includes(cell),
   );
   const dataRows = hasHeader ? rows.slice(1) : rows;
 
@@ -423,7 +417,10 @@ function parseRowWithoutHeader(row: string[]): CsvSubscriberRow | null {
   if (!uuid) return null;
 
   const email = cells.find((cell) => cell.includes("@")) ?? null;
-  const name = cells.find((cell) => cell !== uuid && cell !== email && !["en", "es"].includes(cell.toLowerCase())) ?? null;
+  const name =
+    cells.find(
+      (cell) => cell !== uuid && cell !== email && !["en", "es"].includes(cell.toLowerCase()),
+    ) ?? null;
   const language = cells.find((cell) => ["en", "es"].includes(cell.toLowerCase()))?.toLowerCase();
 
   return {

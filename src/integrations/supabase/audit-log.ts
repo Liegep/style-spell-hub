@@ -42,7 +42,9 @@ export async function listSecondLifeDropboxes() {
 export async function listAuditLogs(limit = 80) {
   const { data, error } = await supabase
     .from("audit_logs")
-    .select("id,actor_id,actor_name,actor_role,action,target_type,target_id,target_name,metadata,created_at")
+    .select(
+      "id,actor_id,actor_name,actor_role,action,target_type,target_id,target_name,metadata,created_at",
+    )
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -51,53 +53,62 @@ export async function listAuditLogs(limit = 80) {
 }
 
 export async function getNotificationHealth(): Promise<NotificationHealth> {
-  const [latest, pending, sent, failed, cancelled, duePending, oldestDuePending, latestSent, latestFailed] =
-    await Promise.all([
-      supabase
-        .from("notification_queue")
-        .select(
-          "id,recipient_id,recipient_sl_uuid,delivery_server_url,channel,type,title,body,action_url,metadata,status,attempts,last_error,scheduled_at,sent_at,created_at,updated_at",
-        )
-        .eq("channel", "second_life")
-        .order("created_at", { ascending: false })
-        .limit(12),
-      countNotifications("pending"),
-      countNotifications("sent"),
-      countNotifications("failed"),
-      countNotifications("cancelled"),
-      supabase
-        .from("notification_queue")
-        .select("id", { count: "exact", head: true })
-        .eq("channel", "second_life")
-        .eq("status", "pending")
-        .lte("scheduled_at", new Date().toISOString()),
-      supabase
-        .from("notification_queue")
-        .select("scheduled_at")
-        .eq("channel", "second_life")
-        .eq("status", "pending")
-        .lte("scheduled_at", new Date().toISOString())
-        .order("scheduled_at", { ascending: true })
-        .limit(1)
-        .maybeSingle<{ scheduled_at: string | null }>(),
-      supabase
-        .from("notification_queue")
-        .select("sent_at")
-        .eq("channel", "second_life")
-        .eq("status", "sent")
-        .not("sent_at", "is", null)
-        .order("sent_at", { ascending: false })
-        .limit(1)
-        .maybeSingle<{ sent_at: string | null }>(),
-      supabase
-        .from("notification_queue")
-        .select("updated_at")
-        .eq("channel", "second_life")
-        .eq("status", "failed")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle<{ updated_at: string | null }>(),
-    ]);
+  const [
+    latest,
+    pending,
+    sent,
+    failed,
+    cancelled,
+    duePending,
+    oldestDuePending,
+    latestSent,
+    latestFailed,
+  ] = await Promise.all([
+    supabase
+      .from("notification_queue")
+      .select(
+        "id,recipient_id,recipient_sl_uuid,delivery_server_url,channel,type,title,body,action_url,metadata,status,attempts,last_error,scheduled_at,sent_at,created_at,updated_at",
+      )
+      .eq("channel", "second_life")
+      .order("created_at", { ascending: false })
+      .limit(12),
+    countNotifications("pending"),
+    countNotifications("sent"),
+    countNotifications("failed"),
+    countNotifications("cancelled"),
+    supabase
+      .from("notification_queue")
+      .select("id", { count: "exact", head: true })
+      .eq("channel", "second_life")
+      .eq("status", "pending")
+      .lte("scheduled_at", new Date().toISOString()),
+    supabase
+      .from("notification_queue")
+      .select("scheduled_at")
+      .eq("channel", "second_life")
+      .eq("status", "pending")
+      .lte("scheduled_at", new Date().toISOString())
+      .order("scheduled_at", { ascending: true })
+      .limit(1)
+      .maybeSingle<{ scheduled_at: string | null }>(),
+    supabase
+      .from("notification_queue")
+      .select("sent_at")
+      .eq("channel", "second_life")
+      .eq("status", "sent")
+      .not("sent_at", "is", null)
+      .order("sent_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ sent_at: string | null }>(),
+    supabase
+      .from("notification_queue")
+      .select("updated_at")
+      .eq("channel", "second_life")
+      .eq("status", "failed")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ updated_at: string | null }>(),
+  ]);
 
   if (latest.error) throw latest.error;
   if (duePending.error) throw duePending.error;
@@ -120,9 +131,11 @@ export async function getNotificationHealth(): Promise<NotificationHealth> {
   if (recipientProfiles?.error) throw recipientProfiles.error;
 
   const recipientsById = new Map(
-    ((recipientProfiles?.data ?? []) as Array<
-      Pick<Profile, "id" | "display_name" | "full_name" | "email" | "sl_avatar_name">
-    >).map((profile) => [profile.id, profile]),
+    (
+      (recipientProfiles?.data ?? []) as Array<
+        Pick<Profile, "id" | "display_name" | "full_name" | "email" | "sl_avatar_name">
+      >
+    ).map((profile) => [profile.id, profile]),
   );
   const latestWithRecipients: NotificationQueueWithRecipient[] = latestRows.map((row) => {
     const recipient = row.recipient_id ? recipientsById.get(row.recipient_id) : null;
@@ -154,6 +167,13 @@ export async function getNotificationHealth(): Promise<NotificationHealth> {
 }
 
 export async function processSecondLifeNotificationsNow() {
+  return processSecondLifeNotificationsInBatches({ maxBatches: 1 });
+}
+
+export async function processSecondLifeNotificationsInBatches(options?: {
+  batchSize?: number;
+  maxBatches?: number;
+}) {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
   const {
@@ -164,30 +184,45 @@ export async function processSecondLifeNotificationsNow() {
     throw new Error("Supabase is not configured for Second Life notification processing.");
   }
 
-  const response = await fetch(`${supabaseUrl}/functions/v1/send-sl-notification`, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${session.access_token}`,
-      apikey: supabaseAnonKey,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ processDue: true }),
-  });
+  const batchSize = Math.min(10, Math.max(1, Math.floor(options?.batchSize ?? 5)));
+  const maxBatches = Math.min(50, Math.max(1, Math.floor(options?.maxBatches ?? 1)));
+  let totalProcessed = 0;
 
-  const text = await response.text();
-  let result: { sent?: boolean; message?: string; processed?: number } | null = null;
+  for (let batchIndex = 0; batchIndex < maxBatches; batchIndex += 1) {
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-sl-notification`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        apikey: supabaseAnonKey,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ processDue: true, batchSize }),
+    });
 
-  try {
-    result = text ? JSON.parse(text) : null;
-  } catch {
-    result = { sent: false, message: text };
+    const text = await response.text();
+    let result: { sent?: boolean; message?: string; processed?: number } | null = null;
+
+    try {
+      result = text ? JSON.parse(text) : null;
+    } catch {
+      result = { sent: false, message: text };
+    }
+
+    if (!response.ok || result?.sent === false) {
+      throw new Error(
+        result?.message || `Second Life processing failed with status ${response.status}.`,
+      );
+    }
+
+    const processedThisBatch = Number(result?.processed ?? 0);
+    totalProcessed += processedThisBatch;
+
+    if (processedThisBatch < batchSize) {
+      break;
+    }
   }
 
-  if (!response.ok || result?.sent === false) {
-    throw new Error(result?.message || `Second Life processing failed with status ${response.status}.`);
-  }
-
-  return Number(result?.processed ?? 0);
+  return totalProcessed;
 }
 
 export async function processSecondLifeNotificationById(queueId: string) {
@@ -221,7 +256,9 @@ export async function processSecondLifeNotificationById(queueId: string) {
   }
 
   if (!response.ok || result?.sent === false) {
-    throw new Error(result?.message || `Second Life notification failed with status ${response.status}.`);
+    throw new Error(
+      result?.message || `Second Life notification failed with status ${response.status}.`,
+    );
   }
 
   return result;
@@ -277,7 +314,9 @@ export async function sendSecondLifePulseTest() {
   let result: { sent?: boolean; message?: string } | null = null;
 
   try {
-    result = responseText ? (JSON.parse(responseText) as { sent?: boolean; message?: string }) : null;
+    result = responseText
+      ? (JSON.parse(responseText) as { sent?: boolean; message?: string })
+      : null;
   } catch {
     result = { sent: false, message: responseText };
   }
