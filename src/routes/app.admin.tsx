@@ -3,7 +3,13 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent 
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { products, stats } from "@/mocks/data";
 import { translateAppPhrase } from "@/i18n/app-text";
 import { useLang } from "@/i18n/dict";
@@ -62,6 +68,113 @@ const ADMIN_SECTIONS: Tab[] = [
   "preferences",
   "subscribers",
 ];
+
+function summarizeNewsletterSendResult(
+  result: {
+    queued: number;
+    processed: number;
+    processWarning: string | null;
+    deliveryStats: NewsletterCampaignWithStats["deliveryStats"];
+  },
+  tr: (value: string) => string,
+) {
+  const total = result.queued;
+  const { sent, pending, failed, lastError } = result.deliveryStats;
+
+  if (total === 0) {
+    return tr("Campaign saved, but no active subscribers were found.");
+  }
+
+  if (sent >= total && pending === 0 && failed === 0) {
+    return `${tr("Delivered to all")} ${total} ${tr(total === 1 ? "subscriber." : "subscribers.")}`;
+  }
+
+  if (sent > 0 && pending > 0 && failed === 0) {
+    return `${tr("Delivered to")} ${sent} ${tr(sent === 1 ? "subscriber." : "subscribers.")} ${pending} ${tr(
+      pending === 1 ? "delivery is still in the queue." : "deliveries are still in the queue.",
+    )}`;
+  }
+
+  if (sent > 0 && failed > 0) {
+    return `${tr("Delivered to")} ${sent} ${tr(
+      sent === 1 ? "subscriber." : "subscribers.",
+    )} ${failed} ${tr(failed === 1 ? "delivery failed." : "deliveries failed.")}${lastError ? ` ${lastError}` : ""}`;
+  }
+
+  if (failed > 0) {
+    return `${tr("Queued for")} ${total} ${tr(
+      total === 1 ? "subscriber," : "subscribers,",
+    )} ${tr("but")} ${failed} ${tr(failed === 1 ? "delivery failed." : "deliveries failed.")}${lastError ? ` ${lastError}` : ""}`;
+  }
+
+  if (pending > 0) {
+    return `${tr("Queued for")} ${total} ${tr(
+      total === 1 ? "subscriber." : "subscribers.",
+    )} ${tr("Delivery is still in progress.")}`;
+  }
+
+  if (result.processWarning) {
+    return `${tr("Queued for")} ${total} ${tr(
+      total === 1 ? "subscriber." : "subscribers.",
+    )} ${tr("The delivery summary needs a quick check:")} ${result.processWarning}`;
+  }
+
+  if (result.processed > 0) {
+    return `${tr("Delivered to")} ${result.processed} ${tr(
+      result.processed === 1 ? "subscriber." : "subscribers.",
+    )}`;
+  }
+
+  return `${tr("Queued for")} ${total} ${tr(total === 1 ? "subscriber." : "subscribers.")} ${tr(
+    "Delivery is still in progress.",
+  )}`;
+}
+
+function getCampaignDeliveryState(
+  stats: NewsletterCampaignWithStats["deliveryStats"],
+  expectedTotal: number,
+) {
+  if (stats.pending > 0) return "sending" as const;
+  if (stats.failed > 0 && stats.sent > 0) return "partial" as const;
+  if (stats.failed > 0) return "needs_check" as const;
+  if (expectedTotal > 0 && stats.sent >= expectedTotal) return "delivered" as const;
+  if (stats.sent > 0) return "sent" as const;
+  return "queued" as const;
+}
+
+function describeCampaignDeliveryState(
+  stats: NewsletterCampaignWithStats["deliveryStats"],
+  expectedTotal: number,
+  tr: (value: string) => string,
+) {
+  const state = getCampaignDeliveryState(stats, expectedTotal);
+
+  if (state === "delivered") {
+    return tr("Delivered to everyone on this list.");
+  }
+
+  if (state === "sending") {
+    return `${tr("Delivered to")} ${stats.sent} ${tr(
+      stats.sent === 1 ? "subscriber." : "subscribers.",
+    )} ${stats.pending} ${tr(stats.pending === 1 ? "delivery is still pending." : "deliveries are still pending.")}`;
+  }
+
+  if (state === "partial") {
+    return `${tr("Delivered to")} ${stats.sent} ${tr(
+      stats.sent === 1 ? "subscriber." : "subscribers.",
+    )} ${stats.failed} ${tr(stats.failed === 1 ? "delivery needs a retry." : "deliveries need a retry.")}`;
+  }
+
+  if (state === "needs_check") {
+    return `${stats.failed} ${tr(stats.failed === 1 ? "delivery needs a retry." : "deliveries need a retry.")}`;
+  }
+
+  if (state === "sent") {
+    return `${tr("Delivered to")} ${stats.sent} ${tr(stats.sent === 1 ? "subscriber." : "subscribers.")}`;
+  }
+
+  return tr("Delivery is queued.");
+}
 
 function normalizeAdminSection(section: unknown): Tab | undefined {
   return ADMIN_SECTIONS.includes(section as Tab) ? (section as Tab) : undefined;
@@ -1568,33 +1681,7 @@ function Newsletter({
 
     try {
       const result = await sendNewsletterCampaign({ title, body, imageFile, slTextureItemName });
-      if (result.queued === 0) {
-        setFeedback(tr("Campaign saved, but no active subscribers were found."));
-      } else if (result.deliveryStats.sent > 0) {
-        setFeedback(
-          `${tr("Queued for")} ${result.queued} ${tr(result.queued === 1 ? "subscriber" : "subscribers")} ${tr("and sent")} ${result.deliveryStats.sent} ${tr(result.deliveryStats.sent === 1 ? "Second Life IM." : "Second Life IMs.")}`,
-        );
-      } else if (result.deliveryStats.failed > 0) {
-        setFeedback(
-          `${tr("Queued for")} ${result.queued} ${tr(result.queued === 1 ? "subscriber," : "subscribers,")} ${tr("but")} ${result.deliveryStats.failed} ${tr(result.deliveryStats.failed === 1 ? "delivery failed." : "deliveries failed.")}${result.deliveryStats.lastError ? ` ${result.deliveryStats.lastError}` : ""}`,
-        );
-      } else if (result.deliveryStats.pending > 0) {
-        setFeedback(
-          `${tr("Queued for")} ${result.queued} ${tr(result.queued === 1 ? "subscriber" : "subscribers")}. ${tr("Delivery is waiting in the Second Life queue.")}`,
-        );
-      } else if (result.processWarning) {
-        setFeedback(
-          `${tr("Queued for")} ${result.queued} ${tr(result.queued === 1 ? "subscriber" : "subscribers")}. ${tr("Delivery processor needs attention:")} ${result.processWarning}`,
-        );
-      } else if (result.processed > 0) {
-        setFeedback(
-          `${tr("Queued for")} ${result.queued} ${tr(result.queued === 1 ? "subscriber" : "subscribers")} ${tr("and sent")} ${result.processed} ${tr(result.processed === 1 ? "Second Life IM." : "Second Life IMs.")}`,
-        );
-      } else {
-        setFeedback(
-          `${tr("Queued for")} ${result.queued} ${tr(result.queued === 1 ? "subscriber" : "subscribers")}. ${tr("Delivery is waiting in the queue.")}`,
-        );
-      }
+      setFeedback(summarizeNewsletterSendResult(result, tr));
       setTitle("");
       setBody("");
       setImageFile(null);
@@ -1958,54 +2045,56 @@ function NewsletterSubscribersPanel({
           </div>
         ) : (
           filteredSubscribers.map((subscriber) => {
-          const displayName =
-            subscriber.display_name ||
-            subscriber.sl_avatar_name ||
-            subscriber.email ||
-            tr("Second Life Resident");
-          const active = subscriber.is_active && !subscriber.unsubscribed_at;
-          const source = formatSubscriberSource(subscriber.source);
+            const displayName =
+              subscriber.display_name ||
+              subscriber.sl_avatar_name ||
+              subscriber.email ||
+              tr("Second Life Resident");
+            const active = subscriber.is_active && !subscriber.unsubscribed_at;
+            const source = formatSubscriberSource(subscriber.source);
 
-          return (
-            <div
-              key={subscriber.id}
-              className="grid gap-3 p-5 md:grid-cols-[minmax(0,1fr)_minmax(240px,0.8fr)_120px_120px] md:items-center"
-            >
-              <div className="min-w-0">
-                <div className="truncate font-display text-2xl leading-tight">{displayName}</div>
-                {subscriber.email ? (
-                  <div className="mt-1 truncate text-sm text-foreground/50">{subscriber.email}</div>
-                ) : null}
+            return (
+              <div
+                key={subscriber.id}
+                className="grid gap-3 p-5 md:grid-cols-[minmax(0,1fr)_minmax(240px,0.8fr)_120px_120px] md:items-center"
+              >
+                <div className="min-w-0">
+                  <div className="truncate font-display text-2xl leading-tight">{displayName}</div>
+                  {subscriber.email ? (
+                    <div className="mt-1 truncate text-sm text-foreground/50">
+                      {subscriber.email}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="truncate font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/45">
+                  {subscriber.sl_avatar_uuid || tr("no sl uuid")}
+                </div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-foreground/55">
+                  {source}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      "rounded-full px-3 py-1 font-mono text-[9px] uppercase tracking-[0.22em]",
+                      active ? "bg-green-100 text-green-700" : "bg-foreground/5 text-foreground/50",
+                    )}
+                  >
+                    {active ? tr("active") : tr("paused")}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={manualState === "saving"}
+                    onClick={() => void onDelete(subscriber)}
+                    aria-label={tr("Delete")}
+                    title={tr("Delete")}
+                    className="flex h-6 w-6 items-center justify-center rounded-full border border-foreground/12 text-sm leading-none text-foreground/45 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
-              <div className="truncate font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/45">
-                {subscriber.sl_avatar_uuid || tr("no sl uuid")}
-              </div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-foreground/55">
-                {source}
-              </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    "rounded-full px-3 py-1 font-mono text-[9px] uppercase tracking-[0.22em]",
-                    active ? "bg-green-100 text-green-700" : "bg-foreground/5 text-foreground/50",
-                  )}
-                >
-                  {active ? tr("active") : tr("paused")}
-                </span>
-                <button
-                  type="button"
-                  disabled={manualState === "saving"}
-                  onClick={() => void onDelete(subscriber)}
-                  aria-label={tr("Delete")}
-                  title={tr("Delete")}
-                  className="flex h-6 w-6 items-center justify-center rounded-full border border-foreground/12 text-sm leading-none text-foreground/45 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          );
-        })
+            );
+          })
         )}
       </div>
     </GlassCard>
@@ -2034,7 +2123,26 @@ function SentNewsletterCampaigns({ campaigns }: { campaigns: NewsletterCampaignW
       {campaigns.map((campaign) => {
         const stats = campaign.deliveryStats;
         const expectedTotal = campaign.queued_count || campaign.recipient_count || stats.total;
-        const hasError = stats.failed > 0 || Boolean(stats.lastError);
+        const deliveryState = getCampaignDeliveryState(stats, expectedTotal);
+        const hasError = deliveryState === "partial" || deliveryState === "needs_check";
+        const badgeLabel =
+          deliveryState === "delivered"
+            ? tr("delivered")
+            : deliveryState === "sending"
+              ? tr("sending")
+              : deliveryState === "partial"
+                ? tr("partial")
+                : deliveryState === "needs_check"
+                  ? tr("needs check")
+                  : tr("queued");
+        const badgeClass =
+          deliveryState === "delivered"
+            ? "bg-green-100 text-green-700"
+            : deliveryState === "sending"
+              ? "bg-amber-100 text-amber-700"
+              : deliveryState === "partial" || deliveryState === "needs_check"
+                ? "bg-[var(--brand-magenta)] text-white"
+                : "bg-white/60 text-foreground/70";
 
         return (
           <GlassCard key={campaign.id} className="p-6">
@@ -2051,10 +2159,10 @@ function SentNewsletterCampaigns({ campaigns }: { campaigns: NewsletterCampaignW
               <span
                 className={cn(
                   "rounded-full px-4 py-2 font-mono text-[9px] uppercase tracking-[0.24em]",
-                  hasError ? "bg-[var(--brand-magenta)] text-white" : "bg-green-100 text-green-700",
+                  badgeClass,
                 )}
               >
-                {hasError ? tr("needs check") : tr("sent")}
+                {badgeLabel}
               </span>
             </div>
 
@@ -2079,14 +2187,19 @@ function SentNewsletterCampaigns({ campaigns }: { campaigns: NewsletterCampaignW
               </div>
             </div>
 
-            {hasError ? (
-              <div className="mt-4 rounded-2xl border border-[var(--brand-magenta)]/30 bg-[var(--brand-magenta)]/10 px-5 py-3 text-sm text-[var(--brand-magenta)]">
-                {stats.failed > 0
-                  ? `${stats.failed} ${tr(stats.failed === 1 ? "delivery failed." : "deliveries failed.")}`
-                  : tr("Delivery needs attention.")}
-                {stats.lastError ? ` ${stats.lastError}` : ""}
-              </div>
-            ) : null}
+            <div
+              className={cn(
+                "mt-4 rounded-2xl border px-5 py-3 text-sm",
+                hasError
+                  ? "border-[var(--brand-magenta)]/30 bg-[var(--brand-magenta)]/10 text-[var(--brand-magenta)]"
+                  : deliveryState === "sending"
+                    ? "border-amber-200 bg-amber-50 text-amber-800"
+                    : "border-green-200 bg-green-50 text-green-800",
+              )}
+            >
+              {describeCampaignDeliveryState(stats, expectedTotal, tr)}
+              {hasError && stats.lastError ? ` ${stats.lastError}` : ""}
+            </div>
           </GlassCard>
         );
       })}
