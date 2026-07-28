@@ -74,6 +74,16 @@ function BloggersPage() {
   );
   const [errorMessage, setErrorMessage] = useState(initialData.error);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [createInitialValues, setCreateInitialValues] = useState<
+    | {
+        displayName?: string;
+        avatarName?: string;
+        avatarUuid?: string;
+        email?: string;
+        language?: "en" | "es";
+      }
+    | undefined
+  >(undefined);
   const [selectedBlogger, setSelectedBlogger] = useState<BloggerListItem | null>(null);
   const [statusAction, setStatusAction] = useState<
     Record<string, "idle" | "saving" | "saved" | "error">
@@ -179,9 +189,24 @@ function BloggersPage() {
 
   useEffect(() => {
     if (createSearch.openCreate !== "application") return;
+    setCreateInitialValues({
+      displayName: createSearch.displayName,
+      avatarName: createSearch.avatarName,
+      avatarUuid: createSearch.avatarUuid,
+      email: createSearch.email,
+      language: createSearch.language,
+    });
     setIsCreateOpen(true);
     void navigate({ search: {} });
-  }, [createSearch.openCreate, navigate]);
+  }, [
+    createSearch.avatarName,
+    createSearch.avatarUuid,
+    createSearch.displayName,
+    createSearch.email,
+    createSearch.language,
+    createSearch.openCreate,
+    navigate,
+  ]);
 
   return (
     <div className="px-6 py-10 md:px-12">
@@ -212,7 +237,10 @@ function BloggersPage() {
             ]}
           />
           <button
-            onClick={() => setIsCreateOpen(true)}
+            onClick={() => {
+              setCreateInitialValues(undefined);
+              setIsCreateOpen(true);
+            }}
             className="rounded-full bg-[var(--brand-magenta)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.3em] text-white shadow-lg shadow-[var(--brand-magenta)]/20 hover:opacity-90"
           >
             + {tr("Create blogger")}
@@ -352,16 +380,14 @@ function BloggersPage() {
 
       {isCreateOpen ? (
         <CreateBloggerModal
-          initialValues={{
-            displayName: createSearch.displayName,
-            avatarName: createSearch.avatarName,
-            avatarUuid: createSearch.avatarUuid,
-            email: createSearch.email,
-            language: createSearch.language,
+          initialValues={createInitialValues}
+          onClose={() => {
+            setIsCreateOpen(false);
+            setCreateInitialValues(undefined);
           }}
-          onClose={() => setIsCreateOpen(false)}
           onCreated={() => {
             setIsCreateOpen(false);
+            setCreateInitialValues(undefined);
             void loadRows();
           }}
         />
@@ -869,24 +895,13 @@ function CreateBloggerModal({
   const [avatarUuid, setAvatarUuid] = useState(initialValues?.avatarUuid ?? "");
   const [email, setEmail] = useState(initialValues?.email ?? "");
   const [password, setPassword] = useState("");
-  const [language, setLanguage] = useState<"en" | "es">(initialValues?.language === "es" ? "es" : "en");
+  const [language, setLanguage] = useState<"en" | "es">(
+    initialValues?.language === "es" ? "es" : "en",
+  );
   const [accountStatus, setAccountStatus] = useState<"pending" | "active">("active");
   const [bloggerTier, setBloggerTier] = useState<BloggerTier>("standard");
   const [state, setState] = useState<"idle" | "saving" | "error">("idle");
   const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    setDisplayName(initialValues?.displayName ?? "");
-    setAvatarName(initialValues?.avatarName ?? "");
-    setAvatarUuid(initialValues?.avatarUuid ?? "");
-    setEmail(initialValues?.email ?? "");
-    setLanguage(initialValues?.language === "es" ? "es" : "en");
-    setPassword("");
-    setAccountStatus("active");
-    setBloggerTier("standard");
-    setState("idle");
-    setMessage("");
-  }, [initialValues]);
 
   async function createAccount(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
