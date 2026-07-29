@@ -11,7 +11,7 @@ import {
 } from "@/integrations/supabase/applications";
 import { listApplicationFormFields } from "@/integrations/supabase/application-form";
 import { getBloggerRejoinHistory, type BloggerRejoinHistory } from "@/integrations/supabase/blogger-rejoin";
-import { createBloggerAccount } from "@/integrations/supabase/bloggers-admin";
+import { createBloggerAccount, findBloggerAccountForApplication } from "@/integrations/supabase/bloggers-admin";
 import { notifySecondLifeQuietly, sendInternalMessage } from "@/integrations/supabase/messages";
 import type { ApplicationFormField, BloggerApplication } from "@/integrations/supabase/database.types";
 import { translateAppPhrase } from "@/i18n/app-text";
@@ -30,20 +30,26 @@ type ApplicationsPanelProps = {
   initialApplications?: BloggerApplication[];
   initialFormFields?: ApplicationFormField[];
   initialError?: string;
+  initialFilter?: ApplicationStatus | "all";
+  initialSelectedId?: string;
+  initialOnboardingState?: "created";
 };
 
 export function ApplicationsPanel({
   initialApplications = [],
   initialFormFields = [],
   initialError = "",
+  initialFilter = "pending",
+  initialSelectedId,
+  initialOnboardingState,
 }: ApplicationsPanelProps) {
   const language = useLang();
   const tr = (value: string) => translateAppPhrase(value, language);
   const navigate = useNavigate({ from: "/app/applications" });
   const [applications, setApplications] = useState<BloggerApplication[]>(initialApplications);
   const [formFields, setFormFields] = useState<ApplicationFormField[]>(initialFormFields);
-  const [filter, setFilter] = useState<ApplicationStatus | "all">("pending");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<ApplicationStatus | "all">(initialFilter);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
   const [comment, setComment] = useState("");
   const [onboardingUuid, setOnboardingUuid] = useState("");
   const [onboardingEmail, setOnboardingEmail] = useState("");
@@ -56,43 +62,50 @@ export function ApplicationsPanel({
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [state, setState] = useState<"idle" | "loading" | "reviewing" | "error">(initialError ? "error" : "idle");
   const [error, setError] = useState(initialError ? tr(initialError) : "");
+  const [existingBloggerId, setExistingBloggerId] = useState<string | null>(null);
+  const [existingBloggerState, setExistingBloggerState] = useState<"idle" | "loading">("idle");
+  const [workflowMessage, setWorkflowMessage] = useState(
+    initialOnboardingState === "created" ? tr("Blogger created. This application is now in Approved.") : "",
+  );
   const didUseInitialApplications = useRef(false);
   const selected = useMemo(
     () => applications.find((application) => application.id === selectedId) ?? null,
     [applications, selectedId],
   );
 
+  async function loadApplications(currentFilter: ApplicationStatus | "all") {
+    setState("loading");
+    setError("");
+    try {
+      const [rows, fields] = await Promise.all([
+        listBloggerApplications(currentFilter),
+        listApplicationFormFields({ includeDisabled: true }),
+      ]);
+      setApplications(rows);
+      setFormFields(fields);
+      setState("idle");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : tr("Could not load applications."));
+      setState("error");
+    }
+  }
+
   useEffect(() => {
     if (!didUseInitialApplications.current) {
       didUseInitialApplications.current = true;
-      if (filter === "pending") return;
+      if (filter === initialFilter) return;
     }
 
-    let mounted = true;
+    void loadApplications(filter);
+  }, [filter, initialFilter]);
 
-    async function loadApplications() {
-      setState("loading");
-      setError("");
-      try {
-        const [rows, fields] = await Promise.all([
-          listBloggerApplications(filter),
-          listApplicationFormFields({ includeDisabled: true }),
-        ]);
-        if (!mounted) return;
-        setApplications(rows);
-        setFormFields(fields);
-        setState("idle");
-      } catch (loadError) {
-        if (!mounted) return;
-        setError(loadError instanceof Error ? loadError.message : tr("Could not load applications."));
-        setState("error");
-      }
+  useEffect(() => {
+    function refreshOnFocus() {
+      void loadApplications(filter);
     }
 
-    void loadApplications();
-    return () => {
-      mounted = false;
-    };
+    window.addEventListener("focus", refreshOnFocus);
+    return () => window.removeEventListener("focus", refreshOnFocus);
   }, [filter]);
 
   function openApplication(application: BloggerApplication) {
@@ -107,6 +120,7 @@ export function ApplicationsPanel({
     setLoginSummary(null);
     setCopyState("idle");
     setRejoinHistory(null);
+    setWorkflowMessage("");
   }
 
   useEffect(() => {
@@ -205,6 +219,7 @@ export function ApplicationsPanel({
             avatarUuid: reviewed.sl_avatar_uuid ?? "",
             email,
             language: reviewed.language_preference === "es" ? "es" : "en",
+            applicationId: reviewed.id,
           },
         });
       }
@@ -232,6 +247,44 @@ export function ApplicationsPanel({
     setCopyState("idle");
     setRejoinHistory(null);
   }, [applications, selectedId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadExistingBlogger() {
+      if (!selected || selected.status !== "approved") {
+        setExistingBloggerId(null);
+        setExistingBloggerState("idle");
+        return;
+      }
+
+      setExistingBloggerState("loading");
+      try {
+        const existing = await findBloggerAccountForApplication({
+          email: getApplicantEmail(selected, formFields),
+          avatarUuid: selected.sl_avatar_uuid,
+          avatarName:
+            selected.sl_avatar_name?.trim() ||
+            findAnswerByKeys(selected.answers, ["slAvatarName", "sl_avatar_name", "avatarName", "avatar_name"]) ||
+            null,
+        });
+        if (!cancelled) {
+          setExistingBloggerId(existing?.id ?? null);
+          setExistingBloggerState("idle");
+        }
+      } catch {
+        if (!cancelled) {
+          setExistingBloggerId(null);
+          setExistingBloggerState("idle");
+        }
+      }
+    }
+
+    void loadExistingBlogger();
+    return () => {
+      cancelled = true;
+    };
+  }, [formFields, selected]);
 
   async function handleCreateBloggerFromApplication() {
     if (!selected) return;
@@ -331,6 +384,7 @@ export function ApplicationsPanel({
           : tr("Blogger account created. Welcome note could not be created, but the login summary is ready to copy."),
       );
       setOnboardingPassword("");
+      setExistingBloggerId(created.userId);
     } catch (createError) {
       setOnboardingState("error");
       setOnboardingMessage(createError instanceof Error ? createError.message : tr("Could not create blogger account."));
@@ -379,6 +433,11 @@ export function ApplicationsPanel({
         {error ? (
           <div className="mt-5 rounded-2xl border border-[var(--brand-rose)] bg-white/70 px-5 py-4 text-sm text-[var(--brand-magenta)]">
             {error}
+          </div>
+        ) : null}
+        {workflowMessage ? (
+          <div className="mt-5 rounded-2xl border border-green-300 bg-green-50 px-5 py-4 text-sm text-green-700">
+            {workflowMessage}
           </div>
         ) : null}
 
@@ -491,10 +550,16 @@ export function ApplicationsPanel({
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-magenta)]">
                 {tr("Approved onboarding")}
               </div>
-              <p className="mt-2 text-sm text-foreground/65">
-                {tr("After approval, create the real blogger login from this application.")}
-              </p>
-              <div className="mt-4 grid gap-3">
+              {existingBloggerId ? (
+                <div className="mt-3 rounded-2xl border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-700">
+                  {tr("This application already has a blogger account.")}
+                </div>
+              ) : (
+                <>
+                  <p className="mt-2 text-sm text-foreground/65">
+                    {tr("After approval, create the real blogger login from this application.")}
+                  </p>
+                  <div className="mt-4 grid gap-3">
                 <label className="block">
                   <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/50">
                     {tr("Login email · optional")}
@@ -557,7 +622,14 @@ export function ApplicationsPanel({
                     placeholder={tr("Give her a first password")}
                   />
                 </label>
-              </div>
+                  </div>
+                  {existingBloggerState === "loading" ? (
+                    <div className="mt-4 rounded-2xl border border-foreground/10 bg-background/70 px-4 py-3 text-sm text-foreground/60">
+                      {tr("Checking whether this blogger account already exists...")}
+                    </div>
+                  ) : null}
+                </>
+              )}
               {onboardingMessage ? (
                 <div
                   className={cn(
@@ -608,14 +680,16 @@ export function ApplicationsPanel({
                   </div>
                 </div>
               ) : null}
-              <button
-                type="button"
-                disabled={onboardingState === "saving" || selected.status !== "approved"}
-                onClick={() => void handleCreateBloggerFromApplication()}
-                className="mt-4 rounded-full bg-foreground px-5 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-background hover:bg-[var(--brand-magenta)] disabled:cursor-not-allowed disabled:opacity-45"
-              >
-                {onboardingState === "saving" ? tr("Creating...") : tr("Create blogger login")}
-              </button>
+              {!existingBloggerId ? (
+                <button
+                  type="button"
+                  disabled={onboardingState === "saving" || selected.status !== "approved" || existingBloggerState === "loading"}
+                  onClick={() => void handleCreateBloggerFromApplication()}
+                  className="mt-4 rounded-full bg-foreground px-5 py-3 font-mono text-[10px] uppercase tracking-[0.25em] text-background hover:bg-[var(--brand-magenta)] disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  {onboardingState === "saving" ? tr("Creating...") : tr("Create blogger login")}
+                </button>
+              ) : null}
             </div>
           </div>
         ) : (

@@ -140,6 +140,35 @@ export async function createBloggerAccount(input: {
   return { userId: data.userId, profile: data.profile };
 }
 
+export async function findBloggerAccountForApplication(input: {
+  email?: string | null;
+  avatarUuid?: string | null;
+  avatarName?: string | null;
+}) {
+  const email = input.email?.trim().toLowerCase();
+  const avatarUuid = input.avatarUuid?.trim().toLowerCase();
+  const avatarName = input.avatarName?.trim();
+
+  const clauses = [
+    avatarUuid ? `sl_avatar_uuid.eq.${avatarUuid}` : null,
+    email ? `email.eq.${email}` : null,
+    !avatarUuid && !email && avatarName ? `sl_avatar_name.eq.${avatarName}` : null,
+  ].filter(Boolean);
+
+  if (clauses.length === 0) return null;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(BLOGGER_SELECT)
+    .eq("role", "blogger")
+    .or(clauses.join(","))
+    .limit(1)
+    .maybeSingle<BloggerListItem>();
+
+  if (error) throw describeBloggerProfileError(error);
+  return data ?? null;
+}
+
 async function describeFunctionError(error: unknown, fallback: string) {
   const response = getFunctionErrorResponse(error);
   if (response) {

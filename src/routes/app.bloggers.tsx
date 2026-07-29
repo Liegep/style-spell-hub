@@ -32,6 +32,7 @@ type BloggerCreateSearch = {
   avatarUuid?: string;
   email?: string;
   language?: "en" | "es";
+  applicationId?: string;
 };
 
 export const Route = createFileRoute("/app/bloggers")({
@@ -43,6 +44,7 @@ export const Route = createFileRoute("/app/bloggers")({
     avatarUuid: typeof search.avatarUuid === "string" ? search.avatarUuid : undefined,
     email: typeof search.email === "string" ? search.email : undefined,
     language: search.language === "es" ? "es" : search.language === "en" ? "en" : undefined,
+    applicationId: typeof search.applicationId === "string" ? search.applicationId : undefined,
   }),
   loader: async () => {
     try {
@@ -81,6 +83,7 @@ function BloggersPage() {
         avatarUuid?: string;
         email?: string;
         language?: "en" | "es";
+        applicationId?: string;
       }
     | undefined
   >(undefined);
@@ -195,6 +198,7 @@ function BloggersPage() {
       avatarUuid: createSearch.avatarUuid,
       email: createSearch.email,
       language: createSearch.language,
+      applicationId: createSearch.applicationId,
     });
     setIsCreateOpen(true);
     void navigate({ search: {} });
@@ -205,6 +209,7 @@ function BloggersPage() {
     createSearch.email,
     createSearch.language,
     createSearch.openCreate,
+    createSearch.applicationId,
     navigate,
   ]);
 
@@ -884,12 +889,14 @@ function CreateBloggerModal({
     avatarUuid?: string;
     email?: string;
     language?: "en" | "es";
+    applicationId?: string;
   };
   onClose: () => void;
   onCreated: () => void;
 }) {
   const languageCode = useLang();
   const tr = (value: string) => translateAppPhrase(value, languageCode);
+  const navigate = useNavigate({ from: "/app/bloggers" });
   const [displayName, setDisplayName] = useState(initialValues?.displayName ?? "");
   const [avatarName, setAvatarName] = useState(initialValues?.avatarName ?? "");
   const [avatarUuid, setAvatarUuid] = useState(initialValues?.avatarUuid ?? "");
@@ -931,6 +938,17 @@ function CreateBloggerModal({
         accountStatus,
         bloggerTier,
       });
+      if (initialValues?.applicationId) {
+        void navigate({
+          to: "/app/applications",
+          search: {
+            status: "approved",
+            applicationId: initialValues.applicationId,
+            onboarding: "created",
+          },
+        });
+        return;
+      }
       onCreated();
     } catch (error) {
       setState("error");

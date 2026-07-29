@@ -12,9 +12,20 @@ import { useLang } from "@/i18n/dict";
 
 export const Route = createFileRoute("/app/applications")({
   ssr: false,
-  loader: async () => {
+  validateSearch: (search: Record<string, unknown>) => ({
+    status:
+      search.status === "approved" || search.status === "rejected" || search.status === "all"
+        ? search.status
+        : "pending",
+    applicationId: typeof search.applicationId === "string" ? search.applicationId : undefined,
+    onboarding: search.onboarding === "created" ? "created" : undefined,
+  }),
+  loader: async ({ location }) => {
+    const search = location.search as {
+      status?: "pending" | "approved" | "rejected" | "all";
+    };
     const [applicationsResult, fieldsResult, settingsResult] = await Promise.allSettled([
-      listBloggerApplications("pending"),
+      listBloggerApplications(search.status ?? "pending"),
       listApplicationFormFields({ includeDisabled: true }),
       getBloggerAdmissionsSettings(),
     ]);
@@ -54,6 +65,7 @@ function ApplicationsPage() {
   const language = useLang();
   const tr = (value: string) => translateAppPhrase(value, language);
   const initialData = Route.useLoaderData();
+  const search = Route.useSearch();
   const [tab, setTab] = useState<ApplicationsTab>("queue");
 
   return (
@@ -87,6 +99,9 @@ function ApplicationsPage() {
             initialApplications={initialData.applications}
             initialFormFields={initialData.formFields}
             initialError={initialData.applicationsError}
+            initialFilter={search.status}
+            initialSelectedId={search.applicationId}
+            initialOnboardingState={search.onboarding}
           />
         ) : (
           <ApplicationFormBuilder
