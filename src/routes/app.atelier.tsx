@@ -2,6 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import bloggerAvatar from "@/assets/blogger-avatar.jpg";
 import {
   getAtelierStats,
@@ -18,7 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getCurrentProfile, type AuthProfile } from "@/integrations/supabase/auth";
 import { notifySecondLifeQuietly } from "@/integrations/supabase/messages";
-import type { SubmissionStatus } from "@/integrations/supabase/database.types";
+import type { ClaimStatus, SubmissionStatus } from "@/integrations/supabase/database.types";
 import { useLang } from "@/i18n/dict";
 import { translateAppPhrase } from "@/i18n/app-text";
 import { getVisibleStatusMessage } from "@/lib/status-note";
@@ -320,6 +326,74 @@ function AtelierPage() {
     },
     { claimed: 0, delivered: 0, failed: 0 } satisfies Record<ClaimStatus, number>,
   );
+  const visibleDeliveryDesk = deliveryDesk.slice(0, 3);
+  const extraDeliveryDesk = deliveryDesk.slice(3);
+
+  function renderDeliveryClaim(claim: DeliveryDeskItem) {
+    return (
+      <div
+        key={claim.id}
+        className="grid gap-4 rounded-2xl border border-foreground/10 bg-background/70 p-4 md:grid-cols-[auto_1fr_auto]"
+      >
+        {claim.product_image ? (
+          <img
+            src={claim.product_image}
+            alt={claim.product_name}
+            className="h-16 w-16 rounded-xl object-cover"
+          />
+        ) : (
+          <div className="h-16 w-16 rounded-xl bg-foreground/10" />
+        )}
+
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="truncate font-display text-2xl">{claim.product_name}</div>
+          </div>
+          <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/55">
+            {claim.blogger_name} · {tr("claimed")} {prettyDate(claim.claimed_at)} ·{" "}
+            {tr("delivered")} {prettyDate(claim.delivered_at)}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end">
+          {claim.status === "delivered" &&
+          claim.latest_submission_status === "pending" &&
+          claim.latest_submission_id ? (
+            <button
+              onClick={() => {
+                setReviewFilter("pending");
+                setSelectedReviewId(claim.latest_submission_id);
+              }}
+              className="rounded-full border border-foreground/15 px-4 py-3 font-mono text-[9px] uppercase tracking-[0.22em] text-foreground/55 hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]"
+            >
+              {tr("review")}
+            </button>
+          ) : claim.status === "delivered" ? (
+            <span className="rounded-full bg-emerald-100 px-4 py-3 font-mono text-[9px] uppercase tracking-[0.22em] text-emerald-700">
+              {tr("reviewed")}
+            </span>
+          ) : (
+            <button
+              onClick={() => void handleRetryDelivery(claim.id)}
+              disabled={retryingClaimId === claim.id || !claim.delivery_item_key}
+              className={cn(
+                "rounded-full px-4 py-3 font-mono text-[9px] uppercase tracking-[0.22em]",
+                retryingClaimId === claim.id || !claim.delivery_item_key
+                  ? "bg-foreground/10 text-foreground/35"
+                  : "bg-foreground text-background hover:bg-[var(--brand-magenta)]",
+              )}
+            >
+              {retryingClaimId === claim.id
+                ? tr("retrying...")
+                : claim.delivery_item_key
+                  ? tr("retry delivery")
+                  : tr("missing item key")}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (!selectedReviewId) return;
@@ -418,72 +492,26 @@ function AtelierPage() {
             </div>
           ) : (
             <div className="mt-5 grid gap-3">
-              {deliveryDesk.slice(0, 8).map((claim) => (
-                <div
-                  key={claim.id}
-                  className="grid gap-4 rounded-2xl border border-foreground/10 bg-background/70 p-4 md:grid-cols-[auto_1fr_auto]"
+              {visibleDeliveryDesk.map(renderDeliveryClaim)}
+
+              {extraDeliveryDesk.length > 0 ? (
+                <Accordion
+                  type="single"
+                  collapsible
+                  className="rounded-2xl border border-foreground/10 bg-background/55 px-4"
                 >
-                  {claim.product_image ? (
-                    <img
-                      src={claim.product_image}
-                      alt={claim.product_name}
-                      className="h-16 w-16 rounded-xl object-cover"
-                    />
-                  ) : (
-                    <div className="h-16 w-16 rounded-xl bg-foreground/10" />
-                  )}
-
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="truncate font-display text-2xl">{claim.product_name}</div>
-                    </div>
-                    <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/55">
-                      {claim.blogger_name} · {tr("claimed")} {prettyDate(claim.claimed_at)} ·{" "}
-                      {tr("delivered")} {prettyDate(claim.delivered_at)}
-                    </div>
-                    {claim.delivery_response ? (
-                      <div className="mt-2 line-clamp-2 text-xs text-foreground/55">
-                        {claim.delivery_response}
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="flex items-center justify-end">
-                    {claim.status === "delivered" && claim.latest_submission_status === "pending" && claim.latest_submission_id ? (
-                      <button
-                        onClick={() => {
-                          setReviewFilter("pending");
-                          setSelectedReviewId(claim.latest_submission_id);
-                        }}
-                        className="rounded-full border border-foreground/15 px-4 py-3 font-mono text-[9px] uppercase tracking-[0.22em] text-foreground/55 hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]"
-                      >
-                        {tr("review")}
-                      </button>
-                    ) : claim.status === "delivered" ? (
-                      <span className="rounded-full bg-emerald-100 px-4 py-3 font-mono text-[9px] uppercase tracking-[0.22em] text-emerald-700">
-                        {tr("reviewed")}
+                  <AccordionItem value="more-deliveries" className="border-none">
+                    <AccordionTrigger className="py-4 font-mono text-[10px] uppercase tracking-[0.24em] text-foreground/60 hover:no-underline">
+                      <span>
+                        {tr("view more")} ({extraDeliveryDesk.length})
                       </span>
-                    ) : (
-                      <button
-                        onClick={() => void handleRetryDelivery(claim.id)}
-                        disabled={retryingClaimId === claim.id || !claim.delivery_item_key}
-                        className={cn(
-                          "rounded-full px-4 py-3 font-mono text-[9px] uppercase tracking-[0.22em]",
-                          retryingClaimId === claim.id || !claim.delivery_item_key
-                            ? "bg-foreground/10 text-foreground/35"
-                            : "bg-foreground text-background hover:bg-[var(--brand-magenta)]",
-                        )}
-                      >
-                        {retryingClaimId === claim.id
-                          ? tr("retrying...")
-                          : claim.delivery_item_key
-                            ? tr("retry delivery")
-                            : tr("missing item key")}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-2">
+                      <div className="grid gap-3">{extraDeliveryDesk.map(renderDeliveryClaim)}</div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              ) : null}
             </div>
           )}
         </GlassCard>
