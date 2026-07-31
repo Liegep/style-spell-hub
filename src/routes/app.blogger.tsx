@@ -338,12 +338,38 @@ function BloggerDash() {
 
     const handleMessagesUpdated = () => void loadMailUnreadCount();
     const handleFocus = () => void loadMailUnreadCount();
+    const mailChannel = supabase
+      .channel(`blogger-mail-count-${profileId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "internal_messages" },
+        (payload) => {
+          const nextRow = (payload.new ?? null) as {
+            recipient_id?: string | null;
+            scope?: string | null;
+          } | null;
+          const prevRow = (payload.old ?? null) as {
+            recipient_id?: string | null;
+            scope?: string | null;
+          } | null;
+          const matchesProfile =
+            nextRow?.recipient_id === profileId || prevRow?.recipient_id === profileId;
+          const isPersonal = nextRow?.scope === "personal" || prevRow?.scope === "personal";
+
+          if (matchesProfile && isPersonal) {
+            void loadMailUnreadCount();
+          }
+        },
+      )
+      .subscribe();
+
     window.addEventListener("messages-updated", handleMessagesUpdated);
     window.addEventListener("focus", handleFocus);
     return () => {
       mounted = false;
       window.removeEventListener("messages-updated", handleMessagesUpdated);
       window.removeEventListener("focus", handleFocus);
+      void supabase.removeChannel(mailChannel);
     };
   }, [profileId]);
 

@@ -346,6 +346,39 @@ function AppLayout() {
     }
 
     const onMessagesUpdated = () => void loadMailCount();
+    const mailChannel = supabase
+      .channel(`sidebar-mail-count-${profile.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "internal_messages" },
+        (payload) => {
+          const nextRow = (payload.new ?? null) as {
+            recipient_id?: string | null;
+            scope?: string | null;
+            read_at?: string | null;
+            staff_read_at?: string | null;
+          } | null;
+          const prevRow = (payload.old ?? null) as {
+            recipient_id?: string | null;
+            scope?: string | null;
+            read_at?: string | null;
+            staff_read_at?: string | null;
+          } | null;
+          const matchesProfile =
+            nextRow?.recipient_id === profile.id || prevRow?.recipient_id === profile.id;
+
+          if (!matchesProfile) return;
+          if (profile.role === "blogger") {
+            if (nextRow?.scope === "personal" || prevRow?.scope === "personal") {
+              void loadMailCount();
+            }
+            return;
+          }
+
+          void loadMailCount();
+        },
+      )
+      .subscribe();
 
     void loadMailCount();
     const intervalId = window.setInterval(() => void loadMailCount(), 60_000);
@@ -357,6 +390,7 @@ function AppLayout() {
       if (intervalId) window.clearInterval(intervalId);
       window.removeEventListener("focus", loadMailCount);
       window.removeEventListener("messages-updated", onMessagesUpdated);
+      void supabase.removeChannel(mailChannel);
     };
   }, [profile]);
 
