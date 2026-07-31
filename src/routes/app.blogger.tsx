@@ -14,6 +14,7 @@ import {
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
 import { Tabs } from "@/components/brand/Tabs";
+import { Badge } from "@/components/ui/badge";
 import { products } from "@/mocks/data";
 import { cn } from "@/lib/utils";
 import {
@@ -1575,19 +1576,28 @@ function InboxTab({
               <div>
                 <div
                   className={cn(
-                    "font-mono text-[10px] uppercase tracking-[0.3em]",
+                    "flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.3em]",
                     isNew ? "text-foreground/60" : "text-foreground/40",
                   )}
                 >
-                  {message.scope === "broadcast"
-                    ? language === "es"
-                      ? "GENERAL"
-                      : "BROADCAST"
-                    : language === "es"
-                      ? "PERSONAL"
-                      : "PERSONAL"}{" "}
-                  · {message.sender_name || "Love Potion HQ"}
-                  {isNew ? " · NEW" : ""}
+                  <span>
+                    {message.scope === "broadcast"
+                      ? language === "es"
+                        ? "GENERAL"
+                        : "BROADCAST"
+                      : language === "es"
+                        ? "PERSONAL"
+                        : "PERSONAL"}{" "}
+                    · {message.sender_name || "Love Potion HQ"}
+                  </span>
+                  {isNew ? (
+                    <Badge
+                      variant="outline"
+                      className="rounded-full border-[var(--brand-magenta)]/25 bg-[var(--brand-pink)]/65 px-2.5 py-1 text-[9px] leading-none tracking-[0.24em] text-[var(--brand-magenta)]"
+                    >
+                      {tr("NEW")}
+                    </Badge>
+                  ) : null}
                 </div>
                 <div
                   className={cn(
