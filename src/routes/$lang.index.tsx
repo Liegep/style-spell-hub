@@ -47,8 +47,11 @@ function Landing() {
           defaultCategory: "Nuevo lanzamiento",
           defaultDescription: "Un nuevo lanzamiento de Love Potion llegó al grid.",
           defaultNote: "nuevo drop",
+          eventsKicker: "DONDE APARECEMOS",
+          eventsTitle: "Círculo de eventos.",
+          eventsBody: "Las casas y sales donde Love Potion sigue apareciendo.",
         }
-      : {
+        : {
           sloganLabel: (
             <>
               our slogan.<br/>cast across<br/>the grid.
@@ -75,6 +78,9 @@ function Landing() {
           defaultCategory: "New release",
           defaultDescription: "A fresh Love Potion release has arrived on the grid.",
           defaultNote: "new drop",
+          eventsKicker: "WHERE WE APPEAR",
+          eventsTitle: "Event circle.",
+          eventsBody: "The houses and sales where Love Potion keeps showing up.",
         };
   const [liveReleases, setLiveReleases] = useState<ProductSummary[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -425,6 +431,46 @@ function Landing() {
             {landingText.syncing}
           </div>
         ) : null}
+      </ScrollReveal>
+
+      {/* EVENT LOGOS */}
+      <ScrollReveal as="section" variant="fade-up" className="mt-32 px-6 pb-20 md:px-12 md:pb-28">
+        <div className="mx-auto max-w-[1400px] overflow-hidden rounded-[2.4rem] bg-[linear-gradient(145deg,#2b1720_0%,#130d12_52%,#09070a_100%)] px-6 py-10 shadow-[0_28px_90px_rgba(27,9,17,0.38)] md:px-10 md:py-14">
+          <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-xl">
+              <div className="font-mono text-[10px] uppercase tracking-[0.35em] text-white/55">
+                {landingText.eventsKicker}
+              </div>
+              <h3 className="mt-3 font-display text-4xl leading-none text-white md:text-5xl">
+                {landingText.eventsTitle}
+              </h3>
+              <p className="mt-4 max-w-lg text-sm leading-relaxed text-white/68">
+                {landingText.eventsBody}
+              </p>
+            </div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.35em] text-white/35">
+              {lang === "es" ? "03 eventos destacados" : "03 featured events"}
+            </div>
+          </div>
+
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {[
+              { name: "The Saturday Sale", style: "font-serif text-[clamp(1.8rem,3.7vw,3.2rem)] italic tracking-[0.06em]" },
+              { name: "Cosmospolitan", style: "font-display text-[clamp(2rem,4.4vw,4rem)] leading-none tracking-[0.12em]" },
+              { name: "Waigu's Dream", style: "font-hand text-[clamp(2.1rem,4vw,3.5rem)] tracking-[0.04em]" },
+            ].map((event) => (
+              <div
+                key={event.name}
+                className="group relative overflow-hidden rounded-[1.8rem] border border-white/12 bg-white/[0.03] px-6 py-8 backdrop-blur-sm"
+              >
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.1),transparent_58%)] opacity-70 transition duration-500 group-hover:opacity-100" />
+                <div className="relative flex min-h-28 items-center justify-center text-center text-white">
+                  <span className={event.style}>{event.name}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </ScrollReveal>
     </main>
   );
