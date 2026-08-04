@@ -435,13 +435,13 @@ function Landing() {
 
       {/* EVENT LOGOS */}
       <ScrollReveal as="section" variant="fade-up" className="mt-32 px-6 pb-20 md:px-12 md:pb-28">
-        <div className="mx-auto max-w-[1400px] overflow-hidden rounded-[2.4rem] bg-[linear-gradient(145deg,#2b1720_0%,#130d12_52%,#09070a_100%)] px-6 py-10 shadow-[0_28px_90px_rgba(27,9,17,0.38)] md:px-10 md:py-14">
+        <div className="mx-auto max-w-[1400px] overflow-hidden rounded-[2.4rem] bg-[linear-gradient(145deg,#24131b_0%,#120d12_58%,#08070a_100%)] px-6 py-10 shadow-[0_28px_90px_rgba(27,9,17,0.38)] md:px-10 md:py-14">
           <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
             <div className="max-w-xl">
               <div className="font-mono text-[10px] uppercase tracking-[0.35em] text-white/55">
                 {landingText.eventsKicker}
               </div>
-              <h3 className="mt-3 font-display text-4xl leading-none text-white md:text-5xl">
+              <h3 className="mt-3 font-display text-4xl leading-none text-white md:text-[4.25rem]">
                 {landingText.eventsTitle}
               </h3>
               <p className="mt-4 max-w-lg text-sm leading-relaxed text-white/68">
@@ -455,17 +455,63 @@ function Landing() {
 
           <div className="mt-10 grid gap-4 md:grid-cols-3">
             {[
-              { name: "The Saturday Sale", style: "font-serif text-[clamp(1.8rem,3.7vw,3.2rem)] italic tracking-[0.06em]" },
-              { name: "Cosmospolitan", style: "font-display text-[clamp(2rem,4.4vw,4rem)] leading-none tracking-[0.12em]" },
-              { name: "Waigu's Dream", style: "font-hand text-[clamp(2.1rem,4vw,3.5rem)] tracking-[0.04em]" },
+              {
+                key: "saturday-sale",
+                mark: (
+                  <div className="flex flex-col items-center text-white">
+                    <div className="font-mono text-[0.68rem] uppercase tracking-[0.5em] text-white/72">
+                      The
+                    </div>
+                    <div className="mt-2 font-serif text-[clamp(2.3rem,4.2vw,3.7rem)] italic leading-none tracking-[0.03em]">
+                      Saturday
+                    </div>
+                    <div className="mt-3 h-px w-32 bg-white/32" />
+                    <div className="mt-4 font-mono text-[clamp(1.2rem,2vw,1.6rem)] uppercase tracking-[0.7em] text-white/86">
+                      SALE
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: "cosmospolitan",
+                mark: (
+                  <div className="flex flex-col items-center text-white">
+                    <div className="font-mono text-[0.58rem] uppercase tracking-[0.7em] text-white/45">
+                      event
+                    </div>
+                    <div className="mt-2 text-center">
+                      <span className="font-display text-[clamp(2rem,4vw,3.5rem)] leading-none tracking-[0.18em] text-white">
+                        COSMO
+                      </span>
+                      <span className="ml-1 inline-block font-hand text-[clamp(2.1rem,4.1vw,3.6rem)] leading-none tracking-[0.02em] text-white/95">
+                        spolitan
+                      </span>
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: "waifus-dream",
+                mark: (
+                  <div className="flex flex-col items-center text-white">
+                    <div className="font-mono text-[clamp(0.95rem,1.5vw,1.15rem)] uppercase tracking-[0.62em] text-white/86">
+                      WAIFUS
+                    </div>
+                    <div className="mt-2 font-hand text-[clamp(2.25rem,4vw,3.6rem)] leading-none tracking-[0.03em] text-white">
+                      Dream
+                    </div>
+                  </div>
+                ),
+              },
             ].map((event) => (
               <div
-                key={event.name}
-                className="group relative overflow-hidden rounded-[1.8rem] border border-white/12 bg-white/[0.03] px-6 py-8 backdrop-blur-sm"
+                key={event.key}
+                className="group relative overflow-hidden rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.015))] px-6 py-8 backdrop-blur-sm"
               >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.1),transparent_58%)] opacity-70 transition duration-500 group-hover:opacity-100" />
-                <div className="relative flex min-h-28 items-center justify-center text-center text-white">
-                  <span className={event.style}>{event.name}</span>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_56%)] opacity-60 transition duration-500 group-hover:opacity-100" />
+                <div className="absolute inset-x-8 bottom-0 h-px bg-white/10" />
+                <div className="relative flex min-h-[11rem] items-center justify-center text-center text-white">
+                  {event.mark}
                 </div>
               </div>
             ))}
