@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import heroImg from "@/assets/hero-marie.png";
+import tssWeekendLogo from "@/assets/event-tss-weekend-2026.png";
+import cosmopolitanLogo from "@/assets/event-cosmopolitan-logo.png";
+import waifuDreamsLogo from "@/assets/event-waifu-dreams-2025-logo.png";
 import { useT } from "@/i18n/dict";
 import { GlassCard } from "@/components/brand/GlassCard";
 import { HandwrittenNote } from "@/components/brand/HandwrittenNote";
@@ -457,51 +460,21 @@ function Landing() {
             {[
               {
                 key: "saturday-sale",
-                mark: (
-                  <div className="flex flex-col items-center text-white">
-                    <div className="font-mono text-[0.68rem] uppercase tracking-[0.5em] text-white/72">
-                      The
-                    </div>
-                    <div className="mt-2 font-serif text-[clamp(2.3rem,4.2vw,3.7rem)] italic leading-none tracking-[0.03em]">
-                      Saturday
-                    </div>
-                    <div className="mt-3 h-px w-32 bg-white/32" />
-                    <div className="mt-4 font-mono text-[clamp(1.2rem,2vw,1.6rem)] uppercase tracking-[0.7em] text-white/86">
-                      SALE
-                    </div>
-                  </div>
-                ),
+                name: "The Saturday Sale Weekend",
+                src: tssWeekendLogo,
+                imgClass: "max-h-[13rem] w-auto object-contain drop-shadow-[0_10px_24px_rgba(0,0,0,0.22)]",
               },
               {
                 key: "cosmospolitan",
-                mark: (
-                  <div className="flex flex-col items-center text-white">
-                    <div className="font-mono text-[0.58rem] uppercase tracking-[0.7em] text-white/45">
-                      event
-                    </div>
-                    <div className="mt-2 text-center">
-                      <span className="font-display text-[clamp(2rem,4vw,3.5rem)] leading-none tracking-[0.18em] text-white">
-                        COSMO
-                      </span>
-                      <span className="ml-1 inline-block font-hand text-[clamp(2.1rem,4.1vw,3.6rem)] leading-none tracking-[0.02em] text-white/95">
-                        spolitan
-                      </span>
-                    </div>
-                  </div>
-                ),
+                name: "Cosmopolitan Event",
+                src: cosmopolitanLogo,
+                imgClass: "max-h-[12.2rem] w-auto object-contain opacity-95 [filter:brightness(1.04)_drop-shadow(0_0_22px_rgba(255,244,208,0.12))]",
               },
               {
                 key: "waifus-dream",
-                mark: (
-                  <div className="flex flex-col items-center text-white">
-                    <div className="font-mono text-[clamp(0.95rem,1.5vw,1.15rem)] uppercase tracking-[0.62em] text-white/86">
-                      WAIFUS
-                    </div>
-                    <div className="mt-2 font-hand text-[clamp(2.25rem,4vw,3.6rem)] leading-none tracking-[0.03em] text-white">
-                      Dream
-                    </div>
-                  </div>
-                ),
+                name: "WAIFUS Dreams",
+                src: waifuDreamsLogo,
+                imgClass: "max-h-[12.8rem] w-auto object-contain drop-shadow-[0_14px_28px_rgba(76,18,64,0.22)]",
               },
             ].map((event) => (
               <div
@@ -511,7 +484,12 @@ function Landing() {
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_56%)] opacity-60 transition duration-500 group-hover:opacity-100" />
                 <div className="absolute inset-x-8 bottom-0 h-px bg-white/10" />
                 <div className="relative flex min-h-[11rem] items-center justify-center text-center text-white">
-                  {event.mark}
+                  <img
+                    src={event.src}
+                    alt={event.name}
+                    loading="lazy"
+                    className={event.imgClass}
+                  />
                 </div>
               </div>
             ))}
