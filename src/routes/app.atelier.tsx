@@ -368,9 +368,13 @@ function AtelierPage() {
             >
               {tr("review")}
             </button>
-          ) : claim.status === "delivered" ? (
+          ) : claim.status === "delivered" && claim.latest_submission_status ? (
             <span className="rounded-full bg-emerald-100 px-4 py-3 font-mono text-[9px] uppercase tracking-[0.22em] text-emerald-700">
               {tr("reviewed")}
+            </span>
+          ) : claim.status === "delivered" ? (
+            <span className="rounded-full border border-foreground/15 px-4 py-3 font-mono text-[9px] uppercase tracking-[0.22em] text-foreground/55">
+              {tr("not yet")}
             </span>
           ) : (
             <button
