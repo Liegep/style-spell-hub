@@ -451,9 +451,6 @@ function Landing() {
                 {landingText.eventsBody}
               </p>
             </div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.35em] text-white/35">
-              {lang === "es" ? "03 eventos destacados" : "03 featured events"}
-            </div>
           </div>
 
           <div className="mt-10 grid gap-4 md:grid-cols-3">
