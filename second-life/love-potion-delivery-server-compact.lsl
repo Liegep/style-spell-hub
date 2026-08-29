@@ -1,3 +1,6 @@
+// Add a copyable/transferable notecard named "Love Potion Update" to this object.
+// It is automatically delivered for new_product and new_message notifications.
+
 string SHARED_SECRET = "CHANGE_ME_TO_MATCH_SECOND_LIFE_DELIVERY_SECRET";
 string SUPABASE_REGISTER_URL = "https://dvhrisqlybqsrzsfoyfx.supabase.co/functions/v1/register-delivery-server";
 
@@ -56,19 +59,19 @@ string notificationText(string title, string message, string actionUrl, string i
 
 integer registerUrl()
 {
+    string payload = "{}";
+
     if (hasText(deliveryUrl) == FALSE)
     {
         return FALSE;
     }
 
-    string payload = llList2Json(JSON_OBJECT, [
-        "secret", SHARED_SECRET,
-        "server_url", deliveryUrl,
-        "object_name", llGetObjectName(),
-        "object_key", (string)llGetKey(),
-        "region_name", llGetRegionName(),
-        "owner_key", (string)llGetOwner()
-    ]);
+    payload = llJsonSetValue(payload, ["secret"], SHARED_SECRET);
+    payload = llJsonSetValue(payload, ["server_url"], deliveryUrl);
+    payload = llJsonSetValue(payload, ["object_name"], llGetObjectName());
+    payload = llJsonSetValue(payload, ["object_key"], (string)llGetKey());
+    payload = llJsonSetValue(payload, ["region_name"], llGetRegionName());
+    payload = llJsonSetValue(payload, ["owner_key"], (string)llGetOwner());
 
     registerRequestId = llHTTPRequest(SUPABASE_REGISTER_URL, [HTTP_METHOD, "POST", HTTP_MIMETYPE, "application/json"], payload);
     return TRUE;
@@ -118,6 +121,16 @@ default
 
     http_request(key requestId, string method, string body)
     {
+        string avatarUuid;
+        string mode;
+        string actionUrl;
+        string imageUrl;
+        string fallbackUrl;
+        string textureItemName;
+        string notecardItemName;
+        string itemName;
+        string productName;
+
         if (method == URL_REQUEST_GRANTED)
         {
             deliveryUrl = body;
@@ -144,16 +157,17 @@ default
             return;
         }
 
-        string avatarUuid = jsonText(body, "avatar_uuid");
-        string mode = jsonText(body, "mode");
+        avatarUuid = jsonText(body, "avatar_uuid");
+        mode = jsonText(body, "mode");
         if (!hasText(mode)) mode = "delivery";
 
         if (mode == "notify")
         {
-            string actionUrl = jsonText(body, "action_url");
-            string imageUrl = jsonText(body, "image_url");
-            string fallbackUrl = jsonText(body, "fallback_url");
-            string textureItemName = jsonText(body, "texture_item_name");
+            actionUrl = jsonText(body, "action_url");
+            imageUrl = jsonText(body, "image_url");
+            fallbackUrl = jsonText(body, "fallback_url");
+            textureItemName = jsonText(body, "texture_item_name");
+            notecardItemName = jsonText(body, "notecard_item_name");
             if (!hasText(fallbackUrl)) fallbackUrl = actionUrl;
 
             if (hasText(textureItemName) && llGetInventoryType(textureItemName) != INVENTORY_NONE)
@@ -167,13 +181,21 @@ default
                 imageUrl = "";
             }
 
+            if (hasText(notecardItemName))
+            {
+                if (llGetInventoryType(notecardItemName) == INVENTORY_NOTECARD)
+                    llGiveInventory((key)avatarUuid, notecardItemName);
+                else
+                    llOwnerSay("Notification notecard missing or invalid: " + notecardItemName + ". Add a notecard with this exact name to the delivery box.");
+            }
+
             llInstantMessage((key)avatarUuid, notificationText(jsonText(body, "title"), jsonText(body, "body"), actionUrl, imageUrl, fallbackUrl));
-            llHTTPResponse(requestId, 200, "Notification sent.");
+            llHTTPResponse(requestId, 200, "Notification sent and notecard delivery processed.");
             return;
         }
 
-        string itemName = jsonText(body, "item_key");
-        string productName = jsonText(body, "product_name");
+        itemName = jsonText(body, "item_key");
+        productName = jsonText(body, "product_name");
 
         if (!hasText(avatarUuid) || !hasText(itemName))
         {

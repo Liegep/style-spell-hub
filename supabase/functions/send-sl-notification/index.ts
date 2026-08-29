@@ -43,6 +43,18 @@ function metadataText(metadata: unknown, key: string) {
   return clean((metadata as Record<string, unknown>)[key]);
 }
 
+function getAlertNotecardItemName(notificationType: string, metadata: unknown) {
+  if (!["new_product", "new_message"].includes(notificationType)) {
+    return "";
+  }
+
+  return (
+    metadataText(metadata, "notecard_item_name") ||
+    clean(Deno.env.get("SECOND_LIFE_ALERT_NOTECARD")) ||
+    "Love Potion Update"
+  );
+}
+
 function appendFallbackLink(body: string, fallbackUrl: string) {
   if (!fallbackUrl || body.includes(fallbackUrl)) {
     return body;
@@ -213,6 +225,8 @@ async function processQueueItem(
   const recipientSlUuid = clean(queueItem.recipient_sl_uuid);
   const title = clean(queueItem.title);
   const metadata = queueItem.metadata;
+  const notificationType = clean(queueItem.type);
+  const notecardItemName = getAlertNotecardItemName(notificationType, metadata);
   const actionUrl = clean(queueItem.action_url);
   const candidateImageUrl = metadataText(metadata, "image_url") || actionUrl;
   const imageUrl = (await canReachUrl(candidateImageUrl)) ? candidateImageUrl : "";
@@ -275,7 +289,7 @@ async function processQueueItem(
         mode: "notify",
         secret: deliverySecret,
         notification_id: queueId,
-        notification_type: queueItem.type,
+        notification_type: notificationType,
         avatar_uuid: recipientSlUuid,
         title,
         body,
@@ -283,6 +297,7 @@ async function processQueueItem(
         image_url: imageUrl,
         fallback_url: fallbackUrl,
         texture_item_name: textureItemName,
+        notecard_item_name: notecardItemName,
       }),
     });
 

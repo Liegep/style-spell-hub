@@ -4,6 +4,8 @@
 //
 // In Content Studio, set delivery_item_key to the exact inventory item name.
 // Example: Holiday Magic Gown - Blogger Pack
+// Add a copyable/transferable notecard named "Love Potion Update" to this object's inventory.
+// It is automatically delivered for new_product and new_message notifications.
 
 string SHARED_SECRET = "CHANGE_ME_TO_MATCH_SECOND_LIFE_DELIVERY_SECRET";
 string SUPABASE_REGISTER_URL = "https://dvhrisqlybqsrzsfoyfx.supabase.co/functions/v1/register-delivery-server";
@@ -67,19 +69,19 @@ string buildNotificationMessage(string title, string message, string actionUrl, 
 
 integer registerDeliveryUrl()
 {
+    string payload = "{}";
+
     if (!hasText(deliveryUrl))
     {
         return FALSE;
     }
 
-    string payload = llList2Json(JSON_OBJECT, [
-        "secret", SHARED_SECRET,
-        "server_url", deliveryUrl,
-        "object_name", llGetObjectName(),
-        "object_key", (string)llGetKey(),
-        "region_name", llGetRegionName(),
-        "owner_key", (string)llGetOwner()
-    ]);
+    payload = llJsonSetValue(payload, ["secret"], SHARED_SECRET);
+    payload = llJsonSetValue(payload, ["server_url"], deliveryUrl);
+    payload = llJsonSetValue(payload, ["object_name"], llGetObjectName());
+    payload = llJsonSetValue(payload, ["object_key"], (string)llGetKey());
+    payload = llJsonSetValue(payload, ["region_name"], llGetRegionName());
+    payload = llJsonSetValue(payload, ["owner_key"], (string)llGetOwner());
 
     registerRequestId = llHTTPRequest(
         SUPABASE_REGISTER_URL,
@@ -134,6 +136,20 @@ default
 
     http_request(key requestId, string method, string body)
     {
+        string secret;
+        string mode;
+        string avatarUuid;
+        string notificationTitle;
+        string notificationBody;
+        string actionUrl;
+        string imageUrl;
+        string fallbackUrl;
+        string textureItemName;
+        string notecardItemName;
+        string itemName;
+        string productName;
+        integer inventoryType;
+
         if (method == URL_REQUEST_GRANTED)
         {
             deliveryUrl = body;
@@ -154,29 +170,30 @@ default
             return;
         }
 
-        string secret = jsonText(body, ["secret"]);
+        secret = jsonText(body, ["secret"]);
         if (secret != SHARED_SECRET)
         {
             llHTTPResponse(requestId, 403, "Invalid delivery secret.");
             return;
         }
 
-        string mode = jsonText(body, ["mode"]);
+        mode = jsonText(body, ["mode"]);
         if (!hasText(mode))
         {
             mode = "delivery";
         }
 
-        string avatarUuid = jsonText(body, ["avatar_uuid"]);
+        avatarUuid = jsonText(body, ["avatar_uuid"]);
 
         if (mode == "notify")
         {
-            string notificationTitle = jsonText(body, ["title"]);
-            string notificationBody = jsonText(body, ["body"]);
-            string actionUrl = jsonText(body, ["action_url"]);
-            string imageUrl = jsonText(body, ["image_url"]);
-            string fallbackUrl = jsonText(body, ["fallback_url"]);
-            string textureItemName = jsonText(body, ["texture_item_name"]);
+            notificationTitle = jsonText(body, ["title"]);
+            notificationBody = jsonText(body, ["body"]);
+            actionUrl = jsonText(body, ["action_url"]);
+            imageUrl = jsonText(body, ["image_url"]);
+            fallbackUrl = jsonText(body, ["fallback_url"]);
+            textureItemName = jsonText(body, ["texture_item_name"]);
+            notecardItemName = jsonText(body, ["notecard_item_name"]);
 
             if (!hasText(fallbackUrl))
             {
@@ -194,6 +211,21 @@ default
                 imageUrl = "";
             }
 
+            if (hasText(notecardItemName))
+            {
+                if (llGetInventoryType(notecardItemName) == INVENTORY_NOTECARD)
+                {
+                    llGiveInventory((key)avatarUuid, notecardItemName);
+                }
+                else
+                {
+                    llOwnerSay(
+                        "Notification notecard missing or invalid: " + notecardItemName +
+                        ". Add a notecard with this exact name to the delivery box."
+                    );
+                }
+            }
+
             if (!hasText(avatarUuid) || (!hasText(notificationTitle) && !hasText(notificationBody) && !hasText(imageUrl) && !hasText(fallbackUrl)))
             {
                 llHTTPResponse(requestId, 400, "Missing avatar_uuid or notification text.");
@@ -201,7 +233,7 @@ default
             }
 
             llInstantMessage((key)avatarUuid, buildNotificationMessage(notificationTitle, notificationBody, actionUrl, imageUrl, fallbackUrl));
-            llHTTPResponse(requestId, 200, "Notification sent.");
+            llHTTPResponse(requestId, 200, "Notification sent and notecard delivery processed.");
             return;
         }
 
@@ -211,8 +243,8 @@ default
             return;
         }
 
-        string itemName = jsonText(body, ["item_key"]);
-        string productName = jsonText(body, ["product_name"]);
+        itemName = jsonText(body, ["item_key"]);
+        productName = jsonText(body, ["product_name"]);
 
         if (!hasText(avatarUuid) || !hasText(itemName))
         {
@@ -220,7 +252,7 @@ default
             return;
         }
 
-        integer inventoryType = llGetInventoryType(itemName);
+        inventoryType = llGetInventoryType(itemName);
         if (inventoryType == INVENTORY_NONE)
         {
             llHTTPResponse(requestId, 404, "Inventory item not found: " + itemName);
