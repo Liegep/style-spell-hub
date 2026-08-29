@@ -22,6 +22,7 @@ import {
 } from "@/integrations/supabase/dashboard";
 import {
   countManagerUnread,
+  deleteSentInternalMessage,
   getManagerMessageReadAt,
   listPersonalInboxMessages,
   listMessageRecipients,
@@ -958,7 +959,11 @@ function Compose({
   const [received, setReceived] = useState<InboxMessage[]>(initialReceived);
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState(initialError);
+  const [showAllSent, setShowAllSent] = useState(false);
   const [showAllReceived, setShowAllReceived] = useState(false);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
+  const [resendingMessageId, setResendingMessageId] = useState<string | null>(null);
+  const [sentActionFeedback, setSentActionFeedback] = useState("");
   const [threadReplyBody, setThreadReplyBody] = useState<Record<string, string>>({});
   const [threadSendingKey, setThreadSendingKey] = useState<string | null>(null);
   const [threadFeedback, setThreadFeedback] = useState<Record<string, string>>({});
@@ -1051,6 +1056,41 @@ function Compose({
     [conversations],
   );
   const visibleReceivedThreads = showAllReceived ? receivedThreads : receivedThreads.slice(0, 5);
+  const visibleSentMessages = showAllSent ? recent : recent.slice(0, 5);
+
+  function notifyMessageSecondLife(
+    messageScope: MessageScope,
+    targetRecipientId: string | null,
+    messageSubject: string,
+    messageBody: string,
+  ) {
+    if (messageScope === "personal" && targetRecipientId) {
+      void notifySecondLifeQuietly(
+        {
+          recipientId: targetRecipientId,
+          type: "new_message",
+          title: messageSubject,
+          body: messageBody || tr("You have a new message from Love Potion HQ."),
+        },
+        "Personal message notification",
+      );
+      return;
+    }
+
+    if (messageScope === "broadcast") {
+      recipients.forEach((recipient) => {
+        void notifySecondLifeQuietly(
+          {
+            recipientId: recipient.id,
+            type: "new_message",
+            title: messageSubject,
+            body: messageBody || tr("Love Potion HQ sent a new announcement."),
+          },
+          "Broadcast message notification",
+        );
+      });
+    }
+  }
 
   async function markThreadMessagesRead(messageIds: string[]) {
     if (messageIds.length === 0) return;
@@ -1153,29 +1193,12 @@ function Compose({
         body,
       });
 
-      if (scope === "personal" && recipientId) {
-        void notifySecondLifeQuietly(
-          {
-            recipientId,
-            type: "new_message",
-            title: subject.trim(),
-            body: body.trim() || tr("You have a new message from Love Potion HQ."),
-          },
-          "Personal message notification",
-        );
-      } else if (scope === "broadcast") {
-        recipients.forEach((recipient) => {
-          void notifySecondLifeQuietly(
-            {
-              recipientId: recipient.id,
-              type: "new_message",
-              title: subject.trim(),
-              body: body.trim() || tr("Love Potion HQ sent a new announcement."),
-            },
-            "Broadcast message notification",
-          );
-        });
-      }
+      notifyMessageSecondLife(
+        scope,
+        scope === "personal" ? recipientId : null,
+        subject.trim(),
+        body.trim(),
+      );
 
       const recipientName =
         scope === "broadcast"
@@ -1194,6 +1217,76 @@ function Compose({
       console.error("[Compose] failed to send", error);
       setError(error instanceof Error ? error.message : tr("Could not send message."));
       setState("error");
+    }
+  }
+
+  async function onResendMessage(message: SentMessage) {
+    setSentActionFeedback("");
+    setResendingMessageId(message.id);
+
+    try {
+      const profile = await getCurrentProfile();
+      if (!profile?.id) throw new Error("Sender profile not found.");
+
+      const resent = await sendInternalMessage({
+        senderId: profile.id,
+        scope: message.scope,
+        recipientId: message.recipient_id,
+        subject: message.subject,
+        body: message.body ?? "",
+      });
+
+      notifyMessageSecondLife(
+        message.scope,
+        message.recipient_id,
+        message.subject,
+        message.body ?? "",
+      );
+
+      setRecent((current) => [
+        { ...resent, recipient_name: message.recipient_name },
+        ...current,
+      ]);
+      setSentActionFeedback(tr("Message resent."));
+    } catch (error) {
+      console.error("[Compose] failed to resend message", error);
+      setSentActionFeedback(
+        error instanceof Error ? error.message : tr("Could not resend this message."),
+      );
+    } finally {
+      setResendingMessageId(null);
+    }
+  }
+
+  async function onDeleteSentMessage(message: SentMessage) {
+    const confirmed = window.confirm(
+      tr(
+        "Delete this message from the system? Messages and notecards already delivered in Second Life cannot be recalled.",
+      ),
+    );
+    if (!confirmed) return;
+
+    setSentActionFeedback("");
+    setDeletingMessageId(message.id);
+
+    try {
+      const profile = await getCurrentProfile();
+      if (!profile?.id) throw new Error("Sender profile not found.");
+
+      await deleteSentInternalMessage({
+        messageId: message.id,
+        senderId: profile.id,
+        subject: message.subject,
+      });
+      setRecent((current) => current.filter((item) => item.id !== message.id));
+      setSentActionFeedback(tr("Message deleted."));
+    } catch (error) {
+      console.error("[Compose] failed to delete sent message", error);
+      setSentActionFeedback(
+        error instanceof Error ? error.message : tr("Could not delete this message."),
+      );
+    } finally {
+      setDeletingMessageId(null);
     }
   }
 
@@ -1385,6 +1478,78 @@ function Compose({
         </div>
       </GlassCard>
       <GlassCard>
+        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+          {tr("SENT · RECENT")}
+        </div>
+        {sentActionFeedback ? (
+          <div className="mt-3 rounded-xl bg-[var(--brand-pink)]/55 px-3 py-2 text-xs text-foreground/70">
+            {sentActionFeedback}
+          </div>
+        ) : null}
+        <ul className="mt-4 space-y-3">
+          {visibleSentMessages.map((message) => {
+            const recipientLabel =
+              message.scope === "broadcast"
+                ? tr("all bloggers")
+                : message.recipient_name || tr("blogger");
+            const isDeleting = deletingMessageId === message.id;
+            const isResending = resendingMessageId === message.id;
+
+            return (
+              <li
+                key={message.id}
+                className="rounded-2xl border border-foreground/10 bg-background/60 p-3"
+              >
+                <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/45">
+                  {tr("TO")} · {recipientLabel} ·{" "}
+                  {new Date(message.created_at).toLocaleDateString(
+                    language === "es" ? "es" : undefined,
+                  )}
+                </div>
+                <div className="mt-1 font-display text-base">{message.subject}</div>
+                {message.body ? (
+                  <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs leading-relaxed text-foreground/65">
+                    {message.body}
+                  </p>
+                ) : null}
+                <div className="mt-3 flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void onResendMessage(message)}
+                    disabled={isResending || isDeleting}
+                    className="rounded-full border border-[var(--brand-magenta)]/35 px-3 py-2 font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--brand-magenta)] hover:bg-[var(--brand-magenta)] hover:text-white disabled:opacity-50"
+                  >
+                    {isResending ? tr("Resending...") : tr("Resend")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void onDeleteSentMessage(message)}
+                    disabled={isDeleting || isResending}
+                    className="rounded-full border border-foreground/15 px-3 py-2 font-mono text-[9px] uppercase tracking-[0.22em] text-foreground/55 hover:border-rose-400 hover:text-rose-600 disabled:opacity-50"
+                  >
+                    {isDeleting ? tr("Deleting...") : tr("Delete")}
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+          {recent.length === 0 ? (
+            <li className="font-hand text-2xl text-[var(--brand-magenta)]">
+              {tr("nothing sent yet")}
+            </li>
+          ) : null}
+        </ul>
+        {recent.length > 5 ? (
+          <button
+            type="button"
+            onClick={() => setShowAllSent((current) => !current)}
+            className="mt-3 rounded-full border border-foreground/20 px-4 py-2 font-mono text-[9px] uppercase tracking-[0.25em] text-foreground/60 hover:border-[var(--brand-magenta)] hover:text-[var(--brand-magenta)]"
+          >
+            {showAllSent ? tr("show less") : `${tr("view all")} (${recent.length})`}
+          </button>
+        ) : null}
+
+        <div className="my-6 border-t border-foreground/10" />
         <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/60">
           {tr("RECEIVED · RECENT")}
         </div>

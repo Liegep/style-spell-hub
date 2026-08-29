@@ -189,10 +189,6 @@ export async function sendInternalMessage(input: {
   subject: string;
   body: string;
 }) {
-  const localId =
-    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const message = {
     sender_id: input.senderId,
     scope: input.scope,
@@ -201,15 +197,19 @@ export async function sendInternalMessage(input: {
     body: input.body.trim() || null,
   };
 
-  const { error } = await supabase.from("internal_messages").insert(message);
+  const { data, error } = await supabase
+    .from("internal_messages")
+    .insert(message)
+    .select("id,scope,sender_id,recipient_id,subject,body,image_url,created_at")
+    .single();
 
-  if (error) throw error;
+  if (error || !data) throw error ?? new Error("Could not save the sent message.");
   window.dispatchEvent(new Event("messages-updated"));
 
   void logAuditEvent({
     action: input.scope === "broadcast" ? "Sent broadcast message" : "Sent personal message",
     targetType: "message",
-    targetId: localId,
+    targetId: data.id,
     targetName: message.subject,
     metadata: {
       scope: input.scope,
@@ -228,15 +228,38 @@ export async function sendInternalMessage(input: {
   }
 
   return {
-    id: localId,
-    ...message,
+    ...data,
     staff_message_group_id: null,
     staff_read_at: null,
     staff_read_by: null,
-    image_url: null,
     read_at: null,
-    created_at: new Date().toISOString(),
   } satisfies InternalMessage;
+}
+
+export async function deleteSentInternalMessage(input: {
+  messageId: string;
+  senderId: string;
+  subject: string;
+}) {
+  const { data, error } = await supabase
+    .from("internal_messages")
+    .delete()
+    .eq("id", input.messageId)
+    .eq("sender_id", input.senderId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) throw new Error("This sent message could not be deleted.");
+
+  void logAuditEvent({
+    action: "Deleted sent message",
+    targetType: "message",
+    targetId: input.messageId,
+    targetName: input.subject,
+  });
+
+  window.dispatchEvent(new Event("messages-updated"));
 }
 
 export async function sendInternalReply(input: {
