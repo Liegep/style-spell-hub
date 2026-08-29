@@ -44,15 +44,18 @@ function metadataText(metadata: unknown, key: string) {
 }
 
 function getAlertNotecardItemName(notificationType: string, metadata: unknown) {
-  if (!["new_product", "new_message"].includes(notificationType)) {
+  if (!["new_product", "new_message", "manual"].includes(notificationType)) {
     return "";
   }
 
-  return (
-    metadataText(metadata, "notecard_item_name") ||
-    clean(Deno.env.get("SECOND_LIFE_ALERT_NOTECARD")) ||
-    "Love Potion Update"
-  );
+  const configuredItemName =
+    notificationType === "new_product"
+      ? clean(Deno.env.get("SECOND_LIFE_PRODUCT_NOTECARD"))
+      : clean(Deno.env.get("SECOND_LIFE_MESSAGE_NOTECARD"));
+  const defaultItemName =
+    notificationType === "new_product" ? "Love Potion Product Release" : "Love Potion New Message";
+
+  return metadataText(metadata, "notecard_item_name") || configuredItemName || defaultItemName;
 }
 
 function appendFallbackLink(body: string, fallbackUrl: string) {
@@ -95,7 +98,11 @@ function isCronRequest(request: Request) {
   return Boolean(cronSecret && requestSecret && requestSecret === cronSecret);
 }
 
-async function getActiveDeliveryUrl(supabase: SupabaseClient, fallbackUrl: string | undefined) {
+async function getActiveDeliveryUrl(
+  supabase: SupabaseClient,
+  fallbackUrl: string | undefined,
+  notificationType: string,
+) {
   const { data, error } = await supabase
     .from("second_life_delivery_servers")
     .select("id,server_url,last_seen_at,object_name,region_name")
@@ -104,10 +111,27 @@ async function getActiveDeliveryUrl(supabase: SupabaseClient, fallbackUrl: strin
     .limit(20);
 
   if (!error && data?.length) {
-    const preferredRow = data.find(
+    const updatesRow = data.find(
+      (row) =>
+        typeof row.object_name === "string" &&
+        /^love potion updates$/i.test(row.object_name.trim()),
+    );
+    const primaryDropboxRow = data.find(
+      (row) =>
+        typeof row.object_name === "string" && /love potion dropbox 1/i.test(row.object_name),
+    );
+    const notifierRow = data.find(
+      (row) => typeof row.object_name === "string" && /notifier/i.test(row.object_name),
+    );
+    const deliveryRow = data.find(
       (row) => typeof row.object_name !== "string" || !/demo/i.test(row.object_name),
     );
-    const row = preferredRow ?? data[0];
+    const isUpdateNotification = ["new_product", "new_message", "manual"].includes(
+      notificationType,
+    );
+    const row = isUpdateNotification
+      ? (updatesRow ?? notifierRow ?? primaryDropboxRow ?? deliveryRow ?? data[0])
+      : (primaryDropboxRow ?? deliveryRow ?? data[0]);
 
     if (!row?.server_url) {
       return fallbackUrl
@@ -243,7 +267,7 @@ async function processQueueItem(
         label: "queue delivery URL",
         lastSeenAt: null,
       }
-    : await getActiveDeliveryUrl(supabase, fallbackDeliveryUrl);
+    : await getActiveDeliveryUrl(supabase, fallbackDeliveryUrl, notificationType);
 
   if (queueStatus === "sent") {
     return {

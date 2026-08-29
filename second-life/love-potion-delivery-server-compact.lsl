@@ -1,4 +1,5 @@
-// Add a copyable/transferable notecard named "Love Potion Update" to this object.
+// Name this object "Love Potion Updates" and add these copyable/transferable
+// notecards: "Love Potion Product Release" and "Love Potion New Message".
 // It is automatically delivered for new_product and new_message notifications.
 
 string SHARED_SECRET = "CHANGE_ME_TO_MATCH_SECOND_LIFE_DELIVERY_SECRET";
@@ -60,6 +61,7 @@ string notificationText(string title, string message, string actionUrl, string i
 integer registerUrl()
 {
     string payload = "{}";
+    list httpOptions = [HTTP_METHOD, "POST", HTTP_MIMETYPE, "application/json"];
 
     if (hasText(deliveryUrl) == FALSE)
     {
@@ -73,7 +75,11 @@ integer registerUrl()
     payload = llJsonSetValue(payload, ["region_name"], llGetRegionName());
     payload = llJsonSetValue(payload, ["owner_key"], (string)llGetOwner());
 
-    registerRequestId = llHTTPRequest(SUPABASE_REGISTER_URL, [HTTP_METHOD, "POST", HTTP_MIMETYPE, "application/json"], payload);
+    registerRequestId = llHTTPRequest(
+        SUPABASE_REGISTER_URL,
+        httpOptions,
+        payload
+    );
     return TRUE;
 }
 

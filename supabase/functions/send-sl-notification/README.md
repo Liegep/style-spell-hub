@@ -8,17 +8,17 @@ Required secrets:
 npx supabase@latest secrets set SECOND_LIFE_DELIVERY_SECRET="same-secret-as-the-LSL-script"
 ```
 
-Optional notecard name override:
+Optional notecard name overrides:
 
 ```bash
-npx supabase@latest secrets set SECOND_LIFE_ALERT_NOTECARD="Love Potion Update"
+npx supabase@latest secrets set SECOND_LIFE_PRODUCT_NOTECARD="Love Potion Product Release"
+npx supabase@latest secrets set SECOND_LIFE_MESSAGE_NOTECARD="Love Potion New Message"
 ```
 
-Add a copyable and transferable notecard with that exact name to the delivery object's inventory.
-The default name is `Love Potion Update`. Notifications of type `new_product` and `new_message`
-automatically ask the object to give this notecard to the recipient. The instant message is still
-sent with the specific product or message details. If the notecard is missing, the object warns its
-owner and uses the IM as the fallback.
+Add copyable and transferable notecards with those exact names to the `Love Potion Updates` object.
+The defaults are `Love Potion Product Release` for `new_product` and `Love Potion New Message` for
+`new_message` and manual tests. The instant message is still sent with the specific details. If a
+notecard is missing, the object warns its owner and uses the IM as the fallback.
 
 The function uses the latest URL registered by `register-delivery-server`. `SECOND_LIFE_DELIVERY_URL` is only a fallback.
 

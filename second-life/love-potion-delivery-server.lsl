@@ -4,13 +4,15 @@
 //
 // In Content Studio, set delivery_item_key to the exact inventory item name.
 // Example: Holiday Magic Gown - Blogger Pack
-// Add a copyable/transferable notecard named "Love Potion Update" to this object's inventory.
+// Name this object "Love Potion Updates" and add these copyable/transferable
+// notecards: "Love Potion Product Release" and "Love Potion New Message".
 // It is automatically delivered for new_product and new_message notifications.
 
 string SHARED_SECRET = "CHANGE_ME_TO_MATCH_SECOND_LIFE_DELIVERY_SECRET";
 string SUPABASE_REGISTER_URL = "https://dvhrisqlybqsrzsfoyfx.supabase.co/functions/v1/register-delivery-server";
+string PRODUCT_NOTECARD = "Love Potion Product Release";
+string MESSAGE_NOTECARD = "Love Potion New Message";
 string deliveryUrl;
-key registerRequestId;
 integer lastRegisterAt;
 integer REFRESH_SECONDS = 900;
 
@@ -70,6 +72,8 @@ string buildNotificationMessage(string title, string message, string actionUrl, 
 integer registerDeliveryUrl()
 {
     string payload = "{}";
+    list httpOptions = [HTTP_METHOD, "POST", HTTP_MIMETYPE, "application/json"];
+    key requestKey;
 
     if (!hasText(deliveryUrl))
     {
@@ -83,9 +87,9 @@ integer registerDeliveryUrl()
     payload = llJsonSetValue(payload, ["region_name"], llGetRegionName());
     payload = llJsonSetValue(payload, ["owner_key"], (string)llGetOwner());
 
-    registerRequestId = llHTTPRequest(
+    requestKey = llHTTPRequest(
         SUPABASE_REGISTER_URL,
-        [HTTP_METHOD, "POST", HTTP_MIMETYPE, "application/json"],
+        httpOptions,
         payload
     );
     lastRegisterAt = llGetUnixTime();
@@ -104,6 +108,24 @@ default
 {
     state_entry()
     {
+        if (llGetInventoryType(PRODUCT_NOTECARD) == INVENTORY_NOTECARD)
+        {
+            llOwnerSay("Product notecard ready: " + PRODUCT_NOTECARD);
+        }
+        else
+        {
+            llOwnerSay("Product notecard missing: add a notecard named exactly " + PRODUCT_NOTECARD);
+        }
+
+        if (llGetInventoryType(MESSAGE_NOTECARD) == INVENTORY_NOTECARD)
+        {
+            llOwnerSay("Message notecard ready: " + MESSAGE_NOTECARD);
+        }
+        else
+        {
+            llOwnerSay("Message notecard missing: add a notecard named exactly " + MESSAGE_NOTECARD);
+        }
+
         startDeliveryServer();
     }
 
@@ -146,6 +168,7 @@ default
         string fallbackUrl;
         string textureItemName;
         string notecardItemName;
+        string notificationType;
         string itemName;
         string productName;
         integer inventoryType;
@@ -194,6 +217,18 @@ default
             fallbackUrl = jsonText(body, ["fallback_url"]);
             textureItemName = jsonText(body, ["texture_item_name"]);
             notecardItemName = jsonText(body, ["notecard_item_name"]);
+            notificationType = jsonText(body, ["notification_type"]);
+
+            if (!hasText(notecardItemName) && notificationType == "new_product")
+            {
+                notecardItemName = PRODUCT_NOTECARD;
+            }
+
+            if (!hasText(notecardItemName) &&
+                (notificationType == "new_message" || notificationType == "manual"))
+            {
+                notecardItemName = MESSAGE_NOTECARD;
+            }
 
             if (!hasText(fallbackUrl))
             {
@@ -265,16 +300,13 @@ default
 
     http_response(key requestId, integer status, list metadata, string body)
     {
-        if (requestId == registerRequestId)
+        if (status >= 200 && status < 300)
         {
-            if (status >= 200 && status < 300)
-            {
-                llOwnerSay("Delivery URL registered with Love Potion HQ.");
-            }
-            else
-            {
-                llOwnerSay("Delivery URL registration failed (" + (string)status + "): " + body);
-            }
+            llOwnerSay("Delivery URL registered with Love Potion HQ.");
+        }
+        else
+        {
+            llOwnerSay("Delivery URL registration failed (" + (string)status + "): " + body);
         }
     }
 }
