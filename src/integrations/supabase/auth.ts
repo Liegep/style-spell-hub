@@ -206,6 +206,36 @@ export async function signInWithIdentifier(identifier: string, password: string)
   return signInWithEmail(loginEmail, password);
 }
 
+export async function requestPasswordReset(email: string, language: "en" | "es") {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured yet.");
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail || !normalizedEmail.includes("@")) {
+    throw new Error("Please enter the email connected to your blogger account.");
+  }
+
+  const redirectTo = `${window.location.origin}/${language}/reset-password`;
+  const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, { redirectTo });
+  if (error) throw error;
+}
+
+export async function completePasswordReset(newPassword: string) {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured yet.");
+  }
+
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (!sessionData.session) {
+    throw new Error("This recovery link is invalid or has expired. Request a new one.");
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+}
+
 export async function getCurrentProfile(userId?: string) {
   if (!isSupabaseConfigured) {
     throw new Error("Supabase is not configured yet.");

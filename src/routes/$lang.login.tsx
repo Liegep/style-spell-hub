@@ -162,9 +162,13 @@ function LoginPage() {
               />
               {t.login.remember}
               </label>
-              <a href="#" className="text-[var(--brand-magenta)] hover:underline">
+              <Link
+                to="/$lang/forgot-password"
+                params={{ lang }}
+                className="text-[var(--brand-magenta)] hover:underline"
+              >
                 {t.login.forgot}
-              </a>
+              </Link>
             </div>
 
             {status === "error" ? (

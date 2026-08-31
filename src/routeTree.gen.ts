@@ -26,10 +26,12 @@ import { Route as AppAtelierRouteImport } from './routes/app.atelier'
 import { Route as AppApplicationsRouteImport } from './routes/app.applications'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as LangShopInfoRouteImport } from './routes/$lang.shop-info'
+import { Route as LangResetPasswordRouteImport } from './routes/$lang.reset-password'
 import { Route as LangReleasesRouteImport } from './routes/$lang.releases'
 import { Route as LangNewsletterRouteImport } from './routes/$lang.newsletter'
 import { Route as LangLoginRouteImport } from './routes/$lang.login'
 import { Route as LangLinksRouteImport } from './routes/$lang.links'
+import { Route as LangForgotPasswordRouteImport } from './routes/$lang.forgot-password'
 import { Route as LangApplyRouteImport } from './routes/$lang.apply'
 import { Route as LangAboutRouteImport } from './routes/$lang.about'
 
@@ -118,6 +120,11 @@ const LangShopInfoRoute = LangShopInfoRouteImport.update({
   path: '/shop-info',
   getParentRoute: () => LangRoute,
 } as any)
+const LangResetPasswordRoute = LangResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => LangRoute,
+} as any)
 const LangReleasesRoute = LangReleasesRouteImport.update({
   id: '/releases',
   path: '/releases',
@@ -138,6 +145,11 @@ const LangLinksRoute = LangLinksRouteImport.update({
   path: '/links',
   getParentRoute: () => LangRoute,
 } as any)
+const LangForgotPasswordRoute = LangForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => LangRoute,
+} as any)
 const LangApplyRoute = LangApplyRouteImport.update({
   id: '/apply',
   path: '/apply',
@@ -155,10 +167,12 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/$lang/about': typeof LangAboutRoute
   '/$lang/apply': typeof LangApplyRoute
+  '/$lang/forgot-password': typeof LangForgotPasswordRoute
   '/$lang/links': typeof LangLinksRoute
   '/$lang/login': typeof LangLoginRoute
   '/$lang/newsletter': typeof LangNewsletterRoute
   '/$lang/releases': typeof LangReleasesRoute
+  '/$lang/reset-password': typeof LangResetPasswordRoute
   '/$lang/shop-info': typeof LangShopInfoRoute
   '/app/admin': typeof AppAdminRoute
   '/app/applications': typeof AppApplicationsRoute
@@ -178,10 +192,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$lang/about': typeof LangAboutRoute
   '/$lang/apply': typeof LangApplyRoute
+  '/$lang/forgot-password': typeof LangForgotPasswordRoute
   '/$lang/links': typeof LangLinksRoute
   '/$lang/login': typeof LangLoginRoute
   '/$lang/newsletter': typeof LangNewsletterRoute
   '/$lang/releases': typeof LangReleasesRoute
+  '/$lang/reset-password': typeof LangResetPasswordRoute
   '/$lang/shop-info': typeof LangShopInfoRoute
   '/app/admin': typeof AppAdminRoute
   '/app/applications': typeof AppApplicationsRoute
@@ -204,10 +220,12 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/$lang/about': typeof LangAboutRoute
   '/$lang/apply': typeof LangApplyRoute
+  '/$lang/forgot-password': typeof LangForgotPasswordRoute
   '/$lang/links': typeof LangLinksRoute
   '/$lang/login': typeof LangLoginRoute
   '/$lang/newsletter': typeof LangNewsletterRoute
   '/$lang/releases': typeof LangReleasesRoute
+  '/$lang/reset-password': typeof LangResetPasswordRoute
   '/$lang/shop-info': typeof LangShopInfoRoute
   '/app/admin': typeof AppAdminRoute
   '/app/applications': typeof AppApplicationsRoute
@@ -231,10 +249,12 @@ export interface FileRouteTypes {
     | '/app'
     | '/$lang/about'
     | '/$lang/apply'
+    | '/$lang/forgot-password'
     | '/$lang/links'
     | '/$lang/login'
     | '/$lang/newsletter'
     | '/$lang/releases'
+    | '/$lang/reset-password'
     | '/$lang/shop-info'
     | '/app/admin'
     | '/app/applications'
@@ -254,10 +274,12 @@ export interface FileRouteTypes {
     | '/'
     | '/$lang/about'
     | '/$lang/apply'
+    | '/$lang/forgot-password'
     | '/$lang/links'
     | '/$lang/login'
     | '/$lang/newsletter'
     | '/$lang/releases'
+    | '/$lang/reset-password'
     | '/$lang/shop-info'
     | '/app/admin'
     | '/app/applications'
@@ -279,10 +301,12 @@ export interface FileRouteTypes {
     | '/app'
     | '/$lang/about'
     | '/$lang/apply'
+    | '/$lang/forgot-password'
     | '/$lang/links'
     | '/$lang/login'
     | '/$lang/newsletter'
     | '/$lang/releases'
+    | '/$lang/reset-password'
     | '/$lang/shop-info'
     | '/app/admin'
     | '/app/applications'
@@ -426,6 +450,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LangShopInfoRouteImport
       parentRoute: typeof LangRoute
     }
+    '/$lang/reset-password': {
+      id: '/$lang/reset-password'
+      path: '/reset-password'
+      fullPath: '/$lang/reset-password'
+      preLoaderRoute: typeof LangResetPasswordRouteImport
+      parentRoute: typeof LangRoute
+    }
     '/$lang/releases': {
       id: '/$lang/releases'
       path: '/releases'
@@ -454,6 +485,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LangLinksRouteImport
       parentRoute: typeof LangRoute
     }
+    '/$lang/forgot-password': {
+      id: '/$lang/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/$lang/forgot-password'
+      preLoaderRoute: typeof LangForgotPasswordRouteImport
+      parentRoute: typeof LangRoute
+    }
     '/$lang/apply': {
       id: '/$lang/apply'
       path: '/apply'
@@ -474,10 +512,12 @@ declare module '@tanstack/react-router' {
 interface LangRouteChildren {
   LangAboutRoute: typeof LangAboutRoute
   LangApplyRoute: typeof LangApplyRoute
+  LangForgotPasswordRoute: typeof LangForgotPasswordRoute
   LangLinksRoute: typeof LangLinksRoute
   LangLoginRoute: typeof LangLoginRoute
   LangNewsletterRoute: typeof LangNewsletterRoute
   LangReleasesRoute: typeof LangReleasesRoute
+  LangResetPasswordRoute: typeof LangResetPasswordRoute
   LangShopInfoRoute: typeof LangShopInfoRoute
   LangIndexRoute: typeof LangIndexRoute
 }
@@ -485,10 +525,12 @@ interface LangRouteChildren {
 const LangRouteChildren: LangRouteChildren = {
   LangAboutRoute: LangAboutRoute,
   LangApplyRoute: LangApplyRoute,
+  LangForgotPasswordRoute: LangForgotPasswordRoute,
   LangLinksRoute: LangLinksRoute,
   LangLoginRoute: LangLoginRoute,
   LangNewsletterRoute: LangNewsletterRoute,
   LangReleasesRoute: LangReleasesRoute,
+  LangResetPasswordRoute: LangResetPasswordRoute,
   LangShopInfoRoute: LangShopInfoRoute,
   LangIndexRoute: LangIndexRoute,
 }
